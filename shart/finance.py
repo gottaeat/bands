@@ -1,14 +1,3 @@
-#!/usr/bin/python
-import re
-import socket
-import ssl
-import unicodedata
-import urllib.request, urllib.parse
-import xmltodict
-from bs4 import BeautifulSoup
-from json import loads
-from time import sleep
-
 # money
 binan_url = "https://api.binance.com/api/v3/ticker/price?"
 doviz_url = "https://www.doviz.com/api/v10/converterItems"
@@ -32,67 +21,6 @@ tcmb_req = tcmb_url
 wgb_req = wgb_url
 xe_req = xe_url + xe_params
 yahoo_req = yahoo_url + yahoo_params
-
-# socket
-host = socket.gethostbyname("ircd.chat")
-port = 6697
-addr = (host, port)
-
-channel = "#msstest"
-botname = "shart"
-
-senduser = f"USER {botname} {botname} {botname} {botname}\r\n"
-sendnick = f"NICK {botname}\r\n"
-sendjoin = f"JOIN {channel}\r\n"
-
-
-# funcs
-def sendquery(channel, msg):
-    irc.send(f"PRIVMSG {channel} :{msg}\r\n".encode(encoding="UTF-8"))
-
-
-def unilen(string):
-    width = 0
-    for i in string:
-        if unicodedata.category(i)[0] in ("M", "C"):
-            continue
-        w = unicodedata.east_asian_width(i)
-        if w in ("N", "Na", "H", "A"):
-            width += 1
-        else:
-            width += 2
-    return width
-
-
-def drawbox(string, charset):
-    if charset == "double":
-        chars = {"1": "╔", "2": "╗", "3": "╚", "4": "╝", "h": "═", "v": "║"}
-    elif charset == "single":
-        chars = {"1": "┌", "2": "┐", "3": "└", "4": "┘", "h": "─", "v": "│"}
-    elif charset == "thic":
-        chars = {"1": "╔", "2": "╗", "3": "╚", "4": "╝", "h": "─", "v": "│"}
-    else:
-        chars = {"1": "+", "2": "+", "3": "+", "4": "+", "h": "-", "v": "|"}
-    a = string.split("\n")
-    if a[-1] == "":
-        a = a[:-1]
-    if a[0] == "":
-        a = a[1:]
-    for i in range(0, len(a)):
-        a[i] = re.sub(r"^", chars["v"], a[i])
-    width = 0
-    for i in range(0, len(a)):
-        if unilen(a[i]) > width:
-            width = unilen(a[i])
-    for i in range(0, len(a)):
-        a[i] = f"{a[i]}{(width - unilen(a[i])) * ' '}{chars['v']}"
-    a.insert(0, f"{chars['1']}{chars['h'] * (width - 1)}{chars['2']}")
-    a.append(f"{chars['3']}{chars['h'] * (width - 1)}{chars['4']}")
-    fin = ""
-    finlen = len(a)
-    for i in range(0, finlen):
-        fin += a[i] + "\n"
-    return fin
 
 
 # json apis
@@ -257,61 +185,3 @@ def pullall():
     alltable = f"{sb_exchanges()}{sb_crypto()}{sb_wgb()}"
     for i in drawbox(alltable, "thic").split("\n"):
         sendquery(channel, i)
-
-
-# help
-def printhelp():
-    helptext = "help\n"
-    helptext += "├ usage: {?help|?islam|?piss [chatter]}\n"
-    helptext += "└ docs : https://www.alislam.org/quran/Holy-Quran-English.pdf\n"
-    for i in drawbox(helptext, "thic").split("\n"):
-        sendquery(channel, i)
-
-
-def printpiss(pisser, pissee):
-    lolman = "     ë\n"
-    lolman += f"   .-║- <- {pisser} \n"
-    lolman += "   ╭╰\\\n"
-    lolman += "   ┊/ \\\n"
-    lolman += "   ┊\n"
-    lolman += f" {pissee}\n"
-    lolman = drawbox(lolman, "single")
-    pismsg = f"{pissee} just got pissed on by {pisser}."
-    finmsg = lolman + pismsg
-
-    for i in finmsg.split("\n"):
-        sendquery(channel, i)
-
-
-# colorshit
-rex = re.compile("[\x02\x0F\x16\x1D\x1F]|\x03(\d{,2}(,\d{,2})?)?")
-
-# action
-irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-irc = ssl.wrap_socket(irc)
-irc.connect(addr)
-
-irc.send(senduser.encode(encoding="UTF-8"))
-irc.send(sendnick.encode(encoding="UTF-8"))
-irc.send(sendjoin.encode(encoding="UTF-8"))
-
-while True:
-    data = rex.sub("", irc.recv(2048).decode(encoding="UTF-8"))
-    if data.split()[0] == "PING":
-        irc.send(f"PONG {data.split()[1]}\r\n".encode(encoding="UTF-8"))
-    if data.split()[1] == "PRIVMSG" and data.split()[2] == channel:
-        cmd = data.split()[3]
-        if cmd == ":?islam":
-            pullall()
-        if cmd == ":?help":
-            printhelp()
-        if cmd == ":?piss":
-            pisser = re.sub(r"^:|\![^!]*$", "", data.split()[0])
-            pissee = " ".join(data.split()[4:])
-            if len(str(pissee)) == 0:
-                sendquery(channel, f"{pisser}: on who nigga")
-            else:
-                if len(str(pissee)) >= 20:
-                    sendquery(channel, f"{pisser}: nah")
-                else:
-                    printpiss(pisser, pissee)
