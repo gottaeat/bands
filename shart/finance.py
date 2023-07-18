@@ -1,187 +1,119 @@
-# money
-binan_url = "https://api.binance.com/api/v3/ticker/price?"
-doviz_url = "https://www.doviz.com/api/v10/converterItems"
-forbes_url = (
-    "https://www.forbes.com/advisor/money-transfer/currency-converter/usd-try/?"
-)
-tcmb_url = "https://www.tcmb.gov.tr/kurlar/today.xml"
-wgb_url = "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/"
-xe_url = "https://www.x-rates.com/calculator/?"
-yahoo_url = "https://query1.finance.yahoo.com/v8/finance/chart/"
+import json
+import re
+import ssl
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
 
-binan_params = urllib.parse.urlencode({"symbol": "USDTTRY"})
-forbes_params = urllib.parse.urlencode({"amount": "1"})
-xe_params = urllib.parse.urlencode({"from": "USD", "to": "TRY", "amount": "1"})
-yahoo_params = urllib.parse.urlencode({"USDTRY": "X"})
-
-binan_req = binan_url + binan_params
-doviz_req = doviz_url
-forbes_req = forbes_url + forbes_params
-tcmb_req = tcmb_url
-wgb_req = wgb_url
-xe_req = xe_url + xe_params
-yahoo_req = yahoo_url + yahoo_params
+from bs4 import BeautifulSoup
 
 
-# json apis
-def sb_doviz():
-    doviz_data = urllib.request.Request(doviz_req)
-    try:
-        doviz_data = loads(
-            urllib.request.urlopen(
-                doviz_data,
-            )
-            .read()
-            .decode()
+class ForexRates:
+    def __init__(self):
+        self.tcmb = None
+        self.yahoo = None
+        self.forbes = None
+        # pylint: disable=invalid-name
+        self.xe = None
+
+    def get_tcmb(self):
+        req = "https://www.tcmb.gov.tr/kurlar/today.xml"
+        context = ssl.create_default_context()
+        context.options |= 0x4
+
+        with urllib.request.urlopen(req, context=context) as f:
+            data = f.read().decode()
+
+        tcmbxml_tree = ET.ElementTree(ET.fromstring(data))
+        tcmbxml_root = tcmbxml_tree.getroot()
+        tcmb_buying = float(tcmbxml_root.findall("Currency/ForexBuying")[0].text)
+        tcmb_selling = float(tcmbxml_root.findall("Currency/ForexSelling")[0].text)
+
+        self.tcmb = (tcmb_buying + tcmb_selling) / 2
+
+    def get_yahoo(self):
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/"
+        params = urllib.parse.urlencode({"USDTRY": "X"})
+        req = url + params
+
+        with urllib.request.urlopen(req) as f:
+            data = json.loads(f.read().decode())
+
+        self.yahoo = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
+
+    def get_forbes(self):
+        url = (
+            "https://www.forbes.com/advisor/money-transfer/currency-converter/usd-try/?"
         )
-    except:
-        return "fucked"
-    else:
-        if doviz_data["error"] == False:
-            doviz_data = doviz_data["data"]["C"]["USD"]
-            doviz_buy = doviz_data["buying"]
-            doviz_sell = doviz_data["selling"]
-            return "{:.6f}".format((doviz_buy + doviz_sell) / 2.0).strip("0")
-        else:
-            return "fucked"
+        params = urllib.parse.urlencode({"amount": "1"})
+        req = url + params
 
+        with urllib.request.urlopen(req) as f:
+            data = f.read().decode()
 
-def sb_binan():
-    binan_data = urllib.request.Request(binan_req)
-    try:
-        binan_data = float(
-            loads(
-                urllib.request.urlopen(
-                    binan_data,
-                )
-                .read()
-                .decode()
-            )[
-                "price"
-            ].rstrip("0")
+        soup = BeautifulSoup(data, "html.parser")
+
+        self.forbes = soup.find_all("span", {"class": "amount"})[0].get_text()
+
+    def get_xe(self):
+        url = "https://www.x-rates.com/calculator/?"
+        params = urllib.parse.urlencode({"from": "USD", "to": "TRY", "amount": "1"})
+        req = url + params
+
+        with urllib.request.urlopen(req) as f:
+            data = f.read().decode()
+
+        soup = BeautifulSoup(data, "html.parser")
+
+        self.xe = (
+            soup.find_all("span", {"class": "ccOutputRslt"})[0].get_text().split(" ")[0]
         )
-    except:
-        return "fucked"
-    else:
-        return binan_data
 
 
-def sb_yahoo():
-    yahoo_data = urllib.request.Request(yahoo_req)
-    try:
-        yahoo_data = loads(urllib.request.urlopen(yahoo_req).read().decode())
-    except:
-        return "fucked"
-    else:
-        return yahoo_data["chart"]["result"][0]["meta"]["regularMarketPrice"]
+# pylint: disable=too-few-public-methods
+class CryptoRates:
+    def __init__(self):
+        self.binance = None
+
+    def get_binance(self):
+        url = "https://api.binance.com/api/v3/ticker/price?"
+        params = urllib.parse.urlencode({"symbol": "USDTTRY"})
+        req = url + params
+
+        with urllib.request.urlopen(req) as f:
+            data = f.read().decode()
+
+        self.binance = float(json.loads(data)["price"].rstrip("0"))
 
 
-# scrapes
-def sb_forbes():
-    forbes_data = urllib.request.Request(forbes_req)
-    try:
-        forbes_data = urllib.request.urlopen(forbes_req).read().decode()
-    except:
-        return "fucked"
-    else:
-        try:
-            forbessoup = BeautifulSoup(forbes_data, "html.parser")
-            forbes_data = forbessoup.find_all("span", {"class": "amount"})[0]
-        except:
-            return "fucked"
-        else:
-            return forbes_data.get_text()
+# pylint: disable=too-few-public-methods
+class WGBRating:
+    def __init__(self):
+        self.wgb_cds = None
+        self.wgb_week = None
+        self.wgb_month = None
+        self.wgb_year = None
 
+    def get_wgb(self):
+        req = "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/"
 
-def sb_xe():
-    xe_data = urllib.request.Request(xe_req)
-    try:
-        xe_data = urllib.request.urlopen(xe_req).read().decode()
-    except:
-        return "fucked"
-    else:
-        try:
-            xesoup = BeautifulSoup(xe_data, "html.parser")
-            xe_data = xesoup.find_all("span", {"class": "ccOutputRslt"})[0]
-        except:
-            return "fucked"
-        else:
-            return xe_data.get_text().split(" ")[0]
+        with urllib.request.urlopen(req) as f:
+            data = f.read().decode()
 
+        soup = BeautifulSoup(data, "html.parser")
 
-# xml
-def sb_tcmb():
-    context = ssl.create_default_context()
-    context.options |= 0x4
-    tcmb_data = urllib.request.Request(tcmb_req)
-    try:
-        tcmb_data = urllib.request.urlopen(tcmb_req, context=context).read().decode()
-    except:
-        return "fucked"
-    else:
-        try:
-            tcmbparse = xmltodict.parse(tcmb_data)
-            tcmbparse = tcmbparse["Tarih_Date"]["Currency"][0]
-        except:
-            return "fucked"
-        else:
-            tcmb_buy = float(tcmbparse["ForexBuying"])
-            tcmb_sell = float(tcmbparse["ForexSelling"])
-            return (tcmb_buy + tcmb_sell) / 2
+        self.wgb_cds = (
+            soup.find_all("div", {"class": "w3-cell font-open-sans"})[0]
+            .get_text()
+            .split()[0]
+        )
 
+        perc = (
+            soup.find_all("p", string=re.compile("CDS value changed"))[0]
+            .get_text()
+            .split()
+        )
 
-## exchangerates
-def sb_exchanges():
-    xchange = "USDTRY\n"
-    xchange += f"├ central  → {sb_tcmb()}\n"
-    xchange += f"├ xe       → {sb_xe()}\n"
-    xchange += f"├ yahoo    → {sb_yahoo()}\n"
-    xchange += f"├ forbes   → {sb_forbes()}\n"
-    xchange += f"└ dovizcom → {sb_doviz()}\n"
-    return xchange
-
-
-def sb_crypto():
-    cchange = "USDTTRY\n"
-    cchange += f"└ binance  → {sb_binan()}\n"
-    return cchange
-
-
-## cds
-def sb_wgb():
-    wgb_data = urllib.request.Request(wgb_req)
-    wgbfin = "CDS\n"
-    try:
-        wgb_data = urllib.request.urlopen(wgb_req).read().decode()
-    except:
-        wgbfin += f"└ wgb      → fucked"
-    else:
-        wgbsoup = BeautifulSoup(wgb_data, "html.parser")
-        try:
-            cds = (
-                wgbsoup.find_all("div", {"class": "w3-cell font-open-sans"})[0]
-                .get_text()
-                .split()[0]
-            )
-            perc = (
-                wgbsoup.find_all("p", string=re.compile("CDS value changed"))[0]
-                .get_text()
-                .split()
-            )
-            week, month, year = perc[3], perc[7], perc[11]
-        except:
-            wgbfin += f"└ wgb      → fucked\n"
-        else:
-            finprint = f"└ wgb      → {cds}\n"
-            finprint += f"  ├ 1w     → {week}\n"
-            finprint += f"  ├ 1m     → {month}\n"
-            finprint += f"  └ 1y     → {year}"
-            wgbfin += finprint
-    return wgbfin
-
-
-## pullall
-def pullall():
-    alltable = f"{sb_exchanges()}{sb_crypto()}{sb_wgb()}"
-    for i in drawbox(alltable, "thic").split("\n"):
-        sendquery(channel, i)
+        self.wgb_week = perc[3]
+        self.wgb_month = perc[7]
+        self.wgb_year = perc[11]
