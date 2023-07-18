@@ -1,13 +1,19 @@
-def printpiss(pisser, pissee):
-    lolman = "     ë\n"
-    lolman += f"   .-║- <- {pisser} \n"
-    lolman += "   ╭╰\\\n"
-    lolman += "   ┊/ \\\n"
-    lolman += "   ┊\n"
-    lolman += f" {pissee}\n"
-    lolman = drawbox(lolman, "single")
-    pismsg = f"{pissee} just got pissed on by {pisser}."
-    finmsg = lolman + pismsg
+from .util import drawbox
 
-    for i in finmsg.split("\n"):
-        sendquery(channel, i)
+
+# pylint: disable=too-few-public-methods
+class Piss:
+    def __init__(self):
+        self.pisser = None
+        self.pissee = None
+
+    def printpiss(self):
+        lolman = "     ë\n"
+        lolman += f"   .-║- <- {self.pisser} \n"
+        lolman += "   ╭╰\\\n"
+        lolman += "   ┊/ \\\n"
+        lolman += "   ┊\n"
+        lolman += f" {self.pissee}\n"
+        lolman = drawbox(lolman, "single")
+
+        return f"{lolman}{self.pissee} just got pissed on by {self.pisser}."
