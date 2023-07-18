@@ -22,6 +22,25 @@ def printhelp():
     for i in drawbox(helptext, "thic").split("\n"):
         sendquery(channel, i)
 
+def sb_exchanges():
+    xchange = "USDTRY\n"
+    xchange += f"├ central  → {sb_tcmb()}\n"
+    xchange += f"├ xe       → {sb_xe()}\n"
+    xchange += f"├ yahoo    → {sb_yahoo()}\n"
+    xchange += f"└ forbes   → {sb_forbes()}\n"
+    return xchange
+
+def sb_crypto():
+    cchange = "USDTTRY\n"
+    cchange += f"└ binance  → {sb_binan()}\n"
+    return cchange
+
+
+## pullall
+def pullall():
+    alltable = f"{sb_exchanges()}{sb_crypto()}{sb_wgb()}"
+    for i in drawbox(alltable, "thic").split("\n"):
+        sendquery(channel, i)
 
 # strip mIRC colors
 rex = re.compile("[\x02\x0F\x16\x1D\x1F]|\x03(\d{,2}(,\d{,2})?)?")
