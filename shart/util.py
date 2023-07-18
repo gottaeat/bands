@@ -1,3 +1,7 @@
+import re
+import unicodedata
+
+
 def unilen(string):
     width = 0
     for i in string:
@@ -20,23 +24,30 @@ def drawbox(string, charset):
         chars = {"1": "╔", "2": "╗", "3": "╚", "4": "╝", "h": "─", "v": "│"}
     else:
         chars = {"1": "+", "2": "+", "3": "+", "4": "+", "h": "-", "v": "|"}
-    a = string.split("\n")
-    if a[-1] == "":
-        a = a[:-1]
-    if a[0] == "":
-        a = a[1:]
-    for i in range(0, len(a)):
-        a[i] = re.sub(r"^", chars["v"], a[i])
+
+    string = string.split("\n")
+
+    if string[-1] == "":
+        string = string[:-1]
+    if string[0] == "":
+        string = string[1:]
+
+    for i, _ in enumerate(string):
+        string[i] = re.sub(r"^", chars["v"], string[i])
+
     width = 0
-    for i in range(0, len(a)):
-        if unilen(a[i]) > width:
-            width = unilen(a[i])
-    for i in range(0, len(a)):
-        a[i] = f"{a[i]}{(width - unilen(a[i])) * ' '}{chars['v']}"
-    a.insert(0, f"{chars['1']}{chars['h'] * (width - 1)}{chars['2']}")
-    a.append(f"{chars['3']}{chars['h'] * (width - 1)}{chars['4']}")
+    for i, _ in enumerate(string):
+        if unilen(string[i]) > width:
+            width = unilen(string[i])
+
+    for i, _ in enumerate(string):
+        string[i] = f"{string[i]}{(width - unilen(string[i])) * ' '}{chars['v']}"
+
+    string.insert(0, f"{chars['1']}{chars['h'] * (width - 1)}{chars['2']}")
+    string.append(f"{chars['3']}{chars['h'] * (width - 1)}{chars['4']}")
+
     fin = ""
-    finlen = len(a)
-    for i in range(0, finlen):
-        fin += a[i] + "\n"
+    for i, line in enumerate(string):
+        fin += line + "\n"
+
     return fin
