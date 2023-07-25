@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "shart"
 authors = [{name = "gottaeat", email = "mss@tutanota.de"}]
-readme = {file = "README"}
+readme = {file = "README", content-type = "text/plain"}
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
 dynamic = ["version", "description"]
@@ -17,5 +17,5 @@ dependencies = [
 [project.urls]
 Source = "http://github.com/gottaeat/shart"
 
-#[project.scripts]
-#shart = "shart.cli:run"
+[project.scripts]
+shart = "shart.cli:run"
