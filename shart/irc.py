@@ -10,7 +10,8 @@ from .util import drawbox
 # pylint: disable=too-few-public-methods
 class IRC:
     def __init__(self):
-        self.addr = None
+        self.net = None
+        self.port = None
         self.channel = None
         self.botname = None
         self.conn = None
@@ -60,33 +61,48 @@ class IRC:
                     self._send_query(line)
 
     def connect(self):
-        self.senduser = (
+        senduser = (
             f"USER {self.botname} {self.botname} {self.botname} {self.botname}\r\n"
         )
-        self.sendnick = f"NICK {self.botname}\r\n"
-        self.sendjoin = f"JOIN {self.channel}\r\n"
+        sendnick = f"NICK {self.botname}\r\n"
+        sendjoin = f"JOIN {self.channel}\r\n"
 
-        print(f"addr:     {self.addr}")
-        print(f"channel:  {self.channel}")
-        print(f"nick:     {self.botname}\n")
-        print(f"senduser: {self.senduser}")
-        print(f"sendnick: {self.sendnick}")
-        print(f"sendjoin: {self.sendjoin}")
+        print(f"net     : {self.net}")
+        print(f"port    : {self.port}")
+        print(f"channel : {self.channel}")
+        print(f"nick    : {self.botname}\n")
+        print(f"senduser: {senduser}")
+        print(f"sendnick: {sendnick}")
+        print(f"sendjoin: {sendjoin}")
+
+        addr = (socket.gethostbyname(self.net), self.port)
+
+        ssl_context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_CLIENT)
+        ssl_context.check_hostname = True
 
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.conn = ssl.wrap_socket(self.conn)
-        self.conn.connect(self.addr)
+        self.conn = ssl_context.wrap_socket(self.conn, server_hostname=self.net)
 
-        self.conn.send(self.senduser.encode(encoding="UTF-8"))
-        self.conn.send(self.sendnick.encode(encoding="UTF-8"))
-        self.conn.send(self.sendjoin.encode(encoding="UTF-8"))
+        try:
+            self.conn.connect(addr)
+        except ssl.SSLCertVerificationError:
+            self.conn.close()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.conn = ssl_context.wrap_socket(self.conn)
+            self.conn.connect(addr)
+
+        self.conn.send(senduser.encode(encoding="UTF-8"))
+        self.conn.send(sendnick.encode(encoding="UTF-8"))
+        self.conn.send(sendjoin.encode(encoding="UTF-8"))
 
         # pylint: disable=anomalous-backslash-in-string
         mirc_strip = re.compile("[\x02\x0F\x16\x1D\x1F]|\x03(\d{,2}(,\d{,2})?)?")
 
         while True:
             data = mirc_strip.sub("", self.conn.recv(2048).decode(encoding="UTF-8"))
-            print(data, end='')
+            print(data, end="")
             if data.split()[0] == "PING":
                 self.conn.send(f"PONG {data.split()[1]}\r\n".encode(encoding="UTF-8"))
 
@@ -102,4 +118,4 @@ class IRC:
                 if cmd == ":?piss":
                     pisser = re.sub(r"^:|\![^!]*$", "", data.split()[0])
                     pissee = " ".join(data.split()[4:])
-                    self._print_piss(pisser,pissee)
+                    self._print_piss(pisser, pissee)

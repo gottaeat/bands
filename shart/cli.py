@@ -1,5 +1,4 @@
 import argparse
-import socket
 
 from .irc import IRC
 
@@ -19,7 +18,8 @@ class CLI:
 
         irc = IRC()
 
-        irc.addr = (socket.gethostbyname(args.net), args.port)
+        irc.net = args.net
+        irc.port = args.port
         irc.channel = f"#{args.channel}"
         irc.botname = args.nick
 
