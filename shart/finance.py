@@ -4,6 +4,7 @@ import ssl
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from threading import Thread
 
 from bs4 import BeautifulSoup
 
@@ -110,9 +111,25 @@ class Finance:
         self.wgb_year = perc[11]
 
     def collect(self):
-        self._get_tcmb()
-        self._get_yahoo()
-        self._get_forbes()
-        self._get_xe()
-        self._get_binance()
-        self._get_wgb()
+        threads = []
+
+        tcmb = Thread(target=self._get_tcmb, daemon=False)
+        yahoo = Thread(target=self._get_yahoo, daemon=False)
+        forbes = Thread(target=self._get_forbes, daemon=False)
+        # pylint: disable=invalid-name
+        xe = Thread(target=self._get_xe, daemon=False)
+        binance = Thread(target=self._get_binance, daemon=False)
+        wgb = Thread(target=self._get_wgb, daemon=False)
+
+        threads.append(tcmb)
+        threads.append(yahoo)
+        threads.append(forbes)
+        threads.append(xe)
+        threads.append(binance)
+        threads.append(wgb)
+
+        for job in threads:
+            job.start()
+
+        for job in threads:
+            job.join()
