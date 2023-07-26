@@ -40,9 +40,11 @@ class IRC:
         msg += f"└ binance  → {finance.binance}\n"
         msg += "CDS\n"
         msg += f"└ wgb      → {finance.wgb_cds}\n"
-        msg += f"  ├ 1w     → {finance.wgb_week}\n"
-        msg += f"  ├ 1m     → {finance.wgb_month}\n"
-        msg += f"  └ 1y     → {finance.wgb_year}"
+
+        if finance.wgb_week is not None:
+            msg += f"  ├ 1w     → {finance.wgb_week}\n"
+            msg += f"  ├ 1m     → {finance.wgb_month}\n"
+            msg += f"  └ 1y     → {finance.wgb_year}"
 
         for i in drawbox(msg, "thic").split("\n"):
             self._send_query(i)
