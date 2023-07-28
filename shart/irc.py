@@ -129,6 +129,10 @@ class IRC:
 
         self.conn.settimeout(None)
 
+        self._send_user()
+        self._send_nick()
+        self._send_join()
+
         signal.signal(signal.SIGINT, self._signal_handler)
 
         # pylint: disable=anomalous-backslash-in-string
