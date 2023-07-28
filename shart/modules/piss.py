@@ -1,4 +1,4 @@
-from .util import drawbox
+from shart.util import drawbox
 
 
 # pylint: disable=too-few-public-methods

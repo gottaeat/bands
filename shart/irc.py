@@ -4,8 +4,8 @@ import ssl
 import sys
 import signal
 
-from .finance import Finance
-from .piss import Piss
+from .modules.finance import Finance
+from .modules.piss import Piss
 from .util import drawbox
 
 
