@@ -1,6 +1,8 @@
 import re
 import socket
 import ssl
+import sys
+import signal
 
 from .finance import Finance
 from .piss import Piss
@@ -14,10 +16,43 @@ class IRC:
         self.port = None
         self.channel = None
         self.botname = None
+
+        self.tls = None
+        self.noverify = None
+
         self.conn = None
 
+    def _send_raw(self, msg):
+        self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
+
     def _send_query(self, msg):
-        self.conn.send(f"PRIVMSG {self.channel} :{msg}\r\n".encode(encoding="UTF-8"))
+        self._send_raw(f"PRIVMSG {self.channel} :{msg}")
+
+    def _send_pong(self):
+        self._send_raw(f"PING {self.botname}")
+
+    def _send_user(self):
+        self._send_raw(
+            f"USER {self.botname} {self.botname} {self.botname} {self.botname}"
+        )
+
+    def _send_nick(self):
+        self._send_raw(f"NICK {self.botname}")
+
+    def _send_join(self):
+        self._send_raw(f"JOIN {self.channel}")
+
+    # pylint: disable=unused-argument
+    def _signal_handler(self, signum, frame):
+        signame = signal.Signals(signum).name
+
+        if signame in {"SIGINT", "SIGTERM"}:
+            msg = f"caught {signame}."
+
+        print(f"\n{msg}")
+        self._send_raw(f"QUIT :{msg}")
+        self.conn.close()
+        sys.exit(0)
 
     def _print_help(self):
         helptext = "help\n"
@@ -62,51 +97,53 @@ class IRC:
                 for line in piss.printpiss().split("\n"):
                     self._send_query(line)
 
+    # pylint: disable=too-many-branches
     def connect(self):
-        senduser = (
-            f"USER {self.botname} {self.botname} {self.botname} {self.botname}\r\n"
-        )
-        sendnick = f"NICK {self.botname}\r\n"
-        sendjoin = f"JOIN {self.channel}\r\n"
-
-        print(f"net     : {self.net}")
-        print(f"port    : {self.port}")
-        print(f"channel : {self.channel}")
-        print(f"nick    : {self.botname}\n")
-        print(f"senduser: {senduser}")
-        print(f"sendnick: {sendnick}")
-        print(f"sendjoin: {sendjoin}")
-
         addr = (socket.gethostbyname(self.net), self.port)
 
-        ssl_context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_CLIENT)
-        ssl_context.check_hostname = True
+        if self.tls:
+            ssl_context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_CLIENT)
+
+            if self.noverify:
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+            else:
+                ssl_context.check_hostname = True
 
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.conn = ssl_context.wrap_socket(self.conn, server_hostname=self.net)
+        self.conn.settimeout(5)
 
+        if self.tls:
+            if self.noverify:
+                self.conn = ssl_context.wrap_socket(self.conn)
+            else:
+                self.conn = ssl_context.wrap_socket(self.conn, server_hostname=self.net)
+
+        # pylint: disable=raise-missing-from
         try:
             self.conn.connect(addr)
-        except ssl.SSLCertVerificationError:
-            self.conn.close()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.conn = ssl_context.wrap_socket(self.conn)
-            self.conn.connect(addr)
+        except ssl.SSLCertVerificationError as exc_msg:
+            raise ValueError(f"E: Attempting to connect with TLS failed:\n{exc_msg}")
+        except TimeoutError as exc_msg:
+            raise ValueError(f"E: Connection timed out:\n{exc_msg}")
 
-        self.conn.send(senduser.encode(encoding="UTF-8"))
-        self.conn.send(sendnick.encode(encoding="UTF-8"))
-        self.conn.send(sendjoin.encode(encoding="UTF-8"))
+        self.conn.settimeout(None)
+
+        signal.signal(signal.SIGINT, self._signal_handler)
 
         # pylint: disable=anomalous-backslash-in-string
         mirc_strip = re.compile("[\x02\x0F\x16\x1D\x1F]|\x03(\d{,2}(,\d{,2})?)?")
 
         while True:
             data = mirc_strip.sub("", self.conn.recv(2048).decode(encoding="UTF-8"))
+            if len(data) == 0:
+                self.conn.close()
+                raise ValueError("E: received nothing.")
+
             print(data, end="")
+
             if data.split()[0] == "PING":
-                self.conn.send(f"PONG {data.split()[1]}\r\n".encode(encoding="UTF-8"))
+                self._send_pong()
 
             if data.split()[1] == "PRIVMSG" and data.split()[2] == self.channel:
                 cmd = data.split()[3]
