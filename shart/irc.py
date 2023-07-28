@@ -48,11 +48,9 @@ class IRC:
 
         if signame in {"SIGINT", "SIGTERM"}:
             msg = f"caught {signame}."
-
-        print(f"\n{msg}")
-        self._send_raw(f"QUIT :{msg}")
-        self.conn.close()
-        sys.exit(0)
+            self._send_raw(f"QUIT :{msg}")
+            self.conn.close()
+            sys.exit(0)
 
     def _print_help(self):
         helptext = "help\n"
