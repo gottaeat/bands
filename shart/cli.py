@@ -14,7 +14,12 @@ class CLI:
         parser.add_argument("--net", type=str, required=True)
         parser.add_argument("--port", type=int, required=True)
         parser.add_argument("--channel", type=str, required=True)
+        parser.add_argument("--tls", action="store_true")
+        parser.add_argument("--noverify", action="store_true")
         args = parser.parse_args()
+
+        if args.noverify and not args.tls:
+            raise ValueError("noverify requested without tls.")
 
         irc = IRC()
 
@@ -22,6 +27,9 @@ class CLI:
         irc.port = args.port
         irc.channel = f"#{args.channel}"
         irc.botname = args.nick
+
+        irc.tls = args.tls
+        irc.noverify = args.noverify
 
         irc.connect()
 
