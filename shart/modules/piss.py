@@ -8,6 +8,14 @@ class Piss:
 
     @staticmethod
     def print(core, pisser, pissee):
+        if len(str(pissee)) == 0:
+            core.send_query(f"{pisser}: on who?")
+            return
+
+        if len(str(pissee)) >= 20:
+            core.send_query(f"{pisser}: pissee longer than 20 chars.")
+            return
+
         msg = "     ë\n"
         msg += f"   .-║- <- {pisser} \n"
         msg += "   ╭╰\\\n"
