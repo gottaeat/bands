@@ -1,2 +1,12 @@
 bands
 =====
+└ bands/
+  ├ cli.py       → parsing of user inputs and the Core() -> IRC() handoff.
+  ├ core.py      → core IRC functionality and creation of the socket.
+  ├ irc.py       → main loop entered after connection is established.
+  ├ util.py      → collection of functions for modules to make use of.
+  └ modules/
+    ├ finance.py → finance API scraper, scraping TCMB, Yahoo, XE, Forbes and
+    │              Binance for forex rates and World Government Bonds for CDS.
+    ├ help.py    → basic help prompt.
+    └ piss.py    → funny little humorous joke for a fun time between friends.
