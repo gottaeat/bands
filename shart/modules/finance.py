@@ -16,8 +16,6 @@ from shart.util import drawbox
 # pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Finance:
     def __init__(self):
-        self.timestamp = None
-
         self.tcmb = None
         self.yahoo = None
         self.forbes = None
@@ -176,8 +174,6 @@ class Finance:
         threads.append(binance)
         threads.append(wgb)
 
-        self.timestamp = time.strftime("%a %d %H:%M:%S")
-
         for job in threads:
             job.start()
 
@@ -187,8 +183,7 @@ class Finance:
     def print(self, core):
         self._collect()
 
-        msg = f"[{self.timestamp}]\n"
-        msg += "USDTRY\n"
+        msg = "USDTRY\n"
         msg += f"├ central  → {self.tcmb}\n"
         msg += f"├ xe       → {self.xe}\n"
         msg += f"├ yahoo    → {self.yahoo}\n"
