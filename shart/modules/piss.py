@@ -4,16 +4,19 @@ from shart.util import drawbox
 # pylint: disable=too-few-public-methods
 class Piss:
     def __init__(self):
-        self.pisser = None
-        self.pissee = None
+        pass
 
-    def printpiss(self):
-        lolman = "     ë\n"
-        lolman += f"   .-║- <- {self.pisser} \n"
-        lolman += "   ╭╰\\\n"
-        lolman += "   ┊/ \\\n"
-        lolman += "   ┊\n"
-        lolman += f" {self.pissee}\n"
-        lolman = drawbox(lolman, "single")
+    @staticmethod
+    def print(core, pisser, pissee):
+        msg = "     ë\n"
+        msg += f"   .-║- <- {pisser} \n"
+        msg += "   ╭╰\\\n"
+        msg += "   ┊/ \\\n"
+        msg += "   ┊\n"
+        msg += f" {pissee}\n"
 
-        return f"{lolman}{self.pissee} just got pissed on by {self.pisser}."
+        msg = drawbox(msg, "single")
+        msg += f"{pissee} just got pissed on by {pisser}"
+
+        for line in msg.split("\n"):
+            core.send_query(line)

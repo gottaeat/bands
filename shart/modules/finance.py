@@ -1,17 +1,23 @@
 import json
 import re
 import ssl
+import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+
 from threading import Thread
 
 from bs4 import BeautifulSoup
+
+from shart.util import drawbox
 
 
 # pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Finance:
     def __init__(self):
+        self.timestamp = None
+
         self.tcmb = None
         self.yahoo = None
         self.forbes = None
@@ -152,7 +158,7 @@ class Finance:
         except IndexError:
             self.wgb_cds = "parse failed"
 
-    def collect(self):
+    def _collect(self):
         threads = []
 
         tcmb = Thread(target=self._get_tcmb, daemon=False)
@@ -170,8 +176,32 @@ class Finance:
         threads.append(binance)
         threads.append(wgb)
 
+        self.timestamp = time.strftime("%a %d %H:%M:%S")
+
         for job in threads:
             job.start()
 
         for job in threads:
             job.join()
+
+    def print(self, core):
+        self._collect()
+
+        msg = f"[{self.timestamp}]\n"
+        msg += "USDTRY\n"
+        msg += f"├ central  → {self.tcmb}\n"
+        msg += f"├ xe       → {self.xe}\n"
+        msg += f"├ yahoo    → {self.yahoo}\n"
+        msg += f"└ forbes   → {self.forbes}\n"
+        msg += "USDTTRY\n"
+        msg += f"└ binance  → {self.binance}\n"
+        msg += "CDS\n"
+        msg += f"└ wgb      → {self.wgb_cds}\n"
+
+        if self.wgb_week is not None:
+            msg += f"  ├ 1w     → {self.wgb_week}\n"
+            msg += f"  ├ 1m     → {self.wgb_month}\n"
+            msg += f"  └ 1y     → {self.wgb_year}"
+
+        for i in drawbox(msg, "thic").split("\n"):
+            core.send_query(i)

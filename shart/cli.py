@@ -1,5 +1,6 @@
 import argparse
 
+from .core import Core
 from .irc import IRC
 
 
@@ -21,17 +22,21 @@ class CLI:
         if args.noverify and not args.tls:
             raise ValueError("noverify requested without tls.")
 
-        irc = IRC()
+        # init core
+        core = Core()
 
-        irc.net = args.net
-        irc.port = args.port
-        irc.channel = f"#{args.channel}"
-        irc.botname = args.nick
+        core.net = args.net
+        core.port = args.port
+        core.channel = f"#{args.channel}"
+        core.botname = args.nick
+        core.tls = args.tls
+        core.noverify = args.noverify
 
-        irc.tls = args.tls
-        irc.noverify = args.noverify
+        core.connect()
 
-        irc.connect()
+        # hand over to IRC
+        irc = IRC(core)
+        irc.run()
 
 
 def run():
