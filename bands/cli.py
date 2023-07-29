@@ -10,8 +10,8 @@ class CLI:
         pass
 
     def run(self):
-        parser = argparse.ArgumentParser(description="shart the IRC bot.")
-        parser.add_argument("--nick", type=str, default="shart")
+        parser = argparse.ArgumentParser(description="bands the IRC bot.")
+        parser.add_argument("--nick", type=str, default="bands")
         parser.add_argument("--net", type=str, required=True)
         parser.add_argument("--port", type=int, required=True)
         parser.add_argument("--channel", type=str, required=True)

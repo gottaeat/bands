@@ -33,7 +33,7 @@ class IRC:
                 user = re.sub(r"^:|\![^!]*$", "", data.split()[0])
                 user_args = " ".join(data.split()[4:])
 
-                if cmd == ":?islam":
+                if cmd == ":?bands":
                     Finance().print(self.core)
 
                 if cmd == ":?help":

@@ -10,7 +10,7 @@ from threading import Thread
 
 from bs4 import BeautifulSoup
 
-from shart.util import drawbox
+from bands.util import drawbox
 
 
 # pylint: disable=too-many-instance-attributes,too-few-public-methods

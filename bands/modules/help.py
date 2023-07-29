@@ -1,4 +1,4 @@
-from shart.util import drawbox
+from bands.util import drawbox
 
 
 # pylint: disable=too-few-public-methods
@@ -9,8 +9,8 @@ class Help:
     @staticmethod
     def print(core):
         msg = "help\n"
-        msg += "├ usage: {?help|?islam|?piss [chatter]}\n"
-        msg += "└ src  : https://github.com/gottaeat/shart\n"
+        msg += "├ usage: {?help|?bands|?piss [chatter]}\n"
+        msg += "└ src  : https://github.com/gottaeat/bands\n"
 
         msg = drawbox(msg, "thic")
 

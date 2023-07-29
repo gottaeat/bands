@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "shart"
+name = "bands"
 authors = [{name = "gottaeat", email = "mss@tutanota.de"}]
 readme = {file = "README", content-type = "text/plain"}
 license = {file = "LICENSE"}
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.urls]
-Source = "http://github.com/gottaeat/shart"
+Source = "http://github.com/gottaeat/bands"
 
 [project.scripts]
-shart = "shart.cli:run"
+bands = "bands.cli:run"
