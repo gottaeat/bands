@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name,bare-except
 import json
 import re
 import ssl
@@ -34,8 +35,14 @@ class Finance:
         try:
             with urllib.request.urlopen(req, context=context) as f:
                 data = f.read().decode()
-        except urllib.error.HTTPError:
-            self.tcmb = "GET failed"
+        except urllib.request.HTTPError as e:
+            self.tcmb = f"HTTP {e.code}"
+            return
+        except urllib.error.URLError as e:
+            self.tcmb = f"URL {e.reason.errno}"
+            return
+        except:
+            self.tcmb = "Error"
             return
 
         try:
@@ -45,8 +52,8 @@ class Finance:
             tcmb_selling = float(tcmbxml_root.findall("Currency/ForexSelling")[0].text)
 
             self.tcmb = (tcmb_buying + tcmb_selling) / 2
-        except IndexError:
-            self.tcmb = "parse failed"
+        except:
+            self.tcmb = "Parse Error"
 
     def _get_yahoo(self):
         url = "https://query1.finance.yahoo.com/v8/finance/chart/"
@@ -56,14 +63,20 @@ class Finance:
         try:
             with urllib.request.urlopen(req) as f:
                 data = json.loads(f.read().decode())
-        except urllib.error.HTTPError:
-            self.yahoo = "GET failed"
+        except urllib.request.HTTPError as e:
+            self.yahoo = f"HTTP {e.code}"
+            return
+        except urllib.error.URLError as e:
+            self.yahoo = f"URL {e.reason.errno}"
+            return
+        except:
+            self.yahoo = "Error"
             return
 
         try:
             self.yahoo = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
-        except KeyError:
-            self.yahoo = "parse failed"
+        except:
+            self.yahoo = "Parse Error"
 
     def _get_forbes(self):
         url = (
@@ -75,15 +88,21 @@ class Finance:
         try:
             with urllib.request.urlopen(req) as f:
                 data = f.read().decode()
-        except urllib.error.HTTPError:
-            self.forbes = "GET failed"
+        except urllib.request.HTTPError as e:
+            self.forbes = f"HTTP {e.code}"
+            return
+        except urllib.error.URLError as e:
+            self.forbes = f"URL {e.reason.errno}"
+            return
+        except:
+            self.forbes = "Error"
             return
 
         try:
             soup = BeautifulSoup(data, "html.parser")
             self.forbes = soup.find_all("span", {"class": "amount"})[0].get_text()
-        except IndexError:
-            self.forbes = "parse failed"
+        except:
+            self.forbes = "Parse Error"
 
     def _get_xe(self):
         url = "https://www.x-rates.com/calculator/?"
@@ -93,8 +112,14 @@ class Finance:
         try:
             with urllib.request.urlopen(req) as f:
                 data = f.read().decode()
-        except urllib.error.HTTPError:
-            self.xe = "GET failed"
+        except urllib.request.HTTPError as e:
+            self.xe = f"HTTP {e.code}"
+            return
+        except urllib.error.URLError as e:
+            self.xe = f"URL {e.reason.errno}"
+            return
+        except:
+            self.xe = "Error"
             return
 
         try:
@@ -104,8 +129,8 @@ class Finance:
                 .get_text()
                 .split(" ")[0]
             )
-        except IndexError:
-            self.xe = "parse failed"
+        except:
+            self.xe = "Parse Error"
 
     def _get_binance(self):
         url = "https://api.binance.com/api/v3/ticker/price?"
@@ -115,14 +140,20 @@ class Finance:
         try:
             with urllib.request.urlopen(req) as f:
                 data = f.read().decode()
-        except urllib.error.HTTPError:
-            self.binance = "GET failed"
+        except urllib.request.HTTPError as e:
+            self.binance = f"HTTP {e.code}"
+            return
+        except urllib.error.URLError as e:
+            self.binance = f"URL {e.reason.errno}"
+            return
+        except:
+            self.binance = "Error"
             return
 
         try:
             self.binance = float(json.loads(data)["price"].rstrip("0"))
-        except KeyError:
-            self.binance = "parse failed"
+        except:
+            self.binance = "Parse Error"
 
     def _get_wgb(self):
         req = "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/"
@@ -130,8 +161,14 @@ class Finance:
         try:
             with urllib.request.urlopen(req) as f:
                 data = f.read().decode()
-        except urllib.error.HTTPError:
-            self.wgb_cds = "GET failed"
+        except urllib.request.HTTPError as e:
+            self.wgb_cds = f"HTTP {e.code}"
+            return
+        except urllib.error.URLError as e:
+            self.wgb_cds = f"URL {e.reason.errno}"
+            return
+        except:
+            self.wgb_cds = "Error"
             return
 
         try:
@@ -152,8 +189,8 @@ class Finance:
             self.wgb_week = perc[3]
             self.wgb_month = perc[7]
             self.wgb_year = perc[11]
-        except IndexError:
-            self.wgb_cds = "parse failed"
+        except:
+            self.wgb_cds = "Parse Error"
 
     def _collect(self):
         threads = []
