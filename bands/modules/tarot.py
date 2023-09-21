@@ -1,9 +1,9 @@
 import os
 import json
 import random
-import textwrap
 
 
+# pylint: disable=too-few-public-methods
 class TarotCard:
     def __init__(self, title, desc1, desc2):
         self.title = title
@@ -64,18 +64,15 @@ class Tarot:
 
         return finmsg
 
-    @staticmethod
-    def print(core, user, user_args):
+    def print(self, core, user, user_args):
         if len(user_args) != 0 and user_args != "explain":
             core.send_query(f"{user}, usage: ?tarot {{explain}}")
             return
 
-        a = Tarot()
-
         if user_args == "explain":
-            msg = a._explain()
+            msg = self._explain()
         else:
-            msg = a._run()
+            msg = self._run()
 
         for line in msg.split("\n"):
             core.send_query(line)
