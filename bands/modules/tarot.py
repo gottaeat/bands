@@ -2,6 +2,8 @@ import os
 import json
 import random
 
+from bands.util import MIRCColors
+
 
 # pylint: disable=too-few-public-methods
 class TarotCard:
@@ -17,6 +19,9 @@ class Tarot:
     )
 
     def __init__(self):
+        # pylint: disable=invalid-name
+        self.c = MIRCColors()
+
         self.cards = []
         self.deck = []
         self.tarot_data = None
@@ -50,7 +55,9 @@ class Tarot:
     def _explain(self):
         finmsg = ""
         for index, val in enumerate(self.tarot_data["card_order"]):
-            finmsg += f"[#{index+1:02}] {val['desc']}\n"
+            finmsg += f"{self.c.GREEN}[{self.c.LBLUE}#{index+1:02}{self.c.GREEN}] "
+            finmsg += f"{self.c.WHITE}{val['desc']} "
+            finmsg += f"{self.c.RES}\n"
 
         return finmsg
 
@@ -60,7 +67,11 @@ class Tarot:
 
         finmsg = ""
         for index, card in enumerate(self.deck):
-            finmsg += f"[#{index+1:02}] | {card.title} | {card.desc1} | {card.desc2}\n"
+            finmsg += f"{self.c.GREEN}[{self.c.LBLUE}#{index+1:02}{self.c.GREEN}] "
+            finmsg += f"{self.c.WHITE}{card.title} "
+            finmsg += f"{self.c.LBLUE}{card.desc1} "
+            finmsg += f"{self.c.LRED}{card.desc2}"
+            finmsg += f"{self.c.RES}\n"
 
         return finmsg
 
