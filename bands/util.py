@@ -2,6 +2,32 @@ import re
 import unicodedata
 
 
+# pylint: disable=too-few-public-methods
+class MIRCColors:
+    RES = "\x0f"
+    BOLD = "\x02"
+
+    WHITE = "\x030"
+    BLACK = "\x031"
+    BLUE = "\x032"
+    GREEN = "\x033"
+    LRED = "\x034"
+    BROWN = "\x035"
+    PURPLE = "\x036"
+    ORANGE = "\x037"
+    YELLOW = "\x038"
+    LGREEN = "\x039"
+    CYAN = "\x0310"
+    LCYAN = "\x0311"
+    LBLUE = "\x0312"
+    PINK = "\x0313"
+    GREY = "\x0314"
+    LGREY = "\x0315"
+
+    def __init__(self):
+        pass
+
+
 def unilen(string):
     width = 0
     for i in string:
