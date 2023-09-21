@@ -5,8 +5,10 @@ bands
   ├ core.py      → core IRC functionality and creation of the socket.
   ├ irc.py       → main loop entered after connection is established.
   ├ util.py      → collection of functions for modules to make use of.
+  ├ files/       → static files.
   └ modules/
     ├ finance.py → finance API scraper, scraping TCMB, Yahoo, XE, Forbes and
     │              Binance for forex rates and World Government Bonds for CDS.
     ├ help.py    → basic help prompt.
-    └ piss.py    → funny little humorous joke for a fun time between friends.
+    ├ piss.py    → funny little humorous joke for a fun time between friends.
+    └ tarot.py   → celtic cross tarot spread.
