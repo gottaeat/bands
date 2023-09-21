@@ -25,7 +25,6 @@ class Tarot:
         self.cards = []
         self.deck = []
         self.tarot_data = None
-        self.ordermsg = []
 
         self._parse_json()
 
