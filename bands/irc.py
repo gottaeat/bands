@@ -4,6 +4,7 @@ from .modules.finance import Finance
 from .modules.help import Help
 from .modules.piss import Piss
 from .modules.tarot import Tarot
+from .modules.advice import Advice
 
 
 # pylint: disable=too-few-public-methods
@@ -45,3 +46,6 @@ class IRC:
 
                 if cmd == ":?tarot":
                     Tarot().print(self.core, user, user_args)
+
+                if cmd == ":?advice":
+                    Advice().print(self.core, user, user_args)
