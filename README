@@ -7,6 +7,7 @@ bands
   ├ util.py      → collection of functions for modules to make use of.
   ├ files/       → static files.
   └ modules/
+    ├ advice.py  → endless supply of useful advice covering all sorts of topics.
     ├ finance.py → finance API scraper, scraping TCMB, Yahoo, XE, Forbes and
     │              Binance for forex rates and World Government Bonds for CDS.
     ├ help.py    → basic help prompt.
