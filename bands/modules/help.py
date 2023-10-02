@@ -10,7 +10,8 @@ class Help:
     def print(core):
         msg = "help\n"
         msg += "├ usage: {?help|?bands|?piss [chatter]}\n"
-        msg += "├      : {?tarot {explain}}\n"
+        msg += "│      : {?advice {target}}\n"
+        msg += "│      : {?tarot {explain}}\n"
         msg += "└ src  : https://github.com/gottaeat/bands\n"
 
         msg = drawbox(msg, "thic")
