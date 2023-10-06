@@ -57,8 +57,8 @@ class Tarot:
         finmsg = ""
 
         for index, card in enumerate(self.deck):
-            order_title = self.tarot_data["card_order"][index]['title']
-            order_desc = self.tarot_data["card_order"][index]['desc']
+            order_title = self.tarot_data["card_order"][index]["title"]
+            order_desc = self.tarot_data["card_order"][index]["desc"]
 
             finmsg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}]"
             finmsg += f"[{c.LCYAN}{order_title}{c.GREEN}]{c.LBLUE}: "
