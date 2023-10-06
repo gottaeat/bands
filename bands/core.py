@@ -5,6 +5,7 @@ import ssl
 import sys
 
 
+# pylint: disable=too-many-instance-attributes
 class Core:
     USER_NICKLIMIT = 30
 
