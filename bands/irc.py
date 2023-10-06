@@ -43,7 +43,7 @@ class IRC:
                     Piss().print(self.core, user, user_args)
 
                 if cmd == ":?tarot":
-                    Tarot().print(self.core, user, user_args)
+                    Tarot().print(self.core)
 
                 if cmd == ":?advice":
                     Advice().print(self.core, user, user_args)

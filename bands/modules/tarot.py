@@ -70,7 +70,7 @@ class Tarot:
 
         return finmsg
 
-    def print(self, core, user, user_args):
+    def print(self, core):
         msg = self._run()
 
         for line in msg.split("\n"):
