@@ -18,5 +18,4 @@ class Help:
         msg += f"{c.WHITE}│       {c.LBLUE}→{c.RES} {{?advice {{target}}}}\n"
         msg += f"{c.WHITE}└ {c.LRED}src   {c.LBLUE}→{c.RES} https://github.com/gottaeat/bands"
 
-        for line in drawbox(msg, "thic").split("\n"):
-            core.send_query(line)
+        core.send_query_split(drawbox(msg, "thic"))

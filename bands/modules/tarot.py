@@ -71,7 +71,4 @@ class Tarot:
         return finmsg
 
     def print(self, core):
-        msg = self._run()
-
-        for line in msg.split("\n"):
-            core.send_query(line)
+        core.send_query_split(self._run())

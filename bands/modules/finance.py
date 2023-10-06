@@ -235,9 +235,8 @@ class Finance:
         msg += f"{c.WHITE}└ {c.LRED}wgb     {c.LBLUE}→{c.RES} {self.wgb_cds}\n"
 
         if self.wgb_week:
-            msg += f"  {c.WHITE}├ {c.LRED}1w     {c.LBLUE}→{c.RES} {self.wgb_week}\n"
-            msg += f"  {c.WHITE}├ {c.LRED}1m     {c.LBLUE}→{c.RES} {self.wgb_month}\n"
-            msg += f"  {c.WHITE}└ {c.LRED}1y     {c.LBLUE}→{c.RES} {self.wgb_year}"
+            msg += f"  {c.WHITE}├ {c.LRED}1w    {c.LBLUE}→{c.RES} {self.wgb_week}\n"
+            msg += f"  {c.WHITE}├ {c.LRED}1m    {c.LBLUE}→{c.RES} {self.wgb_month}\n"
+            msg += f"  {c.WHITE}└ {c.LRED}1y    {c.LBLUE}→{c.RES} {self.wgb_year}"
 
-        for i in drawbox(msg, "thic").split("\n"):
-            core.send_query(i)
+        core.send_query_split(drawbox(msg, "thic"))
