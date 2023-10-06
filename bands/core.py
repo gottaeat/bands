@@ -5,6 +5,8 @@ import sys
 
 
 class Core:
+    USER_NICKLIMIT = 30
+
     def __init__(self):
         self.net = None
         self.port = None
