@@ -50,7 +50,4 @@ class Advice:
         return finmsg
 
     def print(self, core, user, user_args=None):
-        msg = self._run(core, user, user_args)
-
-        for line in msg.split("\n"):
-            core.send_query(line)
+        core.send_query(self._run(core, user, user_args))
