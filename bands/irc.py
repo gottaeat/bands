@@ -1,5 +1,7 @@
 import re
 
+from .util import strip_color
+
 from .modules.finance import Finance
 from .modules.help import Help
 from .modules.piss import Piss
@@ -13,13 +15,9 @@ class IRC:
         self.core = core
 
     def run(self):
-        # pylint: disable=anomalous-backslash-in-string
-        mirc_strip = re.compile("[\x02\x0F\x16\x1D\x1F]|\x03(\d{,2}(,\d{,2})?)?")
-
         while True:
-            data = mirc_strip.sub(
-                "", self.core.conn.recv(2048).decode(encoding="UTF-8")
-            )
+            data = strip_color(self.core.conn.recv(2048).decode(encoding="UTF-8"))
+
             if len(data) == 0:
                 self.core.conn.close()
                 raise ValueError("E: received nothing.")
