@@ -1,4 +1,8 @@
 from bands.util import drawbox
+from bands.util import MIRCColors
+
+# pylint: disable=invalid-name
+c = MIRCColors()
 
 
 # pylint: disable=too-few-public-methods
@@ -8,13 +12,11 @@ class Help:
 
     @staticmethod
     def print(core):
-        msg = "help\n"
-        msg += "├ usage: {?help|?bands|?piss [chatter]}\n"
-        msg += "│      : {?advice {target}}\n"
-        msg += "│      : {?tarot {explain}}\n"
-        msg += "└ src  : https://github.com/gottaeat/bands\n"
+        msg = f"{c.WHITE}help{c.RES}\n"
+        msg += f"{c.WHITE}├ {c.LRED}usage {c.LBLUE}→{c.RES} {{?help|?bands|?tarot}}\n"
+        msg += f"{c.WHITE}│       {c.LBLUE}→{c.RES} {{?piss [target]}}\n"
+        msg += f"{c.WHITE}│       {c.LBLUE}→{c.RES} {{?advice {{target}}}}\n"
+        msg += f"{c.WHITE}└ {c.LRED}src   {c.LBLUE}→{c.RES} https://github.com/gottaeat/bands"
 
-        msg = drawbox(msg, "thic")
-
-        for line in msg.split("\n"):
+        for line in drawbox(msg, "thic").split("\n"):
             core.send_query(line)
