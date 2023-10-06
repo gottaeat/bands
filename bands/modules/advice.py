@@ -4,15 +4,15 @@ import random
 
 from bands.util import MIRCColors
 
+# pylint: disable=invalid-name
+c = MIRCColors()
+
 
 # pylint: disable=too-few-public-methods
 class Advice:
     ADV_FILE = f"{os.path.dirname(os.path.realpath(__file__))}/../files/advices.json"
 
     def __init__(self):
-        # pylint: disable=invalid-name
-        self.c = MIRCColors()
-
         self.adv_data = None
 
     def _parse_json(self):
@@ -22,8 +22,8 @@ class Advice:
     def _run(self, user, user_args):
         if user_args:
             if len(user_args.split(" ")) > 1:
-                finmsg = f"{self.c.WHITE}{user}{self.c.LBLUE},{self.c.RES} "
-                finmsg += f"{self.c.LRED}multicast advice support disabled.{self.c.RES}"
+                finmsg = f"{c.WHITE}{user}{c.LBLUE},{c.RES} "
+                finmsg += f"{c.LRED}multicast advice support disabled.{c.RES}"
                 return finmsg
 
             target = user_args
@@ -35,8 +35,8 @@ class Advice:
         random.shuffle(self.adv_data)
         advice = self.adv_data.pop(random.randrange(len(self.adv_data)))
 
-        finmsg = f"{self.c.WHITE}{target}{self.c.LBLUE},{self.c.RES} "
-        finmsg += f"{self.c.GREEN}{advice}{self.c.RES}\n"
+        finmsg = f"{c.WHITE}{target}{c.LBLUE},{c.RES} "
+        finmsg += f"{c.GREEN}{advice}{c.RES}\n"
 
         return finmsg
 
