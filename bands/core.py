@@ -1,3 +1,4 @@
+import time
 import signal
 import socket
 import ssl
@@ -16,6 +17,8 @@ class Core:
         self.tls = None
         self.noverify = None
 
+        self.scroll_speed = None
+
         self.conn = None
 
     def send_raw(self, msg):
@@ -23,6 +26,11 @@ class Core:
 
     def send_query(self, msg):
         self.send_raw(f"PRIVMSG {self.channel} :{msg}")
+
+    def send_query_split(self, msg):
+        for line in msg.split("\n"):
+            self.send_query(line)
+            time.sleep(self.scroll_speed)
 
     def send_pong(self):
         self.send_raw(f"PING {self.botname}")
