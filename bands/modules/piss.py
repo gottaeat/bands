@@ -1,3 +1,4 @@
+from bands.util import unilen
 from bands.util import drawbox
 from bands.util import MIRCColors
 
@@ -18,9 +19,9 @@ class Piss:
             core.send_query(msg)
             return
 
-        if len(str(pissee)) >= 30:
+        if unilen(str(pissee)) > core.USER_NICKLIMIT:
             msg = f"{c.ORANGE}{pisser}{c.LBLUE}, {c.YELLOW}pissee "
-            msg += f"{c.LRED}is longer than 30 chats.{c.RES}"
+            msg += f"{c.LRED}is wider than {core.USER_NICKLIMIT} chars.{c.RES}"
             core.send_query(msg)
             return
 
