@@ -11,6 +11,11 @@ from threading import Thread
 from bs4 import BeautifulSoup
 
 from bands.util import drawbox
+from bands.util import MIRCColors
+
+
+# pylint: disable=invalid-name
+c = MIRCColors()
 
 
 # pylint: disable=too-many-instance-attributes,too-few-public-methods
@@ -219,20 +224,20 @@ class Finance:
     def print(self, core):
         self._collect()
 
-        msg = "USDTRY\n"
-        msg += f"├ central  → {self.tcmb}\n"
-        msg += f"├ xe       → {self.xe}\n"
-        msg += f"├ yahoo    → {self.yahoo}\n"
-        msg += f"└ forbes   → {self.forbes}\n"
-        msg += "USDTTRY\n"
-        msg += f"└ binance  → {self.binance}\n"
-        msg += "CDS\n"
-        msg += f"└ wgb      → {self.wgb_cds}\n"
+        msg = f"{c.WHITE}USDTRY{c.RES}\n"
+        msg += f"{c.WHITE}├ {c.LRED}central {c.LBLUE}→{c.RES} {self.tcmb}\n"
+        msg += f"{c.WHITE}├ {c.LRED}xe      {c.LBLUE}→{c.RES} {self.xe}\n"
+        msg += f"{c.WHITE}├ {c.LRED}yahoo   {c.LBLUE}→{c.RES} {self.yahoo}\n"
+        msg += f"{c.WHITE}└ {c.LRED}forbes  {c.LBLUE}→{c.RES} {self.forbes}\n"
+        msg += f"{c.WHITE}USDTTRY{c.RES}\n"
+        msg += f"{c.WHITE}└ {c.LRED}binance {c.LBLUE}→{c.RES} {self.binance}\n"
+        msg += f"{c.WHITE}CDS{c.RES}\n"
+        msg += f"{c.WHITE}└ {c.LRED}wgb     {c.LBLUE}→{c.RES} {self.wgb_cds}\n"
 
-        if self.wgb_week is not None:
-            msg += f"  ├ 1w     → {self.wgb_week}\n"
-            msg += f"  ├ 1m     → {self.wgb_month}\n"
-            msg += f"  └ 1y     → {self.wgb_year}"
+        if self.wgb_week:
+            msg += f"  {c.WHITE}├ {c.LRED}1w     {c.LBLUE}→{c.RES} {self.wgb_week}\n"
+            msg += f"  {c.WHITE}├ {c.LRED}1m     {c.LBLUE}→{c.RES} {self.wgb_month}\n"
+            msg += f"  {c.WHITE}└ {c.LRED}1y     {c.LBLUE}→{c.RES} {self.wgb_year}"
 
         for i in drawbox(msg, "thic").split("\n"):
             core.send_query(i)
