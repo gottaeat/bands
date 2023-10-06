@@ -13,3 +13,8 @@ bands
     ├ help.py    → basic help prompt.
     ├ piss.py    → funny little humorous joke for a fun time between friends.
     └ tarot.py   → celtic cross tarot spread.
+
+installation
+============
+$ git clone --depth=1 https://github.com/gottaeat/bands
+$ pip install .
