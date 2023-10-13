@@ -1,4 +1,5 @@
 import re
+import time
 
 from .util import strip_color
 
@@ -16,13 +17,25 @@ class IRC:
 
     def run(self):
         while True:
-            data = strip_color(self.core.conn.recv(2048).decode(encoding="UTF-8"))
+            data = self.core.conn.recv(512)
+            try:
+                data = data.decode(encoding="UTF-8")
+            except UnicodeDecodeError:
+                try:
+                    data = data.decode(encoding="latin-1")
+                except:
+                    continue
+            except Exception:
+                continue
+
+            data = strip_color(data)
 
             if len(data) == 0:
                 self.core.conn.close()
                 raise ValueError("E: received nothing.")
 
-            print(data, end="")
+            tstamp = time.strftime("%H:%M:%S")
+            print(f"[{tstamp}] {data}", end="")
 
             if data.split()[0] == "PING":
                 self.core.send_pong()
