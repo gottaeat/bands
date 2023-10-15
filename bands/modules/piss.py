@@ -38,4 +38,4 @@ class Piss:
         msg += f"{c.WHITE}by {c.ORANGE}{pisser}"
         msg += f"{c.WHITE}.{c.RES}"
 
-        core.send_query_split(msg)
+        core.send_query(msg)

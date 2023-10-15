@@ -18,4 +18,4 @@ class Help:
         msg += f"{c.WHITE}│       {c.LBLUE}→{c.RES} {{?advice {{target}}}}\n"
         msg += f"{c.WHITE}└ {c.LRED}src   {c.LBLUE}→{c.RES} https://github.com/gottaeat/bands"
 
-        core.send_query_split(drawbox(msg, "thic"))
+        core.send_query(drawbox(msg, "thic"))

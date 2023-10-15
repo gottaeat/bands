@@ -239,4 +239,4 @@ class Finance:
             msg += f"  {c.WHITE}├ {c.LRED}1m    {c.LBLUE}→{c.RES} {self.wgb_month}\n"
             msg += f"  {c.WHITE}└ {c.LRED}1y    {c.LBLUE}→{c.RES} {self.wgb_year}"
 
-        core.send_query_split(drawbox(msg, "thic"))
+        core.send_query(drawbox(msg, "thic"))
