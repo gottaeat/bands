@@ -1,13 +1,24 @@
-import time
+import json
+import os
 import signal
 import socket
 import ssl
 import sys
+import textwrap
+import time
+
+import openai
+
+from bands.util import unilen
 
 
 # pylint: disable=too-many-instance-attributes
 class Core:
     USER_NICKLIMIT = 30
+
+    OPENAI_KEYS_FILE = (
+        f"{os.path.dirname(os.path.realpath(__file__))}/files/openai_keys.json"
+    )
 
     def __init__(self):
         self.net = None
@@ -19,19 +30,47 @@ class Core:
         self.noverify = None
 
         self.scroll_speed = None
+        self.line_length = None
 
         self.conn = None
+
+        # openai
+        self.openai = openai
+        self.openai_key_index = -1
+
+        self.rotate_openai_key()
+
+    def rotate_openai_key(self):
+        if self.openai_key_index >= 3:
+            self.openai_key_index = 0
+        else:
+            self.openai_key_index += 1
+
+        with open(self.OPENAI_KEYS_FILE, "r", encoding="utf-8") as keys_file:
+            openai_keys = json.loads(keys_file.read())["openai_keys"]
+
+        self.openai.api_key = openai_keys[self.openai_key_index]["key"]
 
     def send_raw(self, msg):
         self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
 
     def send_query(self, msg):
-        self.send_raw(f"PRIVMSG {self.channel} :{msg}")
-
-    def send_query_split(self, msg):
-        for line in msg.split("\n"):
-            self.send_query(line)
-            time.sleep(self.scroll_speed)
+        if "\n" in msg:
+            for line in msg.split("\n"):
+                if line != "":
+                    if unilen(line) > self.line_length:
+                        for item in textwrap.wrap(line, self.line_length):
+                            self.send_raw(f"PRIVMSG {self.channel} :{item}")
+                            time.sleep(self.scroll_speed)
+                    else:
+                        self.send_raw(f"PRIVMSG {self.channel} :{line}")
+        else:
+            if unilen(msg) > self.line_length:
+                for item in textwrap.wrap(msg, self.line_length):
+                    self.send_raw(f"PRIVMSG {self.channel} :{item}")
+                    time.sleep(self.scroll_speed)
+            else:
+                self.send_raw(f"PRIVMSG {self.channel} :{msg}")
 
     def send_pong(self):
         self.send_raw(f"PING {self.botname}")
