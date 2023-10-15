@@ -16,6 +16,7 @@ class CLI:
         parser.add_argument("--port", type=int, required=True)
         parser.add_argument("--channel", type=str, required=True)
         parser.add_argument("--speed", type=int, default=0)
+        parser.add_argument("--len", type=int, default=300)
         parser.add_argument("--tls", action="store_true")
         parser.add_argument("--noverify", action="store_true")
         args = parser.parse_args()
@@ -33,6 +34,7 @@ class CLI:
         core.tls = args.tls
         core.noverify = args.noverify
         core.scroll_speed = args.speed
+        core.line_length = args.len
 
         core.connect()
 
