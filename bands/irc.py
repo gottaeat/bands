@@ -3,18 +3,20 @@ import time
 
 from .util import strip_color
 
+from .modules.advice import Advice
 from .modules.finance import Finance
 from .modules.help import Help
 from .modules.piss import Piss
 from .modules.tarot import Tarot
-from .modules.advice import Advice
 
 
 # pylint: disable=too-few-public-methods
 class IRC:
     def __init__(self, core):
         self.core = core
+        self.tarot_deck = None
 
+    # pylint: disable=too-many-branches
     def run(self):
         while True:
             data = self.core.conn.recv(512)
@@ -23,8 +25,10 @@ class IRC:
             except UnicodeDecodeError:
                 try:
                     data = data.decode(encoding="latin-1")
+                # pylint: disable=bare-except
                 except:
                     continue
+            # pylint: disable=broad-exception-caught
             except Exception:
                 continue
 
@@ -56,7 +60,14 @@ class IRC:
                     Piss().print(self.core, user, user_args)
 
                 if cmd == ":?tarot":
-                    Tarot().print(self.core)
+                    retval = Tarot().print(self.core, self.tarot_deck, user_args)
+
+                    try:
+                        if retval[0].__class__.__name__ == "TarotCard":
+                            self.tarot_deck = retval
+                    # pylint: disable=bare-except
+                    except:
+                        pass
 
                 if cmd == ":?advice":
                     Advice().print(self.core, user, user_args)
