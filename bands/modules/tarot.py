@@ -1,8 +1,10 @@
-import os
 import json
+import os
 import random
+import re
 
 from bands.util import MIRCColors
+
 
 # pylint: disable=invalid-name
 c = MIRCColors()
@@ -16,10 +18,18 @@ class TarotCard:
         self.desc2 = desc2
 
 
+# pylint: disable=inconsistent-return-statements
 class Tarot:
     DESC_FILE = (
         f"{os.path.dirname(os.path.realpath(__file__))}/../files/tarot_desc.json"
     )
+
+    MISS_CLEO = "You are a Rastafarian speaking tarot reader mimicking American "
+    MISS_CLEO += "television character Miss Cleo. The decks you read are laid out "
+    MISS_CLEO += "in the context of the Celtic tarot spread. Your responses never "
+    MISS_CLEO += 'include the word "Celtic". Your responses are always limited '
+    MISS_CLEO += "to 400 characters. Your responses never include lists. You always "
+    MISS_CLEO += "respond with a single paragraph."
 
     def __init__(self):
         self.cards = []
@@ -49,14 +59,114 @@ class Tarot:
         for _ in range(0, 10):
             self.deck.append(self.cards.pop(random.randrange(len(self.cards))))
 
+    def _interpret(self, core, deck):
+        # stringify cards
+        cards_str = ""
+        for index, card in enumerate(deck):
+            cards_str += f"{index+1}. {card.title}\n"
+
+        # generate prompt
+        prompt = "Read the following Celtic tarot deck where the cards are ordered "
+        prompt += f"from 1 to 10:\n{cards_str}Respond as the American television "
+        prompt += "character Miss Cleo. Your response must be in Rastafarian. "
+        prompt += "The cards must be read in the context of the Celtic tarot "
+        prompt += 'spread. Your response must not include the word "Celtic". '
+        prompt += "Your response must be limited to 400 characters. Your response "
+        prompt += "must be a paragraph and must not include lists. "
+
+        # role defs
+        message = [
+            {"role": "system", "content": self.MISS_CLEO},
+            {"role": "user", "content": prompt},
+        ]
+
+        # notify that we're generating the reading
+        notif_msg = f"{c.GREEN}[{c.LBLUE}I:{core.openai_key_index}{c.GREEN}] "
+        notif_msg += f"{c.LGREEN}Generating reading:{c.RES}"
+        core.send_query(notif_msg)
+
+        # call openai api
+        try:
+            response = core.openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=message,
+                temperature=0.1,
+                max_tokens=400,
+                frequency_penalty=0.0,
+                n=1,
+            )
+        # pylint: disable=broad-exception-caught
+        except Exception as e:
+            print(e)
+
+            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+            errmsg += f"{c.LRED}create() failed but your deck has been stored, "
+            errmsg += f"you can retry using {c.LGREEN}?tarot last{c.LRED}.{c.RES}"
+
+            core.send_query(errmsg)
+            return
+
+        try:
+            core.send_query(response.choices[0]["message"]["content"])
+        # pylint: disable=broad-exception-caught
+        except Exception as e:
+            print(e)
+
+            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+            errmsg += f"{c.LRED}Failed parsing response but your deck has been"
+            errmsg += f"stored, you can retry using {c.LGREEN}?tarot last"
+            errmsg += f"{c.LRED}.{c.RES}"
+
+            core.send_query(errmsg)
+
+            return
+
     def _run(self):
         self._parse_json()
         self._gen_cards()
         self._pull()
 
+    def print(self, core, deck, user_args):
+        # case 1: rerun the old deck and interpret it
+        if len(user_args) != 0:
+            if user_args == "last":
+                if not deck:
+                    errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                    errmsg += f"{c.LRED}no previous deck found.{c.RES}"
+                    core.send_query(errmsg)
+
+                    return
+
+                # print the cards in the last deck
+                cards_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
+                cards_msg += f"{c.LGREEN}Cards in the last deck are{c.LBLUE}: "
+
+                for index, card in enumerate(deck):
+                    cards_msg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}] "
+                    cards_msg += f"{c.WHITE}{card.title}{c.LBLUE}, "
+
+                cards_msg = re.sub(r", $", f"{c.RES}", cards_msg)
+                core.send_query(cards_msg)
+
+                # gen and send reading
+                self._interpret(core, deck)
+                core.rotate_openai_key()
+
+                return
+
+            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+            errmsg += f"{c.LRED}only arg supported is {{last}}.{c.RES}"
+            core.send_query(errmsg)
+
+            return
+
+        # case 2: gen a deck and interpret it, and store it
+        self._run()
+
+        deck = self.deck
         finmsg = ""
 
-        for index, card in enumerate(self.deck):
+        for index, card in enumerate(deck):
             order_title = self.tarot_data["card_order"][index]["title"]
             order_desc = self.tarot_data["card_order"][index]["desc"]
 
@@ -68,7 +178,10 @@ class Tarot:
             finmsg += f"{c.LRED}{card.desc2}"
             finmsg += f"{c.RES}\n"
 
-        return finmsg
+        core.send_query(finmsg)
 
-    def print(self, core):
-        core.send_query_split(self._run())
+        # gen and send reading
+        self._interpret(core, deck)
+        core.rotate_openai_key()
+
+        return deck
