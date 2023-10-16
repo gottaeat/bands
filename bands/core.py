@@ -2,10 +2,9 @@ import signal
 import socket
 import ssl
 import sys
-import textwrap
 import time
 
-from bands.util import unilen
+from bands.util import wrap_bytes
 
 
 # pylint: disable=too-many-instance-attributes
@@ -24,7 +23,8 @@ class Core:
         self.noverify = None
 
         self.scroll_speed = None
-        self.line_length = None
+
+        self.char_limit = None
 
         self.conn = None
 
@@ -35,15 +35,15 @@ class Core:
         if "\n" in msg:
             for line in msg.split("\n"):
                 if line != "":
-                    if unilen(line) > self.line_length:
-                        for item in textwrap.wrap(line, self.line_length):
+                    if len(line.encode("utf-8")) > self.char_limit:
+                        for item in wrap_bytes(line, self.char_limit):
                             self.send_raw(f"PRIVMSG {self.channel} :{item}")
                             time.sleep(self.scroll_speed)
                     else:
                         self.send_raw(f"PRIVMSG {self.channel} :{line}")
         else:
-            if unilen(msg) > self.line_length:
-                for item in textwrap.wrap(msg, self.line_length):
+            if len(msg.encode("utf-8")) > self.char_limit:
+                for item in wrap_bytes(msg, self.char_limit):
                     self.send_raw(f"PRIVMSG {self.channel} :{item}")
                     time.sleep(self.scroll_speed)
             else:
