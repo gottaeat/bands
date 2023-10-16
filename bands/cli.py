@@ -4,6 +4,7 @@ from .core import Core
 from .irc import IRC
 from .ai import AI
 
+
 # pylint: disable=too-few-public-methods
 class CLI:
     def __init__(self):

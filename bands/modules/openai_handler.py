@@ -1,11 +1,11 @@
-import os
-
 from bands.util import drawbox
 from bands.util import MIRCColors
 
 # pylint: disable=invalid-name
 c = MIRCColors()
 
+
+# pylint: disable=too-few-public-methods
 class OpenAIHandler:
     def __init__(self, core):
         self.core = core
@@ -26,8 +26,6 @@ class OpenAIHandler:
 
     def _reload(self):
         self.core.ai.run()
-        print(self.core.ai.openai.api_key)
-        print(os.path.isfile(self.core.ai._OPENAI_KEYS_FILE))
 
         if not self.core.ai.keys:
             errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
