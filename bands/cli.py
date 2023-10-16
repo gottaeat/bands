@@ -2,7 +2,7 @@ import argparse
 
 from .core import Core
 from .irc import IRC
-
+from .ai import AI
 
 # pylint: disable=too-few-public-methods
 class CLI:
@@ -24,8 +24,13 @@ class CLI:
         if args.noverify and not args.tls:
             raise ValueError("noverify requested without tls.")
 
+        # init ai
+        ai = AI()
+
         # init core
         core = Core()
+
+        core.ai = ai
 
         core.net = args.net
         core.port = args.port
