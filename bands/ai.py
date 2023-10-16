@@ -25,6 +25,8 @@ class AI:
         if os.path.isfile(self._OPENAI_KEYS_FILE):
             with open(self._OPENAI_KEYS_FILE, "r", encoding="utf-8") as keys_file:
                 self.keys = json.loads(keys_file.read())["openai_keys"]
+        else:
+            self.keys = None
 
     def rotate_key(self):
         if not self.keys:
