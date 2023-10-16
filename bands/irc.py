@@ -8,6 +8,7 @@ from .modules.finance import Finance
 from .modules.help import Help
 from .modules.piss import Piss
 from .modules.tarot import Tarot
+from .modules.openai_handler import OpenAIHandler
 
 
 # pylint: disable=too-few-public-methods
@@ -49,6 +50,9 @@ class IRC:
 
                 user = re.sub(r"^:|\![^!]*$", "", data.split()[0])
                 user_args = " ".join(data.split()[4:])
+
+                if cmd == ":?openai":
+                    OpenAIHandler(self.core).print(user_args)
 
                 if cmd == ":?bands":
                     Finance().print(self.core)
