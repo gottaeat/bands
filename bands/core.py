@@ -49,9 +49,6 @@ class Core:
             else:
                 self.send_raw(f"PRIVMSG {self.channel} :{msg}")
 
-    def send_pong(self):
-        self.send_raw(f"PING {self.botname}")
-
     def _send_user(self):
         self.send_raw(
             f"USER {self.botname} {self.botname} {self.botname} {self.botname}"
