@@ -1,13 +1,9 @@
-import json
-import os
 import signal
 import socket
 import ssl
 import sys
 import textwrap
 import time
-
-import openai
 
 from bands.util import unilen
 
@@ -16,11 +12,9 @@ from bands.util import unilen
 class Core:
     USER_NICKLIMIT = 30
 
-    OPENAI_KEYS_FILE = (
-        f"{os.path.dirname(os.path.realpath(__file__))}/files/openai_keys.json"
-    )
-
     def __init__(self):
+        self.ai = None
+
         self.net = None
         self.port = None
         self.channel = None
@@ -33,23 +27,6 @@ class Core:
         self.line_length = None
 
         self.conn = None
-
-        # openai
-        self.openai = openai
-        self.openai_key_index = -1
-
-        self.rotate_openai_key()
-
-    def rotate_openai_key(self):
-        if self.openai_key_index >= 3:
-            self.openai_key_index = 0
-        else:
-            self.openai_key_index += 1
-
-        with open(self.OPENAI_KEYS_FILE, "r", encoding="utf-8") as keys_file:
-            openai_keys = json.loads(keys_file.read())["openai_keys"]
-
-        self.openai.api_key = openai_keys[self.openai_key_index]["key"]
 
     def send_raw(self, msg):
         self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
