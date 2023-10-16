@@ -1,4 +1,5 @@
 import re
+import textwrap
 import unicodedata
 
 
@@ -96,3 +97,28 @@ def drawbox(string, charset):
         fin += line + "\n"
 
     return fin
+
+
+def strip_user(string):
+    return re.sub(r"^:|\![^!]*$", "", string)
+
+
+def wrap_bytes(text, size):
+    # pylint: disable=protected-access
+    words = textwrap.TextWrapper()._split_chunks(text)
+    words.reverse()
+    words = [w.encode() for w in words]
+
+    lines = [b""]
+    while words:
+        word = words.pop(-1)
+        if len(word) > size:
+            words.append(word[size:])
+            word = word[0:size]
+
+        if len(lines[-1]) + len(word) <= size:
+            lines[-1] += word
+        else:
+            lines.append(word)
+
+    return [l.decode() for l in lines]
