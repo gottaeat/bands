@@ -55,16 +55,16 @@ class IRC:
                     OpenAIHandler(self.core).print(user_args)
 
                 if cmd == ":?bands":
-                    Finance().print(self.core)
+                    Finance(self.core).print()
 
                 if cmd == ":?help":
-                    Help().print(self.core)
+                    Help(self.core).print()
 
                 if cmd == ":?piss":
-                    Piss().print(self.core, user, user_args)
+                    Piss(self.core).print(user, user_args)
 
                 if cmd == ":?tarot":
-                    retval = Tarot().print(self.core, self.tarot_deck, user_args)
+                    retval = Tarot().print(self.tarot_deck, user_args)
 
                     try:
                         if retval[0].__class__.__name__ == "TarotCard":

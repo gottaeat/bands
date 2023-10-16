@@ -20,7 +20,9 @@ c = MIRCColors()
 
 # pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Finance:
-    def __init__(self):
+    def __init__(self, core):
+        self.core = core
+
         self.tcmb = None
         self.yahoo = None
         self.forbes = None
@@ -221,7 +223,7 @@ class Finance:
         for job in threads:
             job.join()
 
-    def print(self, core):
+    def print(self):
         self._collect()
 
         msg = f"{c.WHITE}USDTRY{c.RES}\n"
@@ -239,4 +241,4 @@ class Finance:
             msg += f"  {c.WHITE}├ {c.LRED}1m    {c.LBLUE}→{c.RES} {self.wgb_month}\n"
             msg += f"  {c.WHITE}└ {c.LRED}1y    {c.LBLUE}→{c.RES} {self.wgb_year}"
 
-        core.send_query(drawbox(msg, "thic"))
+        self.core.send_query(drawbox(msg, "thic"))
