@@ -1,3 +1,4 @@
+import re
 import time
 
 from .util import strip_color
@@ -43,7 +44,7 @@ class IRC:
             print(f"[{tstamp}] {data}", end="")
 
             if data.split()[0] == "PING":
-                self.core.send_pong()
+                self.core.send_raw(f"{re.sub(r'PING', 'PONG', data)}\r\n")
 
             if not self.core.char_limit:
                 if (
