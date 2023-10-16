@@ -81,13 +81,13 @@ class Tarot:
         ]
 
         # notify that we're generating the reading
-        notif_msg = f"{c.GREEN}[{c.LBLUE}I:{core.openai_key_index}{c.GREEN}] "
+        notif_msg = f"{c.GREEN}[{c.LBLUE}I:{core.ai.key_index}{c.GREEN}] "
         notif_msg += f"{c.LGREEN}Generating reading:{c.RES}"
         core.send_query(notif_msg)
 
         # call openai api
         try:
-            response = core.openai.ChatCompletion.create(
+            response = core.ai.openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=message,
                 temperature=0.1,
@@ -150,7 +150,7 @@ class Tarot:
 
                 # gen and send reading
                 self._interpret(core, deck)
-                core.rotate_openai_key()
+                core.ai.rotate_key()
 
                 return
 
@@ -182,6 +182,6 @@ class Tarot:
 
         # gen and send reading
         self._interpret(core, deck)
-        core.rotate_openai_key()
+        core.ai.rotate_key()
 
         return deck
