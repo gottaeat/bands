@@ -3,6 +3,8 @@ import os
 
 import yaml
 
+from .ai import AI
+
 
 # pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Config:
@@ -18,9 +20,13 @@ class Config:
         self.verify_tls = False
         self.scroll_speed = 0
 
+        self.ai = None
+
 
 class CLI:
     def __init__(self):
+        self.openai_keys_file = None
+
         self.config_file = None
         self.servers = []
 
@@ -34,7 +40,7 @@ class CLI:
 
         self.config_file = args.c
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches, too-many-statements
     def _parse_yaml(self):
         if os.path.isfile(self.config_file):
             try:
@@ -46,6 +52,27 @@ class CLI:
         else:
             raise ValueError(f"E: {self.config_file} is not a file.")
 
+        # openai
+        try:
+            openai = yaml_parsed["openai"]
+        except KeyError:
+            # pylint: disable=raise-missing-from
+            raise ValueError("E: openai section in the YAML file is missing.")
+
+        try:
+            keys_file = openai["keys_file"]
+        except KeyError:
+            # pylint: disable=raise-missing-from
+            raise ValueError(
+                "E: keys_file in openai section in the YAML file is missing."
+            )
+
+        if os.path.isfile(keys_file):
+            self.openai_keys_file = keys_file
+        else:
+            raise ValueError(f"E: {keys_file} is not a file")
+
+        # servers
         try:
             servers = yaml_parsed["servers"]
         except KeyError:
@@ -106,8 +133,15 @@ class CLI:
     def run(self):
         self._gen_args()
         self._parse_yaml()
-        for i in self.servers:
-            print(i)
+
+        # init ai
+        ai = AI()
+        ai.keys_file = self.openai_keys_file
+        ai.run()
+
+        for config in self.servers:
+            # pass the same ai to all configs
+            config.ai = ai
 
 
 def run():
