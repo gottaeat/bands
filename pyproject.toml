@@ -13,6 +13,7 @@ dynamic = ["version", "description"]
 dependencies = [
     "beautifulsoup4 >= 4.12.2",
     "openai >= 0.28.1",
+    "PyYAML >= 6.0.0",
 ]
 
 [project.urls]
