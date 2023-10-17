@@ -1,50 +1,113 @@
 import argparse
+import os
 
-from .core import Core
-from .irc import IRC
-from .ai import AI
+import yaml
 
 
-# pylint: disable=too-few-public-methods
+# pylint: disable=too-many-instance-attributes,too-few-public-methods
+class Config:
+    def __init__(self):
+        self.name = None
+        self.address = None
+        self.port = None
+        self.botname = None
+        self.channels = None
+        self.secret = None
+
+        self.tls = False
+        self.verify_tls = False
+        self.scroll_speed = 0
+
+
 class CLI:
     def __init__(self):
-        pass
+        self.config_file = None
+        self.servers = []
 
-    def run(self):
-        parser = argparse.ArgumentParser(description="bands the IRC bot.")
-        parser.add_argument("--nick", type=str, default="bands")
-        parser.add_argument("--net", type=str, required=True)
-        parser.add_argument("--port", type=int, required=True)
-        parser.add_argument("--channel", type=str, required=True)
-        parser.add_argument("--speed", type=int, default=0)
-        parser.add_argument("--tls", action="store_true")
-        parser.add_argument("--noverify", action="store_true")
+    def _gen_args(self):
+        parser_desc = "bands the IRC bot."
+        parser_c_help = "Configuration YAML file."
+
+        parser = argparse.ArgumentParser(description=parser_desc)
+        parser.add_argument("-c", type=str, required=True, help=parser_c_help)
         args = parser.parse_args()
 
-        if args.noverify and not args.tls:
-            raise ValueError("noverify requested without tls.")
+        self.config_file = args.c
 
-        # init ai
-        ai = AI()
+    # pylint: disable=too-many-branches
+    def _parse_yaml(self):
+        if os.path.isfile(self.config_file):
+            try:
+                with open(self.config_file, "r", encoding="utf-8") as yaml_file:
+                    yaml_parsed = yaml.load(yaml_file.read(), Loader=yaml.Loader)
+            except Exception as exc:
+                # pylint: disable=raise-missing-from
+                raise ValueError(f"E: {self.config_file} parsing has failed:\n{exc}")
+        else:
+            raise ValueError(f"E: {self.config_file} is not a file.")
 
-        # init core
-        core = Core()
+        try:
+            servers = yaml_parsed["servers"]
+        except KeyError:
+            # pylint: disable=raise-missing-from
+            raise ValueError("E: server section in the YAML file is missing.")
 
-        core.ai = ai
+        server_must_have = [
+            "name",
+            "address",
+            "port",
+            "botname",
+            "channels",
+            "secret",
+        ]
 
-        core.net = args.net
-        core.port = args.port
-        core.channel = f"#{args.channel}"
-        core.botname = args.nick
-        core.tls = args.tls
-        core.noverify = args.noverify
-        core.scroll_speed = args.speed
+        for server in servers:
+            for item in server_must_have:
+                if item not in server.keys():
+                    raise ValueError(f"E: {item} is missing from the YAML.")
 
-        core.connect()
+            config = Config()
+            config.name = str(server["name"])
+            config.address = str(server["address"])
+            config.port = int(server["port"])
+            config.botname = str(server["botname"])
 
-        # hand over to IRC
-        irc = IRC(core)
-        irc.run()
+            if len(server["channels"]) == 0:
+                raise ValueError(
+                    f"E: no channels provided for server {server['name']}."
+                )
+
+            config.channels = server["channels"]
+            config.secret = str(server["secret"])
+
+            try:
+                if type(server["tls"]).__name__ != "bool":
+                    raise ValueError("E: tls should be a bool.")
+
+                config.tls = server["tls"]
+            except KeyError:
+                pass
+
+            try:
+                if type(server["verify_tls"]).__name__ != "bool":
+                    raise ValueError("E: verify_tls should be a bool.")
+
+                config.verify_tls = server["verify_tls"]
+            except KeyError:
+                pass
+
+            try:
+                config.scroll_speed = int(server["scroll_speed"])
+            except KeyError:
+                pass
+
+            self.servers.append(config)
+
+    def run(self):
+        self._gen_args()
+        self._parse_yaml()
+        for i in self.servers:
+            print(i)
 
 
 def run():
