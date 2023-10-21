@@ -1,32 +1,16 @@
 import argparse
-import os
+import signal
 
-import yaml
+from threading import Thread
 
 from .ai import AI
+from .config import ConfigYAML
+from .server import Server
 
 
-# pylint: disable=too-many-instance-attributes,too-few-public-methods
-class Config:
-    def __init__(self):
-        self.name = None
-        self.address = None
-        self.port = None
-        self.botname = None
-        self.channels = None
-        self.secret = None
-
-        self.tls = False
-        self.verify_tls = False
-        self.scroll_speed = 0
-
-        self.ai = None
-
-
+# pylint: disable=too-few-public-methods
 class CLI:
     def __init__(self):
-        self.openai_keys_file = None
-
         self.config_file = None
         self.servers = []
 
@@ -40,108 +24,76 @@ class CLI:
 
         self.config_file = args.c
 
-    # pylint: disable=too-many-branches, too-many-statements
-    def _parse_yaml(self):
-        if os.path.isfile(self.config_file):
-            try:
-                with open(self.config_file, "r", encoding="utf-8") as yaml_file:
-                    yaml_parsed = yaml.load(yaml_file.read(), Loader=yaml.Loader)
-            except Exception as exc:
-                # pylint: disable=raise-missing-from
-                raise ValueError(f"E: {self.config_file} parsing has failed:\n{exc}")
-        else:
-            raise ValueError(f"E: {self.config_file} is not a file.")
+    # pylint: disable=unused-argument
+    def _signal_handler(self, signum, frame):
+        signame = signal.Signals(signum).name
 
-        # openai
-        try:
-            openai = yaml_parsed["openai"]
-        except KeyError:
-            # pylint: disable=raise-missing-from
-            raise ValueError("E: openai section in the YAML file is missing.")
-
-        try:
-            keys_file = openai["keys_file"]
-        except KeyError:
-            # pylint: disable=raise-missing-from
-            raise ValueError(
-                "E: keys_file in openai section in the YAML file is missing."
-            )
-
-        if os.path.isfile(keys_file):
-            self.openai_keys_file = keys_file
-        else:
-            raise ValueError(f"E: {keys_file} is not a file")
-
-        # servers
-        try:
-            servers = yaml_parsed["servers"]
-        except KeyError:
-            # pylint: disable=raise-missing-from
-            raise ValueError("E: server section in the YAML file is missing.")
-
-        server_must_have = [
-            "name",
-            "address",
-            "port",
-            "botname",
-            "channels",
-            "secret",
-        ]
-
-        for server in servers:
-            for item in server_must_have:
-                if item not in server.keys():
-                    raise ValueError(f"E: {item} is missing from the YAML.")
-
-            config = Config()
-            config.name = str(server["name"])
-            config.address = str(server["address"])
-            config.port = int(server["port"])
-            config.botname = str(server["botname"])
-
-            if len(server["channels"]) == 0:
-                raise ValueError(
-                    f"E: no channels provided for server {server['name']}."
-                )
-
-            config.channels = server["channels"]
-            config.secret = str(server["secret"])
-
-            try:
-                if type(server["tls"]).__name__ != "bool":
-                    raise ValueError("E: tls should be a bool.")
-
-                config.tls = server["tls"]
-            except KeyError:
-                pass
-
-            try:
-                if type(server["verify_tls"]).__name__ != "bool":
-                    raise ValueError("E: verify_tls should be a bool.")
-
-                config.verify_tls = server["verify_tls"]
-            except KeyError:
-                pass
-
-            try:
-                config.scroll_speed = int(server["scroll_speed"])
-            except KeyError:
-                pass
-
-            self.servers.append(config)
+        if signame in ("SIGINT", "SIGTERM"):
+            print(f"I: CLI() caught {signame}.")
+            for server in self.servers:
+                server.stop()
 
     def run(self):
+        # signal handling to terminate threads peacefully
+        # we don't exit here, the exit is done within Server(), otherwise the
+        # recv loops throw I/O errors.
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+
+        # init argparse
         self._gen_args()
-        self._parse_yaml()
+
+        # parse yaml and gen ServerConfig()'s
+        config = ConfigYAML(self.config_file)
+        config.parse_yaml()
 
         # init ai
         ai = AI()
-        ai.keys_file = self.openai_keys_file
-        ai.run()
+        ai.keys = config.openai_keys
+        ai.rotate_key()
 
-        for config in self.servers:
-            # pass the same ai to all configs
-            config.ai = ai
+        # pass the same ai instance to all servers
+        for server in config.servers:
+            server.ai = ai
+
+        # start servers
+        threads = []
+
+        for server in config.servers:
+            s = Server()
+
+            msg = "Server() details\n"
+            msg += "----------------\n"
+            msg += f"ai          : {server.ai}\n"
+            msg += f"name        : {server.name}\n"
+            msg += f"address     : {server.address}\n"
+            msg += f"port        : {server.port}\n"
+            msg += f"botname     : {server.botname}\n"
+            msg += f"channels    : {server.channels}\n"
+            msg += f"secret      : {server.secret}\n"
+            msg += f"tls         : {server.tls}\n"
+            msg += f"verify_tls  : {server.verify_tls}\n"
+            msg += f"scroll_speed: {server.scroll_speed}\n"
+            print(msg)
+
+            s.ai = server.ai
+            s.name = server.name
+            s.address = server.address
+            s.port = server.port
+            s.botname = server.botname
+            s.channels = server.channels
+            s.secret = server.secret
+            s.tls = server.tls
+            s.verify_tls = server.verify_tls
+            s.scroll_speed = server.scroll_speed
+
+            self.servers.append(s)
+
+            p = Thread(target=s.run)
+            threads.append(p)
+
+        for thread in threads:
+            thread.start()
 
 
 def run():
