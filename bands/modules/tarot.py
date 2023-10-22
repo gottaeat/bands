@@ -3,7 +3,7 @@ import os
 import random
 import re
 
-from bands.util import MIRCColors
+from bands.colors import MIRCColors
 
 
 # pylint: disable=invalid-name

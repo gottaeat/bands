@@ -2,7 +2,7 @@ import os
 import json
 
 from bands.util import drawbox
-from bands.util import MIRCColors
+from bands.colors import MIRCColors
 
 # pylint: disable=invalid-name
 c = MIRCColors()

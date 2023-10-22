@@ -11,7 +11,7 @@ from threading import Thread
 from bs4 import BeautifulSoup
 
 from bands.util import drawbox
-from bands.util import MIRCColors
+from bands.colors import MIRCColors
 
 
 # pylint: disable=invalid-name
