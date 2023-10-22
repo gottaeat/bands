@@ -11,7 +11,7 @@ class AI:
 
     def rotate_key(self):
         if self.keys:
-            if self.key_index >= 3:
+            if self.key_index >= (len(self.keys) - 1):
                 self.key_index = 0
             else:
                 self.key_index += 1
