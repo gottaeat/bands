@@ -1,20 +1,90 @@
 bands
 =====
 └ bands/
-  ├ cli.py       → parsing of user inputs and the Core() -> IRC() handoff.
-  ├ core.py      → core IRC functionality and creation of the socket.
-  ├ irc.py       → main loop entered after connection is established.
-  ├ util.py      → collection of functions for modules to make use of.
-  ├ files/       → static files.
+  ├ ai.py               → source of AI() class, instantiates an openai object
+  │                       that gets passed down to all of the Server()
+  │                       instances.
+  ├ channel.py          → Channel() class, instantiated for every channel,
+  │                       stores the character limit, gets passed down to every
+  │                       channel-specific module for them to have access to
+  │                       Server() resources, allows for context to be stored.
+  ├ cli.py              → takes in a YAML file, creates an AI() instance and
+  │                       instantiates all the Server()'s using the resources
+  │                       within the YAML, passes the AI() to every Server() and
+  │                       runs all the Server()'s in their own Thread().
+  ├ config.py           → parses the provided YAML, creates ServerConfig()
+  │                       objects and provides the keys for the AI() to be
+  │                       instentiated.
+  ├ server.py           → handles everything irc. creates a socket, sends in the
+  │                       client details, enters an infinite loop and handles
+  │                       channel/user/server events within it.
+  ├ user.py             → User() class, 1:1 in behavior to the Channel() class,
+  │                       without storing any context.
+  ├ util.py             → collection of functions that are shared within the
+  │                       rest of the codebase.
+  ├ files/
+  │ ├ advices.json      → file parsed by the Advice() module.
+  │ └ tarot_desc.json   → file parsed by the Tarot() module.
   └ modules/
-    ├ advice.py  → endless supply of useful advice covering all sorts of topics.
-    ├ finance.py → finance API scraper, scraping TCMB, Yahoo, XE, Forbes and
-    │              Binance for forex rates and World Government Bonds for CDS.
-    ├ help.py    → basic help prompt.
-    ├ piss.py    → funny little humorous joke for a fun time between friends.
-    └ tarot.py   → celtic cross tarot spread.
+    ├ advice.py         → provides the user, and if specified, the target, with
+    │                     pre-set advices.
+    ├ auth.py           → sets the Server().admin attribute if the query matches
+    │                     the Server().secret, allowing the query user to run
+    │                     privileged commands.
+    ├ finance.py        → finance API scraper, scraping TCMB, Yahoo, XE, Forbes
+    │                     and Binance for forex rates and World Government Bonds
+    │                     for CDS.
+    ├ help.py           → help prompt providing syntactic help for user and
+    │                     channel specific commands.
+    ├ openai_handler.py → allows for the AI() status to be queried and the keys
+    │                     to be updated via private queries from the admin user.
+    ├ piss.py           → allows for a funny little humorous joke for a fun time
+    │                     between friends.
+    └ tarot.py          → creates a tarot deck, prints the a prompt containing
+                          the title and descriptions of the cards in the deck,
+                          explains the meaning of the order that the cards are
+                          pulled, and hits up the OpenAI API for a reading.
 
-installation
-============
-$ git clone --depth=1 https://github.com/gottaeat/bands
-$ pip install .
+expected openai keys_file format
+--------------------------------
+{
+  "openai_keys": [
+      {
+        "key": "sk-"
+      },
+      {
+        "key": "sk-"
+      }
+    ]
+}
+
+
+config.yaml example
+-------------------
+openai:
+    keys_file: /path/to/openai_keys.json
+
+servers:
+    - name: example1
+      address: irc.example1.com
+      port: 6697
+      botname: bands
+      tls: true
+      verify_tls: false
+      scroll_speed: 0
+      channels:
+        - "#goodchannel"
+        - "#badchannel"
+      secret: verysecret
+
+    - name: example2
+      address: irc.example2.com
+      port: 6697
+      botname: bands
+      tls: true
+      verify_tls: false
+      scroll_speed: 0
+      channels:
+        - "#goodchannel"
+        - "#badchannel"
+      secret: verysecret
