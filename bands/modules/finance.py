@@ -20,8 +20,8 @@ c = MIRCColors()
 
 # pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Finance:
-    def __init__(self, core):
-        self.core = core
+    def __init__(self, channel):
+        self.channel = channel
 
         self.tcmb = None
         self.yahoo = None
@@ -241,4 +241,4 @@ class Finance:
             msg += f"  {c.WHITE}├ {c.LRED}1m    {c.LBLUE}→{c.RES} {self.wgb_month}\n"
             msg += f"  {c.WHITE}└ {c.LRED}1y    {c.LBLUE}→{c.RES} {self.wgb_year}"
 
-        self.core.send_query(drawbox(msg, "thic"))
+        self.channel.send_query(drawbox(msg, "thic"))

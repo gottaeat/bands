@@ -1,50 +1,99 @@
 import argparse
+import signal
 
-from .core import Core
-from .irc import IRC
+from threading import Thread
+
 from .ai import AI
+from .config import ConfigYAML
+from .server import Server
 
 
 # pylint: disable=too-few-public-methods
 class CLI:
     def __init__(self):
-        pass
+        self.config_file = None
+        self.servers = []
 
-    def run(self):
-        parser = argparse.ArgumentParser(description="bands the IRC bot.")
-        parser.add_argument("--nick", type=str, default="bands")
-        parser.add_argument("--net", type=str, required=True)
-        parser.add_argument("--port", type=int, required=True)
-        parser.add_argument("--channel", type=str, required=True)
-        parser.add_argument("--speed", type=int, default=0)
-        parser.add_argument("--tls", action="store_true")
-        parser.add_argument("--noverify", action="store_true")
+    def _gen_args(self):
+        parser_desc = "bands the IRC bot."
+        parser_c_help = "Configuration YAML file."
+
+        parser = argparse.ArgumentParser(description=parser_desc)
+        parser.add_argument("-c", type=str, required=True, help=parser_c_help)
         args = parser.parse_args()
 
-        if args.noverify and not args.tls:
-            raise ValueError("noverify requested without tls.")
+        self.config_file = args.c
+
+    # pylint: disable=unused-argument
+    def _signal_handler(self, signum, frame):
+        signame = signal.Signals(signum).name
+
+        if signame in ("SIGINT", "SIGTERM"):
+            print(f"I: CLI() caught {signame}.")
+            for server in self.servers:
+                server.stop()
+
+    def run(self):
+        # signal handling to terminate threads peacefully
+        # we don't exit here, the exit is done within Server(), otherwise the
+        # recv loops throw I/O errors.
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+
+        # init argparse
+        self._gen_args()
+
+        # parse yaml and gen ServerConfig()'s
+        config = ConfigYAML(self.config_file)
+        config.parse_yaml()
 
         # init ai
         ai = AI()
+        ai.keys = config.openai_keys
+        ai.rotate_key()
 
-        # init core
-        core = Core()
+        # pass the same ai instance to all servers
+        for server in config.servers:
+            server.ai = ai
 
-        core.ai = ai
+        # start servers
+        threads = []
 
-        core.net = args.net
-        core.port = args.port
-        core.channel = f"#{args.channel}"
-        core.botname = args.nick
-        core.tls = args.tls
-        core.noverify = args.noverify
-        core.scroll_speed = args.speed
+        for server in config.servers:
+            s = Server()
 
-        core.connect()
+            msg = "Server() details\n"
+            msg += "----------------\n"
+            msg += f"ai          : {server.ai}\n"
+            msg += f"name        : {server.name}\n"
+            msg += f"address     : {server.address}\n"
+            msg += f"port        : {server.port}\n"
+            msg += f"botname     : {server.botname}\n"
+            msg += f"channels    : {server.channels}\n"
+            msg += f"secret      : {server.secret}\n"
+            msg += f"tls         : {server.tls}\n"
+            msg += f"verify_tls  : {server.verify_tls}\n"
+            msg += f"scroll_speed: {server.scroll_speed}\n"
+            print(msg)
 
-        # hand over to IRC
-        irc = IRC(core)
-        irc.run()
+            s.ai = server.ai
+            s.name = server.name
+            s.address = server.address
+            s.port = server.port
+            s.botname = server.botname
+            s.channels = server.channels
+            s.secret = server.secret
+            s.tls = server.tls
+            s.verify_tls = server.verify_tls
+            s.scroll_speed = server.scroll_speed
+
+            self.servers.append(s)
+
+            p = Thread(target=s.run)
+            threads.append(p)
+
+        for thread in threads:
+            thread.start()
 
 
 def run():

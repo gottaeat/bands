@@ -57,133 +57,133 @@
         "major_arcana": [
           {
             "id": 0,
-            "title": "The Fool #0",
+            "title": "The Fool",
             "desc1": "Taking a risk. Getting outside your comfort zone. Knowing the universe is looking after you.",
             "desc2": "Foolishness. Making a stupid choice. Disregarding good advice. Getting in with a bad crowd."
           },
           {
             "id": 1,
-            "title": "The Magician #1",
+            "title": "The Magician",
             "desc1": "Feeling confident, assured. Having all the tools and resources at your disposal. Power.",
             "desc2": "Deception, trickery, cunning. Scammer. Personality disorders such as narcissism. Lack of empathy."
           },
           {
             "id": 2,
-            "title": "The High Priestess #2",
+            "title": "The High Priestess",
             "desc1": "Intuition. Going within. Inner knowing.",
             "desc2": "Emerging from depression. Extreme shyness or over-confidence, denying intuition, predatory sexual behavior, superficiality, disclosure of secrets."
           },
           {
             "id": 3,
-            "title": "The Empress #3",
+            "title": "The Empress",
             "desc1": "Growth, fertility, pregnancy, motherhood. New project. Dominant female.",
             "desc2": "Famine, drought. Neglected land. Smother-love, living through your children. Vanity, empty nest syndrome, feeling useless, infidelity, unloving, unsupportive. Fertility issues. Failing business. Problems with adoption or step-parenting."
           },
           {
             "id": 4,
-            "title": "The Emperor #4",
+            "title": "The Emperor",
             "desc1": "Structure, organization, rules. Dominant male.",
             "desc2": "Nature controlled. Urban sprawl and degeneration. Authoritarian, tyrant, dictator, domination, rigid, unyielding, fatherhood problems, loss of control, obstruction, misuse of power."
           },
           {
             "id": 5,
-            "title": "The Hierophant #5",
+            "title": "The Hierophant",
             "desc1": "Learning path, religion, spirituality, spiritual mentor, guide.",
             "desc2": "Rejection of the establishment. A mentor with ulterior motives. Expulsion, excommunication. Sexual misdemeanors. Inappropriate behavior. Rejecting one’s faith."
           },
           {
             "id": 6,
-            "title": "The Lovers #6",
+            "title": "The Lovers",
             "desc1": "Life-changing choice, a turning point. Union with another, two as one.",
             "desc2": "Inappropriate relationship. Immaturity, lack of love, possessiveness, infatuation/stalking. Lust rather than love. Bad choice, indecision, temptation, weakness, lack of trust, separation. Endless obsessive search for non-existent soul-mate."
           },
           {
             "id": 7,
-            "title": "The Chariot #7",
+            "title": "The Chariot",
             "desc1": "Drive and determination. Autonomy. Mediation and negotiation.",
             "desc2": "Ambition but at a cost. Personal life derailed. Travel problems. Stress, quarrels, accidents, delays. Failed negotiation."
           },
           {
             "id": 8,
-            "title": "Strength #8",
+            "title": "Strength",
             "desc1": "Persuasion, gentle strength. Patience, control, compassion.",
             "desc2": "Mental problems. Too overbearing or too weak. Not knowing when to stop. Government vs citizens. Cruelty. Disregarding the well-being of others in order to achieve your desire."
           },
           {
             "id": 9,
-            "title": "The Hermit #9",
+            "title": "The Hermit",
             "desc1": "Knowing oneself, solitude. Understanding humanity, wisdom.",
             "desc2": "Fear of being alone. Social withdrawal, paranoia, identity crisis, embittered. Worry about aging. Fear of having to depend on others."
           },
           {
             "id": 10,
-            "title": "The Wheel of Fortune #10",
+            "title": "The Wheel of Fortune",
             "desc1": "Change, good luck, destiny.",
             "desc2": "Change. Good and bad luck. Destiny, chaos, uncertainty."
           },
           {
             "id": 11,
-            "title": "Justice #11",
+            "title": "Justice",
             "desc1": "Cause and effect, karma, fairness, legal issues.",
             "desc2": "Cause and effect. Poetic justice, unfairness, disputes, legal problems. Bigotry, bias, intolerance. Liver damage."
           },
           {
             "id": 12,
-            "title": "The Hanged Man #12",
+            "title": "The Hanged Man",
             "desc1": "On hold, nothing happening, stuck, letting go of the outcome.",
             "desc2": "Ready to go but being held back. Hidden motives or agenda. Unfinished work or projects. About to move on from a friendship or relationship."
           },
           {
             "id": 13,
-            "title": "Death #13",
+            "title": "Death",
             "desc1": "Endings and new beginnings, transformation, transition. Death.",
             "desc2": "Attempting to avoid an inevitable end. Chronic illness. Extreme depression or pessimism. Coming back from the dead (NDE). Obsession with death. Accident (narrowly escaping death)."
           },
           {
             "id": 14,
-            "title": "Temperance #14",
+            "title": "Temperance",
             "desc1": "Chemistry, moderation, balance. Getting it right.",
             "desc2": "Out of balance, non-cooperation, conflicting ideas/positions. Emotional extremes. Procrastination. Digestive problems. Mind/body health out of whack."
           },
           {
             "id": 15,
-            "title": "The Devil #15",
+            "title": "The Devil",
             "desc1": "Addiction, bad habits, co-dependency, materialism.",
             "desc2": "Extremes of the upright meaning: Life-threatening addiction, psychopathic personality disorder. Abuse (mental and physical). Escape, release, moving forward, taking control of your problems and your life."
           },
           {
             "id": 16,
-            "title": "The Tower #16",
+            "title": "The Tower",
             "desc1": "Chaos, destruction, upheaval. Unexpected and possibly unwanted change.",
             "desc2": "Weakened energy of upright card. Irritations, things going wrong, setbacks, pressure, stress. Accidents, cuts, burns, surgery. Need to visit the doctor. Can't see the way through all the problems."
           },
           {
             "id": 17,
-            "title": "The Star #17",
+            "title": "The Star",
             "desc1": "Renewed optimism, hope, serenity. Spiritual love and joy.",
             "desc2": "Low self-esteem. Lack of clarity. Futility. Not feeling the love around you. Disappointment."
           },
           {
             "id": 18,
-            "title": "The Moon #18",
+            "title": "The Moon",
             "desc1": "Insecurity, anxiety, illusion, fear, health issues.",
             "desc2": "Resistance to anything spiritual. Self-delusion. Closed mind. Mental health issues, and things like fibromyalgia and urinary tract problems."
           },
           {
             "id": 19,
-            "title": "The Sun #19",
+            "title": "The Sun",
             "desc1": "Improvement, growth, positivity, love, abundance, joy.",
             "desc2": "Weakened energy of upright card. Still positive but less so. Success is mediocre. Happiness on a lower scale."
           },
           {
             "id": 20,
-            "title": "Judgment #20",
+            "title": "Judgment",
             "desc1": "Rebirth, calling, forgiveness.",
             "desc2": "Problematic transitions. Resistance, rejection, alienation. Over critical and judgmental."
           },
           {
             "id": 21,
-            "title": "The World #21",
+            "title": "The World",
             "desc1": "In the right place. Accomplishment, completion. Pause before the next stage.",
             "desc2": "If negatively aspected can signify slightly weakened energy of the original definition, so generally positive. Completion of projects delayed. Wanting to move forward but held back. Overdue birth. Issues with weight loss. Having to wait for test results."
           }

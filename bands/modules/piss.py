@@ -8,20 +8,20 @@ c = MIRCColors()
 
 # pylint: disable=too-few-public-methods
 class Piss:
-    def __init__(self, core):
-        self.core = core
+    def __init__(self, channel):
+        self.channel = channel
 
     def print(self, pisser, pissee):
         if len(str(pissee)) == 0:
             msg = f"{c.ORANGE}{pisser}{c.LBLUE}, "
             msg += f"{c.WHITE}on {c.YELLOW}who{c.WHITE}?{c.RES}"
-            self.core.send_query(msg)
+            self.channel.send_query(msg)
             return
 
-        if unilen(str(pissee)) > self.core.USER_NICKLIMIT:
+        if unilen(str(pissee)) > self.channel.server.USER_NICKLIMIT:
             msg = f"{c.ORANGE}{pisser}{c.LBLUE}, {c.YELLOW}pissee "
-            msg += f"{c.LRED}is wider than {self.core.USER_NICKLIMIT} chars.{c.RES}"
-            self.core.send_query(msg)
+            msg += f"{c.LRED}is wider than {self.channel.server.USER_NICKLIMIT} chars.{c.RES}"
+            self.channel.send_query(msg)
             return
 
         msg = f"     {c.WHITE}ë{c.RES} \n"
@@ -37,4 +37,4 @@ class Piss:
         msg += f"{c.WHITE}by {c.ORANGE}{pisser}"
         msg += f"{c.WHITE}.{c.RES}"
 
-        self.core.send_query(msg)
+        self.channel.send_query(msg)

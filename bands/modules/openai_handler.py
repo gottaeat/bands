@@ -1,3 +1,6 @@
+import os
+import json
+
 from bands.util import drawbox
 from bands.util import MIRCColors
 
@@ -7,14 +10,14 @@ c = MIRCColors()
 
 # pylint: disable=too-few-public-methods
 class OpenAIHandler:
-    def __init__(self, core):
-        self.core = core
+    def __init__(self, user):
+        self.user = user
 
     def _status(self):
-        key_index = self.core.ai.key_index
+        key_index = self.user.server.ai.key_index
 
         try:
-            key_total = len(self.core.ai.keys)
+            key_total = len(self.user.server.ai.keys)
         except TypeError:
             key_total = "none"
 
@@ -22,33 +25,97 @@ class OpenAIHandler:
         msg += f"{c.WHITE}├ {c.LRED}Current key index {c.LBLUE}→{c.RES} {key_index}\n"
         msg += f"{c.WHITE}└ {c.LRED}Total keys parsed {c.LBLUE}→{c.RES} {key_total}"
 
-        self.core.send_query(drawbox(msg, "thic"))
+        self.user.send_query(drawbox(msg, "thic"))
 
-    def _reload(self):
-        self.core.ai.run()
+    def _reload(self, keys_file):
+        if not os.path.isfile(keys_file):
+            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+            errmsg += f"{c.LRED}{keys_file} is not a file.{c.RES}"
+            self.user.send_query(errmsg)
 
-        if not self.core.ai.keys:
+            return
+
+        try:
+            with open(keys_file, "r", encoding="utf-8") as file:
+                openai_keys = json.loads(file.read())["openai_keys"]
+        # pylint: disable=broad-exception-caught
+        except Exception as exc:
+            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+            errmsg += f"{c.LRED}parsing {keys_file} failed:{c.RES}\n"
+            errmsg += f"{exc}"
+            self.user.send_query(errmsg)
+
+            return
+
+        if len(openai_keys) == 0:
+            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+            errmsg += f"{c.LRED}{keys_file} has no keys.{c.RES}"
+            self.user.send_query(errmsg)
+
+            return
+
+        for key in openai_keys:
+            try:
+                if key["key"][0:3] != "sk-":
+                    errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                    errmsg += f"{c.LRED}{key['key']} is not a valid OpenAI key.{c.RES}"
+                    self.user.send_query(errmsg)
+
+                    return
+            except KeyError:
+                # pylint: disable=raise-missing-from
+                errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                errmsg += f"{c.LRED}{keys_file} formatting is incorrect.{c.RES}"
+                self.user.send_query(errmsg)
+
+                return
+
+        self.user.server.ai.keys = openai_keys
+        self.user.server.ai.rotate_key()
+
+        if not self.user.server.ai.keys:
             errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
             errmsg += f"{c.LRED}no keys found.{c.RES}"
-            self.core.send_query(errmsg)
-        else:
-            notif_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
-            notif_msg += f"{c.LGREEN}Success.{c.RES}"
-            self.core.send_query(notif_msg)
+            self.user.send_query(errmsg)
+
+            return
+
+        notif_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
+        notif_msg += f"{c.LGREEN}Success.{c.RES}"
+        self.user.send_query(notif_msg)
+
+        self._status()
 
     def _usage(self):
         errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
         errmsg += f"{c.LRED}usage: {{status|reload}}.{c.RES}"
-        self.core.send_query(errmsg)
+        self.user.send_query(errmsg)
 
     def print(self, user_args):
-        if len(user_args) == 0 or len(user_args.split(" ")) > 1:
+        if self.user.name != self.user.server.admin:
+            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+            errmsg += f"{c.LRED}user {self.user.name} is not authorized to run "
+            errmsg += f"this command.{c.RES}"
+            self.user.send_query(errmsg)
+
+            return
+
+        if len(user_args) == 0:
             self._usage()
             return
 
-        if user_args == "reload":
-            self._reload()
-        elif user_args == "status":
+        if user_args.split()[0] == "reload":
+            try:
+                keys_file = user_args.split()[1]
+            except IndexError:
+                errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                errmsg += f"{c.LRED}must supply a keys file.{c.RES}"
+                self.user.send_query(errmsg)
+
+                return
+
+            self._reload(keys_file)
+        elif user_args.split()[0] == "status":
             self._status()
         else:
             self._usage()

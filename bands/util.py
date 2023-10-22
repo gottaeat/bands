@@ -37,6 +37,10 @@ def strip_color(string):
     return mirc_strip.sub("", ansi_strip.sub("", string))
 
 
+def strip_user(string):
+    return re.sub(r"^:|\![^!]*$", "", string)
+
+
 def unilen(string):
     string = strip_color(string)
 
@@ -99,10 +103,6 @@ def drawbox(string, charset):
     return fin
 
 
-def strip_user(string):
-    return re.sub(r"^:|\![^!]*$", "", string)
-
-
 def wrap_bytes(text, size):
     # pylint: disable=protected-access
     words = textwrap.TextWrapper()._split_chunks(text)
@@ -122,3 +122,30 @@ def wrap_bytes(text, size):
             lines.append(word)
 
     return [l.decode() for l in lines]
+
+
+# pylint: disable=bare-except
+def decode_data(data):
+    try:
+        data = strip_color(data.decode(encoding="UTF-8")).split("\r\n")
+        for index, item in enumerate(data):
+            if item == "":
+                del data[index]
+                break
+            data[index] = f"{item}\r\n"
+
+        return data
+    except UnicodeDecodeError:
+        try:
+            data = strip_color(data.decode(encoding="latin-1")).split("\r\n")
+            for index, item in enumerate(data):
+                if item == "":
+                    del data[index]
+
+                data[index] = f"{item}\r\n"
+
+            return data
+        except:
+            return None
+    except:
+        return None
