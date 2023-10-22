@@ -3,32 +3,6 @@ import textwrap
 import unicodedata
 
 
-# pylint: disable=too-few-public-methods
-class MIRCColors:
-    RES = "\x0f"
-    BOLD = "\x02"
-
-    WHITE = "\x0300"
-    BLACK = "\x0301"
-    BLUE = "\x0302"
-    GREEN = "\x0303"
-    LRED = "\x0304"
-    BROWN = "\x0305"
-    PURPLE = "\x0306"
-    ORANGE = "\x0307"
-    YELLOW = "\x0308"
-    LGREEN = "\x0309"
-    CYAN = "\x0310"
-    LCYAN = "\x0311"
-    LBLUE = "\x0312"
-    PINK = "\x0313"
-    GREY = "\x0314"
-    LGREY = "\x0315"
-
-    def __init__(self):
-        pass
-
-
 # pylint: disable=anomalous-backslash-in-string
 def strip_color(string):
     ansi_strip = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
