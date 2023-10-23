@@ -2,6 +2,8 @@ import re
 import textwrap
 import unicodedata
 
+from bands.colors import MIRCColors
+
 
 # pylint: disable=anomalous-backslash-in-string
 def strip_color(string):
