@@ -1,4 +1,3 @@
-from bands.util import drawbox
 from bands.colors import MIRCColors
 
 # pylint: disable=invalid-name
@@ -21,6 +20,8 @@ class Help:
         msg += f"{c.WHITE}│ └ {c.LRED}user{c.RES}\n"
         msg += f"{c.WHITE}│   ├ {c.LGREEN}?auth{c.RES}   [secret]\n"
         msg += f"{c.WHITE}│   └ {c.LGREEN}?openai{c.RES} [reload|status]\n"
-        msg += f"{c.WHITE}└ {c.LRED}src{c.RES}         https://github.com/gottaeat/bands"
+        msg += (
+            f"{c.WHITE}└ {c.LRED}src{c.RES}         https://github.com/gottaeat/bands"
+        )
 
         self.channel.send_query(msg)
