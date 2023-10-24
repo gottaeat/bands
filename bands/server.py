@@ -9,6 +9,8 @@ from .util import decode_data
 from .util import strip_user
 from .util import strip_color
 
+from .colors import ANSIColors
+
 from .channel import Channel
 from .user import User
 
@@ -20,6 +22,8 @@ from .modules.tarot import Tarot
 
 from .modules.auth import Auth
 from .modules.openai_handler import OpenAIHandler
+
+ac = ANSIColors()
 
 
 # pylint: disable=too-many-instance-attributes,too-many-branches
@@ -48,7 +52,9 @@ class Server:
         # faster lookups
         self.channel_obj = []
 
-        # admin user
+        # users
+        self.users = []
+        self.user_obj = []
         self.admin = None
 
         # Server-wide socket
@@ -60,52 +66,63 @@ class Server:
 
     # - - query handling - - #
     def send_raw(self, msg):
+        self.logger.debug("%s %s", f"{ac.BRED}-->{ac.RES}", strip_color(msg))
         self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
-
-        self.logger.debug(
-            "<- %s",
-            strip_color(msg),
-        )
 
     def _send_pong(self, data):
         self.send_raw(re.sub(r"PING", "PONG", data.rstrip("\r\n")))
 
     def _send_nick(self):
+        self.logger.info("sending NICK")
         self.send_raw(f"NICK {self.botname}")
 
-        self.logger.info(
-            "sending NICK",
-        )
-
     def _send_user(self):
+        self.logger.info("sending USER")
         self.send_raw(
             f"USER {self.botname} {self.botname} {self.address} :{self.botname}"
         )
 
-        self.logger.info(
-            "sending USER",
-        )
-
     def _send_quit(self, reason):
+        self.logger.info("sending QUIT: %s", reason)
         self.send_raw(f"QUIT :{reason}")
 
-        self.logger.info(
-            "sent QUIT: %s",
-            reason,
-        )
-
     def _send_join(self, channel):
+        self.logger.info("joining %s", channel)
         self.send_raw(f"JOIN {channel}")
 
-        self.logger.info(
-            "joining %s",
-            channel,
-        )
+    # -- context handling -- #
+    def _gen_channel(self, channel_name):
+        self.channels.append(channel_name)
 
-    # -- arg handling -- #
-    def _handle_cmd(self, channel, user, cmd, user_args):
+        chan = Channel(self)
+        chan.name = channel_name
+        self.channel_obj.append(chan)
+
+        self.logger.info("generated channel %s", chan.name)
+
+    def _gen_user(self, user_name):
+        self.users.append(user_name)
+
+        user = User(self)
+        user.name = user_name
+        user.char_limit = 512 - len(f"PRIVMSG {user} :".encode("utf-8"))
+
+        self.user_obj.append(user)
+
+        self.logger.info("generated user %s (%s)", user.name, user.char_limit)
+
+    # -- cmd handling -- #
+    def _handle_channel_msg(self, channel, user_name, cmd, user_args):
+        if len(self.user_obj) == 0 or user_name not in self.users:
+            self._gen_user(user_name)
+
+        for user_obj in self.user_obj:
+            if user_obj.name == user_name:
+                user = user_obj
+                break
+
         if cmd == ":?advice":
-            Advice(channel).print(user, user_args)
+            Advice(channel, user).print(user_args)
 
         if cmd == ":?bands":
             Finance(channel).print()
@@ -114,36 +131,31 @@ class Server:
             Help(channel).print()
 
         if cmd == ":?piss":
-            Piss(channel).print(user, user_args)
+            Piss(channel, user).print(user_args)
 
         if cmd == ":?tarot":
-            Tarot(channel).print(user_args)
+            Tarot(channel, user).print(user_args)
 
-    def _handle_pm(self, user, cmd, user_args):
-        user_instance = User(self)
-        user_instance.name = user
-        user_instance.char_limit = 512 - len(f"PRIVMSG {user} :".encode("utf-8"))
+    def _handle_pm(self, user_name, cmd, user_args):
+        if len(self.user_obj) == 0 or user_name not in self.users:
+            self._gen_user(user_name)
+
+        for user_obj in self.user_obj:
+            if user_obj.name == user_name:
+                user = user_obj
+                break
 
         if cmd == ":?auth":
-            Auth(user_instance).print(user_args)
+            Auth(user).print(user_args)
 
         if cmd == ":?openai":
-            OpenAIHandler(user_instance).print(user_args)
+            OpenAIHandler(user).print(user_args)
 
-        del user_instance
-
-    def _gen_channel(self, channel_name):
-        chan = Channel(self)
-        chan.name = channel_name
-        self.channel_obj.append(chan)
-
-        self.logger.info("generated channel %s", chan.name)
-
+    # -- irc handling -- #
     def _handle_join(self, botname_with_vhost, channel_name):
         channel_name = re.sub(r"^:", "", channel_name)
 
         if len(self.channel_obj) == 0 or channel_name not in self.channels:
-            self.channels.append(channel_name)
             self._gen_channel(channel_name)
 
         for chan in self.channel_obj:
@@ -161,14 +173,12 @@ class Server:
             )
 
     def _handle_invite(self, user, channel_name):
-        self._send_join(channel_name)
-
         self.logger.info("%s has invited us to %s", user, channel_name)
+        self._send_join(channel_name)
 
     def _handle_kick(self, user, channel_name, reason):
-        self._send_join(channel_name)
-
         self.logger.info("%s has kicked us from %s for: %s", user, channel_name, reason)
+        self._send_join(channel_name)
 
     def _handle_ban(self, channel_name):
         if channel_name in self.channels:
@@ -254,7 +264,7 @@ class Server:
                 )
 
             for line in data:
-                self.logger.debug("<- %s", line.rstrip("\r\n"))
+                self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
                 if line.split()[0] == "PING":
                     Thread(target=self._send_pong, args=[line], daemon=True).start()
@@ -322,7 +332,7 @@ class Server:
                 self.logger.error("received nothing")
 
             for line in data:
-                self.logger.debug("<- %s", line.rstrip("\r\n"))
+                self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
                 # PING handling
                 if line.split()[0] == "PING":
@@ -381,11 +391,11 @@ class Server:
                         args = line.split()[4:]
 
                         self.logger.info(
-                            "[%s<-%s] %s %s", channel.name, user, cmd, " ".join(args)
+                            "[%s/%s] %s %s", user, channel.name, cmd, " ".join(args)
                         )
 
                         Thread(
-                            target=self._handle_cmd,
+                            target=self._handle_channel_msg,
                             args=[
                                 channel,
                                 user,
@@ -401,7 +411,7 @@ class Server:
                         cmd = line.split()[3]
                         args = line.split()[4:]
 
-                        self.logger.info("[PM<-%s] %s %s", user, cmd, " ".join(args))
+                        self.logger.info("[%s/PM] %s %s", user, cmd, " ".join(args))
 
                         Thread(
                             target=self._handle_pm,

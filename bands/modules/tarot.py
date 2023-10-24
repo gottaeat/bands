@@ -31,8 +31,9 @@ class Tarot:
     MISS_CLEO += "to 400 characters. Your responses never include lists. You always "
     MISS_CLEO += "respond with a single paragraph."
 
-    def __init__(self, channel):
+    def __init__(self, channel, user):
         self.channel = channel
+        self.user = user
 
         self.cards = []
         self.deck = []
@@ -86,7 +87,9 @@ class Tarot:
         notif_msg = (
             f"{c.GREEN}[{c.LBLUE}I:{self.channel.server.ai.key_index}{c.GREEN}] "
         )
-        notif_msg += f"{c.LGREEN}Generating reading:{c.RES}"
+        notif_msg += f"{c.LGREEN}Generating reading for "
+        notif_msg += f"{c.WHITE}{self.user.name}{c.LBLUE}.{c.RES}"
+
         self.channel.send_query(notif_msg)
 
         # call openai api
@@ -114,7 +117,11 @@ class Tarot:
             return
 
         try:
-            self.channel.send_query(response.choices[0]["message"]["content"])
+            notif_msg = f"{c.LGREEN}Reading for "
+            notif_msg += f"{c.WHITE}{self.user.name}{c.LBLUE}:{c.RES}\n"
+            notif_msg += response.choices[0]["message"]["content"]
+
+            self.channel.send_query(notif_msg)
         # pylint: disable=broad-exception-caught
         except Exception as exc:
             err_log = f"parsing response failed:\n{exc}"
@@ -140,18 +147,20 @@ class Tarot:
         # case 1: rerun the old deck and interpret it
         if len(user_args) != 0:
             if user_args[0] == "last":
-                if not self.channel.tarot_deck:
+                if not self.user.tarot_deck:
                     errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
-                    errmsg += f"{c.LRED}no previous deck found.{c.RES}"
+                    errmsg += f"{c.LRED}no previous deck found for "
+                    errmsg += f"{self.user.name}.{c.RES}"
                     self.channel.send_query(errmsg)
 
                     return
 
                 # print the cards in the last deck
                 cards_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
-                cards_msg += f"{c.LGREEN}Cards in the last deck are{c.LBLUE}: "
+                cards_msg += f"{c.LGREEN}Cards in the last deck of "
+                cards_msg += f"{self.user.name} are{c.LBLUE}: "
 
-                for index, card in enumerate(self.channel.tarot_deck):
+                for index, card in enumerate(self.user.tarot_deck):
                     cards_msg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}] "
                     cards_msg += f"{c.WHITE}{card.title}{c.LBLUE}, "
 
@@ -159,13 +168,13 @@ class Tarot:
                 self.channel.send_query(cards_msg)
 
                 # gen and send reading
-                self._interpret(self.channel.tarot_deck)
+                self._interpret(self.user.tarot_deck)
                 self.channel.server.ai.rotate_key()
 
                 return
 
             errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
-            errmsg += f"{c.LRED}only arg supported is {{last}}.{c.RES}"
+            errmsg += f"{c.LRED}only supported arg is {{last}}.{c.RES}"
             self.channel.send_query(errmsg)
 
             return
@@ -173,9 +182,10 @@ class Tarot:
         # case 2: gen a deck and interpret it, and store it
         self._run()
 
-        self.channel.tarot_deck = self.deck
+        self.user.tarot_deck = self.deck
 
-        finmsg = ""
+        finmsg = f"{c.LGREEN}Generating deck for "
+        finmsg += f"{c.WHITE}{self.user.name}{c.LBLUE}:{c.RES}\n"
 
         for index, card in enumerate(self.deck):
             order_title = self.tarot_data["card_order"][index]["title"]
@@ -194,5 +204,3 @@ class Tarot:
         # gen and send reading
         self._interpret(self.deck)
         self.channel.server.ai.rotate_key()
-
-        return

@@ -13,8 +13,9 @@ c = MIRCColors()
 class Advice:
     ADV_FILE = f"{os.path.dirname(os.path.realpath(__file__))}/../files/advices.json"
 
-    def __init__(self, channel):
+    def __init__(self, channel, user):
         self.channel = channel
+        self.user = user
 
         self.adv_data = None
 
@@ -22,20 +23,20 @@ class Advice:
         with open(self.ADV_FILE, "r", encoding="utf-8") as adv_file:
             self.adv_data = json.loads(adv_file.read())["advices"]
 
-    def _run(self, user, user_args):
+    def _run(self, user_args):
         if user_args:
             if len(user_args) > 1:
-                finmsg = f"{c.WHITE}{user}{c.LBLUE},{c.RES} "
+                finmsg = f"{c.WHITE}{self.user.name}{c.LBLUE},{c.RES} "
                 finmsg += f"{c.LRED}multicast advice support disabled.{c.RES}"
 
                 return finmsg
 
             target = user_args[0]
         else:
-            target = user
+            target = self.user.name
 
         if unilen(target) > self.channel.server.USER_NICKLIMIT:
-            finmsg = f"{c.WHITE}{user}{c.LBLUE},{c.RES} "
+            finmsg = f"{c.WHITE}{self.user.name}{c.LBLUE},{c.RES} "
             finmsg += f"{c.LRED}person in need of advice is wider than "
             finmsg += f"{self.channel.server.USER_NICKLIMIT} chars.{c.RES}"
 
@@ -51,5 +52,5 @@ class Advice:
 
         return finmsg
 
-    def print(self, user, user_args=None):
-        self.channel.send_query(self._run(user, user_args))
+    def print(self, user_args=None):
+        self.channel.send_query(self._run(user_args))
