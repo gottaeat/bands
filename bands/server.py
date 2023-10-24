@@ -378,7 +378,7 @@ class Server:
 
                         user = strip_user(line.split()[0])
                         cmd = line.split()[3]
-                        args = " ".join(line.split()[4:])
+                        args = line.split()[4:]
 
                         self.logger.info(
                             "[%s<-%s] %s %s", channel.name, user, cmd, args
@@ -399,7 +399,7 @@ class Server:
                     if line.split()[2] == self.botname:
                         user = strip_user(line.split()[0])
                         cmd = line.split()[3]
-                        args = " ".join(line.split()[4:])
+                        args = line.split()[4:]
 
                         self.logger.info("[PM<-%s] %s %s", user, cmd, args)
 
