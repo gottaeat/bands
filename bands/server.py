@@ -381,7 +381,7 @@ class Server:
                         args = line.split()[4:]
 
                         self.logger.info(
-                            "[%s<-%s] %s %s", channel.name, user, cmd, args
+                            "[%s<-%s] %s %s", channel.name, user, cmd, " ".join(args)
                         )
 
                         Thread(
@@ -401,7 +401,7 @@ class Server:
                         cmd = line.split()[3]
                         args = line.split()[4:]
 
-                        self.logger.info("[PM<-%s] %s %s", user, cmd, args)
+                        self.logger.info("[PM<-%s] %s %s", user, cmd, " ".join(args))
 
                         Thread(
                             target=self._handle_pm,
