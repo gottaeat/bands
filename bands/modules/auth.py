@@ -21,7 +21,7 @@ class Auth:
 
             return
 
-        if user_args == self.user.server.secret:
+        if user_args[0] == self.user.server.secret:
             self.user.server.admin = self.user.name
 
             self.user.server.logger.warning(

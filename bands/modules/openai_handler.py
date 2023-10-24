@@ -104,9 +104,9 @@ class OpenAIHandler:
             self._usage()
             return
 
-        if user_args.split()[0] == "reload":
+        if user_args[0] == "reload":
             try:
-                keys_file = user_args.split()[1]
+                keys_file = user_args[1]
             except IndexError:
                 errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
                 errmsg += f"{c.LRED}must supply a keys file.{c.RES}"
@@ -115,7 +115,7 @@ class OpenAIHandler:
                 return
 
             self._reload(keys_file)
-        elif user_args.split()[0] == "status":
+        elif user_args[0] == "status":
             self._status()
         else:
             self._usage()

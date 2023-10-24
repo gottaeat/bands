@@ -139,7 +139,7 @@ class Tarot:
     def print(self, user_args):
         # case 1: rerun the old deck and interpret it
         if len(user_args) != 0:
-            if user_args == "last":
+            if user_args[0] == "last":
                 if not self.channel.tarot_deck:
                     errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
                     errmsg += f"{c.LRED}no previous deck found.{c.RES}"

@@ -24,17 +24,17 @@ class Advice:
 
     def _run(self, user, user_args):
         if user_args:
-            if len(user_args.split(" ")) > 1:
+            if len(user_args) > 1:
                 finmsg = f"{c.WHITE}{user}{c.LBLUE},{c.RES} "
                 finmsg += f"{c.LRED}multicast advice support disabled.{c.RES}"
 
                 return finmsg
 
-            target = user_args
+            target = user_args[0]
         else:
             target = user
 
-        if unilen(str(target)) > self.channel.server.USER_NICKLIMIT:
+        if unilen(target) > self.channel.server.USER_NICKLIMIT:
             finmsg = f"{c.WHITE}{user}{c.LBLUE},{c.RES} "
             finmsg += f"{c.LRED}person in need of advice is wider than "
             finmsg += f"{self.channel.server.USER_NICKLIMIT} chars.{c.RES}"
