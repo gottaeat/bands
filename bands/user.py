@@ -8,7 +8,9 @@ class User:
     def __init__(self, server):
         self.server = server
         self.name = None
+
         self.char_limit = None
+        self.tarot_deck = None
 
     def send_query(self, msg):
         if "\n" in msg:
