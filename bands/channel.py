@@ -10,7 +10,6 @@ class Channel:
         self.name = None
 
         self.char_limit = None
-        self.tarot_deck = None
 
     def send_query(self, msg):
         if "\n" in msg:
