@@ -100,8 +100,11 @@ class Tarot:
                 n=1,
             )
         # pylint: disable=broad-exception-caught
-        except Exception as e:
-            print(e)
+        except Exception as exc:
+            err_log = f"create() failed:\n{exc}"
+
+            for line in err_log.split("\n"):
+                self.channel.server.logger.warning("%s", line)
 
             errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
             errmsg += f"{c.LRED}create() failed but your deck has been stored, "
@@ -113,8 +116,11 @@ class Tarot:
         try:
             self.channel.send_query(response.choices[0]["message"]["content"])
         # pylint: disable=broad-exception-caught
-        except Exception as e:
-            print(e)
+        except Exception as exc:
+            err_log = f"parsing response failed:\n{exc}"
+
+            for line in err_log.split("\n"):
+                self.channel.server.logger.warning("%s", line)
 
             errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
             errmsg += f"{c.LRED}Failed parsing response but your deck has been"
