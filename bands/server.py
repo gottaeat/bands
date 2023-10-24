@@ -30,6 +30,9 @@ class Server:
         # ServerConfig()<-AI()<-CLI()<-ConfigYAML()
         self.ai = None
 
+        # haul in the same logger
+        self.logger = None
+
         # ServerConfig()<-CLI()<-ConfigYAML()
         self.name = None
         self.address = None
@@ -59,8 +62,9 @@ class Server:
     def send_raw(self, msg):
         self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
 
-        print(
-            f"[{time.strftime('%H:%M:%S')}][{self.name}][send_raw() ->] {strip_color(msg)}"
+        self.logger.debug(
+            "<- %s",
+            strip_color(msg),
         )
 
     def _send_pong(self, data):
@@ -69,8 +73,8 @@ class Server:
     def _send_nick(self):
         self.send_raw(f"NICK {self.botname}")
 
-        print(
-            f"[{time.strftime('%H:%M:%S')}][{self.name}][_send_client() INFO] sending NICK"
+        self.logger.info(
+            "sending NICK",
         )
 
     def _send_user(self):
@@ -78,22 +82,24 @@ class Server:
             f"USER {self.botname} {self.botname} {self.address} :{self.botname}"
         )
 
-        print(
-            f"[{time.strftime('%H:%M:%S')}][{self.name}][_send_client() INFO] sending USER"
+        self.logger.info(
+            "sending USER",
         )
 
     def _send_quit(self, reason):
         self.send_raw(f"QUIT :{reason}")
 
-        print(
-            f"[{time.strftime('%H:%M:%S')}][{self.name}][_send_quit() INFO] sent QUIT: {reason}"
+        self.logger.info(
+            "sent QUIT: %s",
+            reason,
         )
 
     def _send_join(self, channel):
         self.send_raw(f"JOIN {channel}")
 
-        print(
-            f"[{time.strftime('%H:%M:%S')}][{self.name}][_send_join() INFO] joining {channel}"
+        self.logger.info(
+            "joining %s",
+            channel,
         )
 
     # -- arg handling -- #
@@ -131,9 +137,7 @@ class Server:
         chan.name = channel_name
         self.channel_obj.append(chan)
 
-        msg = f"[{time.strftime('%H:%M:%S')}][{self.name}]"
-        msg += f"[_gen_channel() INFO] generated channel {chan.name}"
-        print(msg)
+        self.logger.info("generated channel %s", chan.name)
 
     def _handle_join(self, botname_with_vhost, channel_name):
         channel_name = re.sub(r"^:", "", channel_name)
@@ -152,24 +156,19 @@ class Server:
                 f"{botname_with_vhost} PRIVMSG {channel.name} :\r\n".encode("utf-8")
             )
 
-            msg = f"[{time.strftime('%H:%M:%S')}][{self.name}]"
-            msg += f"[_handle_join() INFO] char_limit for {channel.name} is set "
-            msg += f"to {channel.char_limit}"
-            print(msg)
+            self.logger.info(
+                "char_limit for %s is set to %s", channel.name, channel.char_limit
+            )
 
     def _handle_invite(self, user, channel_name):
         self._send_join(channel_name)
 
-        msg = f"[{time.strftime('%H:%M:%S')}][{self.name}][_handle_invite() INFO] "
-        msg += f"{user} has invited us to {channel_name}"
-        print(msg)
+        self.logger.info("%s has invited us to %s", user, channel_name)
 
     def _handle_kick(self, user, channel_name, reason):
         self._send_join(channel_name)
 
-        msg = f"[{time.strftime('%H:%M:%S')}][{self.name}][_handle_kick() INFO] "
-        msg += f"{user} has kicked us from {channel_name} for: {reason}"
-        print(msg)
+        self.logger.info("%s has kicked us from %s for: %s", user, channel_name, reason)
 
     def _handle_ban(self, channel_name):
         if channel_name in self.channels:
@@ -179,23 +178,18 @@ class Server:
             if chan.name == channel_name:
                 self.channel_obj.remove(channel_name)
 
-        msg = f"[{time.strftime('%H:%M:%S')}][{self.name}][_handle_ban() INFO] "
-        msg += f"we are banned from {channel_name}, removing from lists."
-        print(msg)
+        self.logger.info("we are banned from %s, removing from lists", channel_name)
 
         if len(self.channels) == 0:
-            msg = f"[{time.strftime('%H:%M:%S')}][{self.name}][_handle_ban() INFO] "
-            msg += "channels list is empty, quitting."
-            print(msg)
+            self.logger.info("channels list is empty, quitting")
 
             self.stop()
 
     # -- stages -- #
     # stage 1: open socket that we will pass around for the entire server instance
     def _connect(self):
-        print(
-            f"[{time.strftime('%H:%M:%S')}][{self.name}][_connect() INFO] connecting to {self.name}"
-        )
+        self.logger.info("connecting to %s", self.name)
+
         addr = (socket.gethostbyname(self.address), self.port)
 
         if self.tls:
@@ -220,13 +214,16 @@ class Server:
                     self.conn, server_hostname=self.address
                 )
 
-        # pylint: disable=raise-missing-from
         try:
             self.conn.connect(addr)
-        except ssl.SSLCertVerificationError as exc:
-            raise ValueError(f"E: Attempting to connect with TLS failed:\n{exc}")
-        except TimeoutError as exc:
-            raise ValueError(f"E: Connection timed out:\n{exc}")
+        except ssl.SSLCertVerificationError:
+            self.logger.exception(
+                "attempting to connect with TLS failed",
+            )
+        except TimeoutError:
+            self.logger.exception(
+                "connection timed out",
+            )
 
         self.conn.settimeout(None)
 
@@ -245,19 +242,19 @@ class Server:
             data = decode_data(self.conn.recv(512))
 
             if not data:
-                errmsg = "E: decoding error while trying to grab the network welcome "
-                errmsg += f"message for {self.name}"
-                raise ValueError(errmsg)
+                errmsg = "decoding error while trying to grab the network "
+                errmsg += "welcome message for %s"
+                self.logger.error(errmsg, self.name)
 
             if len(data) == 0:
                 self.conn.close()
-                raise ValueError("E: received nothing.")
+
+                self.logger.error(
+                    "received nothing",
+                )
 
             for line in data:
-                print(
-                    f"[{time.strftime('%H:%M:%S')}][{self.name}][_send_client()<-] {line}",
-                    end="",
-                )
+                self.logger.debug("<- %s", line.rstrip("\r\n"))
 
                 if line.split()[0] == "PING":
                     Thread(target=self._send_pong, args=[line], daemon=True).start()
@@ -281,6 +278,8 @@ class Server:
                 if line.split()[1] in ("376", "422", "221") and not sent_ping:
                     self.send_raw(f"PING {self.address}")
 
+                    self.logger.info("sent PING before JOINs")
+
                     sent_ping = True
                     ping_tstamp = int(time.strftime("%s"))
 
@@ -291,20 +290,17 @@ class Server:
                             self.address in line.split()[0]
                             and line.split()[1] == "PONG"
                         ):
-                            msg = f"[{time.strftime('%H:%M:%S')}][{self.name}]"
-                            msg += "[_send_client() INFO] received PONG"
-                            print(msg)
-
                             pong_received = True
+
+                            self.logger.info("received PONG")
 
                         if int(time.strftime("%s")) - ping_tstamp > 30:
                             self.conn.close()
 
-                            errmsg = (
-                                f"E: {self.name} never responded to the PING before "
+                            self.logger.error(
+                                "%s never responded to the PING, closing connection",
+                                self.name,
                             )
-                            errmsg += "_join(), closing connection."
-                            raise ValueError(errmsg)
                 except UnboundLocalError:
                     continue
 
@@ -322,13 +318,11 @@ class Server:
 
             if len(data) == 0:
                 self.conn.close()
-                raise ValueError("E: received nothing.")
+
+                self.logger.error("received nothing")
 
             for line in data:
-                print(
-                    f"[{time.strftime('%H:%M:%S')}][{self.name}][_loop() <-] {line}",
-                    end="",
-                )
+                self.logger.debug("<- %s", line.rstrip("\r\n"))
 
                 # PING handling
                 if line.split()[0] == "PING":
@@ -382,25 +376,39 @@ class Server:
                                 channel = chan
                                 break
 
+                        user = strip_user(line.split()[0])
+                        cmd = line.split()[3]
+                        args = " ".join(line.split()[4:])
+
+                        self.logger.info(
+                            "[%s<-%s] %s %s", channel.name, user, cmd, args
+                        )
+
                         Thread(
                             target=self._handle_cmd,
                             args=[
                                 channel,
-                                strip_user(line.split()[0]),
-                                line.split()[3],
-                                " ".join(line.split()[4:]),
+                                user,
+                                cmd,
+                                args,
                             ],
                             daemon=True,
                         ).start()
 
                     # user PRIVMSG
                     if line.split()[2] == self.botname:
+                        user = strip_user(line.split()[0])
+                        cmd = line.split()[3]
+                        args = " ".join(line.split()[4:])
+
+                        self.logger.info("[PM<-%s] %s %s", user, cmd, args)
+
                         Thread(
                             target=self._handle_pm,
                             args=[
-                                strip_user(line.split()[0]),
-                                line.split()[3],
-                                " ".join(line.split()[4:]),
+                                user,
+                                cmd,
+                                args,
                             ],
                             daemon=True,
                         ).start()
