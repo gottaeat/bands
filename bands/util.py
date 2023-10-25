@@ -98,30 +98,3 @@ def wrap_bytes(text, size):
             lines.append(word)
 
     return [l.decode() for l in lines]
-
-
-# pylint: disable=bare-except
-def decode_data(data):
-    try:
-        data = strip_color(data.decode(encoding="UTF-8")).split("\r\n")
-        for index, item in enumerate(data):
-            if item == "":
-                del data[index]
-                break
-            data[index] = f"{item}\r\n"
-
-        return data
-    except UnicodeDecodeError:
-        try:
-            data = strip_color(data.decode(encoding="latin-1")).split("\r\n")
-            for index, item in enumerate(data):
-                if item == "":
-                    del data[index]
-
-                data[index] = f"{item}\r\n"
-
-            return data
-        except:
-            return None
-    except:
-        return None
