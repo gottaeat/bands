@@ -5,7 +5,6 @@ import time
 
 from threading import Thread
 
-from .util import decode_data
 from .util import strip_user
 from .util import strip_color
 
@@ -59,15 +58,21 @@ class Server:
 
         # Server-wide socket
         self.conn = None
+        self.buffer = b""
 
         # halt when cli.py catches TERM/INT
         self.halt = None
         self.connected = None
 
-    # - - query handling - - #
+    # -- sending -- #
     def send_raw(self, msg):
         self.logger.debug("%s %s", f"{ac.BRED}-->{ac.RES}", strip_color(msg))
-        self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
+
+        try:
+            self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
+        # pylint: disable=bare-except
+        except:
+            self.logger.exception("send failed")
 
     def _send_pong(self, data):
         self.send_raw(re.sub(r"PING", "PONG", data.rstrip("\r\n")))
@@ -89,6 +94,42 @@ class Server:
     def _send_join(self, channel):
         self.logger.info("joining %s", channel)
         self.send_raw(f"JOIN {channel}")
+
+    # -- receiving -- #
+    # pylint: disable=inconsistent-return-statements
+    def _decode_data(self, data):
+        if len(data) == 0 and not self.halt:
+            self.logger.warning("received nothing")
+            self.stop()
+            return
+
+        data = self.buffer + data
+
+        data_split = data.split(b"\r\n")
+
+        if data_split[-1] != b"":
+            self.buffer += data_split[-1]
+        else:
+            self.buffer = b""
+
+        data_split = data_split[:-1]
+
+        for index, item in enumerate(data_split):
+            try:
+                data_split[index] = f"{strip_color(item.decode(encoding='UTF-8'))}\r\n"
+            except UnicodeDecodeError:
+                try:
+                    data_split[
+                        index
+                    ] = f"{strip_color(item.decode(encoding='UTF-8'))}\r\n"
+                # pylint: disable=bare-except
+                except:
+                    data_split[index] = None
+            # pylint: disable=bare-except
+            except:
+                data_split[index] = None
+
+        return data_split
 
     # -- context handling -- #
     def _gen_channel(self, channel_name):
@@ -249,21 +290,21 @@ class Server:
         self._send_user()
 
         while not self.halt:
-            data = decode_data(self.conn.recv(512))
-
-            if not data:
+            try:
+                recv_data = self.conn.recv(512)
+            # pylint: disable=bare-except
+            except:
                 errmsg = "decoding error while trying to grab the network "
-                errmsg += "welcome message for %s"
-                self.logger.error(errmsg, self.name)
+                errmsg = "welcome message for %s"
 
-            if len(data) == 0:
-                self.conn.close()
+                self.logger.exception(errmsg, self.name)
 
-                self.logger.error(
-                    "received nothing",
-                )
+            data = self._decode_data(recv_data)
 
             for line in data:
+                if not line:
+                    continue
+
                 self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
                 if line.split()[0] == "PING":
@@ -321,18 +362,19 @@ class Server:
     def _loop(self):
         # pylint: disable=too-many-nested-blocks
         while not self.halt:
-            data = decode_data(self.conn.recv(512))
+            try:
+                recv_data = self.conn.recv(512)
+            # pylint: disable=bare-except
+            except:
+                self.logger.exception("recv failed")
 
-            if not data:
-                continue
-
-            if len(data) == 0:
-                self.conn.close()
-
-                self.logger.error("received nothing")
+            data = self._decode_data(recv_data)
 
             for line in data:
-                self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
+                if not line:
+                    continue
+
+                self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line)
 
                 # PING handling
                 if line.split()[0] == "PING":
@@ -434,9 +476,18 @@ class Server:
         self._loop()
 
     def stop(self):
+        self.logger.warning("halting")
         self.halt = True
 
         if self.connected:
-            self._send_quit("going out cold.")
+            try:
+                self._send_quit("quitting.")
+            # pylint: disable=bare-except
+            except:
+                self.logger.warning("sending quit failed")
 
+        self.logger.info("shutting down socket (RDWR)")
+        self.conn.shutdown(socket.SHUT_RDWR)
+
+        self.logger.info("closing connection")
         self.conn.close()
