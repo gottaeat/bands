@@ -4,7 +4,7 @@ import random
 import re
 
 from bands.colors import MIRCColors
-
+from bands.util import unilen
 
 # pylint: disable=invalid-name
 c = MIRCColors()
@@ -18,6 +18,12 @@ class TarotCard:
         self.desc2 = desc2
 
 
+class TarotDeck:
+    def __init__(self):
+        self.cards = []
+        self.question = None
+
+
 # pylint: disable=inconsistent-return-statements
 class Tarot:
     DESC_FILE = (
@@ -26,18 +32,22 @@ class Tarot:
 
     MISS_CLEO = "You are a Rastafarian speaking tarot reader mimicking American "
     MISS_CLEO += "television character Miss Cleo. The decks you read are laid out "
-    MISS_CLEO += "in the context of the Celtic tarot spread. Your responses never "
-    MISS_CLEO += 'include the word "Celtic". Your responses are always limited '
-    MISS_CLEO += "to 400 characters. Your responses never include lists. You always "
-    MISS_CLEO += "respond with a single paragraph."
+    MISS_CLEO += "in the context of the Celtic tarot spread. You always perform "
+    MISS_CLEO += "the tarot reading in accordance and in relation to the querent's "
+    MISS_CLEO += 'question. Your responses never include the word "Celtic". '
+    MISS_CLEO += "Your responses are always limited to 400 characters. Your "
+    MISS_CLEO += "responses never include lists. You always respond with a single "
+    MISS_CLEO += "paragraph."
 
     def __init__(self, channel, user):
         self.channel = channel
         self.user = user
 
-        self.cards = []
-        self.deck = []
+        self.deck = TarotDeck()
+
         self.tarot_data = None
+
+        self.cards = []
 
     def _parse_json(self):
         with open(self.DESC_FILE, "r", encoding="utf-8") as desc_file:
@@ -60,22 +70,26 @@ class Tarot:
         random.shuffle(self.cards)
 
         for _ in range(0, 10):
-            self.deck.append(self.cards.pop(random.randrange(len(self.cards))))
+            self.deck.cards.append(self.cards.pop(random.randrange(len(self.cards))))
 
     def _interpret(self, deck):
         # stringify cards
         cards_str = ""
-        for index, card in enumerate(deck):
+        for index, card in enumerate(deck.cards):
             cards_str += f"{index+1}. {card.title}\n"
 
         # generate prompt
-        prompt = "Read the following Celtic tarot deck where the cards are ordered "
-        prompt += f"from 1 to 10:\n{cards_str}Respond as the American television "
-        prompt += "character Miss Cleo. Your response must be in Rastafarian. "
-        prompt += "The cards must be read in the context of the Celtic tarot "
-        prompt += 'spread. Your response must not include the word "Celtic". '
-        prompt += "Your response must be limited to 400 characters. Your response "
-        prompt += "must be a paragraph and must not include lists. "
+        prompt = f'The querent\'s question is "{deck.question}". Read the '
+        prompt += "following Celtic tarot deck and answer the querent's "
+        prompt += f"question, the cards are ordered from 1 to 10:\n{cards_str}"
+        prompt += "Respond as the American television character Miss Cleo. "
+        prompt += "Your response must be in Rastafarian. The cards must be "
+        prompt += "read in the context of the Celtic tarot spread. Your "
+        prompt += 'response must not include the word "Celtic". Your '
+        prompt += "response must be limited to 400 characters. Your response "
+        prompt += "must be a paragraph and must not include lists. The reading "
+        prompt += "must be done in accordance and relation to the querent's "
+        prompt += "question."
 
         # role defs
         message = [
@@ -91,6 +105,9 @@ class Tarot:
         notif_msg += f"{c.WHITE}{self.user.name}{c.LBLUE}.{c.RES}"
 
         self.channel.send_query(notif_msg)
+
+        # rotate before call
+        self.channel.server.ai.rotate_key()
 
         # call openai api
         try:
@@ -138,69 +155,99 @@ class Tarot:
 
             return
 
-    def _run(self):
-        self._parse_json()
-        self._gen_cards()
-        self._pull()
+    def _usage(self):
+        errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+        errmsg += f"{c.LRED}an argument must be provided: "
+        errmsg += f"{c.LGREEN}[question|last].{c.RES}"
+        self.channel.send_query(errmsg)
 
+    # pylint: disable=too-many-statements
     def print(self, user_args):
+        if len(user_args) == 0:
+            self._usage()
+            return
+
         # case 1: rerun the old deck and interpret it
-        if len(user_args) != 0:
-            if user_args[0] == "last":
-                if not self.user.tarot_deck:
-                    errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
-                    errmsg += f"{c.LRED}no previous deck found for "
-                    errmsg += f"{self.user.name}.{c.RES}"
-                    self.channel.send_query(errmsg)
-
-                    return
-
-                # print the cards in the last deck
-                cards_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
-                cards_msg += f"{c.LGREEN}Cards in the last deck of "
-                cards_msg += f"{self.user.name} are{c.LBLUE}: "
-
-                for index, card in enumerate(self.user.tarot_deck):
-                    cards_msg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}] "
-                    cards_msg += f"{c.WHITE}{card.title}{c.LBLUE}, "
-
-                cards_msg = re.sub(r", $", f"{c.RES}", cards_msg)
-                self.channel.send_query(cards_msg)
-
-                # gen and send reading
-                self._interpret(self.user.tarot_deck)
-                self.channel.server.ai.rotate_key()
+        if user_args[0] == "last":
+            if not self.user.tarot_deck:
+                errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                errmsg += f"{c.LRED}no previous deck found for "
+                errmsg += f"{self.user.name}.{c.RES}"
+                self.channel.send_query(errmsg)
 
                 return
 
-            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
-            errmsg += f"{c.LRED}only supported arg is {{last}}.{c.RES}"
-            self.channel.send_query(errmsg)
+            # print the cards in the last deck
+            cards_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
+            cards_msg += f"{c.LGREEN}Cards in the last deck of "
+            cards_msg += f"{self.user.name} are{c.LBLUE}: "
 
-            return
+            for index, card in enumerate(self.user.tarot_deck.cards):
+                cards_msg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}] "
+                cards_msg += f"{c.WHITE}{card.title}{c.LBLUE}, "
+
+            cards_msg = re.sub(r", $", f"{c.RES}", cards_msg)
+
+            cards_msg += f"{c.WHITE}{self.user.name}{c.LGREEN}'s question was"
+            cards_msg += f"{c.LBLUE}: {c.WHITE}{self.deck.question}{c.RES}"
+
+            self.channel.send_query(cards_msg)
+
+            # gen and send reading
+            self._interpret(self.user.tarot_deck)
 
         # case 2: gen a deck and interpret it, and store it
-        self._run()
+        elif user_args[0] == "question":
+            if len(user_args) == 1:
+                errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                errmsg += f"{c.LRED}question query is missing.{c.RES}"
+                self.channel.send_query(errmsg)
 
-        self.user.tarot_deck = self.deck
+                return
 
-        finmsg = f"{c.LGREEN}Generating deck for "
-        finmsg += f"{c.WHITE}{self.user.name}{c.LBLUE}:{c.RES}\n"
+            user_Q = " ".join(user_args[1:])
 
-        for index, card in enumerate(self.deck):
-            order_title = self.tarot_data["card_order"][index]["title"]
-            order_desc = self.tarot_data["card_order"][index]["desc"]
+            if unilen(user_Q) > 300:
+                errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                errmsg += f"{c.LRED}question query is longer than 300 "
+                errmsg += f"characters.{c.RES}"
+                self.channel.send_query(errmsg)
 
-            finmsg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}]"
-            finmsg += f"[{c.LCYAN}{order_title}{c.GREEN}]{c.LBLUE}: "
-            finmsg += f"{c.LGREY}{order_desc} {c.LBLUE}¦ "
-            finmsg += f"{c.WHITE}{card.title} {c.LBLUE}¦ "
-            finmsg += f"{c.LGREEN}{card.desc1} {c.LBLUE}¦ "
-            finmsg += f"{c.LRED}{card.desc2}"
-            finmsg += f"{c.RES}\n"
+                return
 
-        self.channel.send_query(finmsg)
+            # set q
+            self.deck.question = user_Q
 
-        # gen and send reading
-        self._interpret(self.deck)
-        self.channel.server.ai.rotate_key()
+            # set deck
+            self._parse_json()
+            self._gen_cards()
+            self._pull()
+
+            self.user.tarot_deck = self.deck
+
+            # prompt
+            finmsg = f"{c.LGREEN}Generating deck for "
+            finmsg += f"{c.WHITE}{self.user.name}{c.LBLUE}:{c.RES}\n"
+
+            for index, card in enumerate(self.deck.cards):
+                order_title = self.tarot_data["card_order"][index]["title"]
+                order_desc = self.tarot_data["card_order"][index]["desc"]
+
+                finmsg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}]"
+                finmsg += f"[{c.LCYAN}{order_title}{c.GREEN}]{c.LBLUE}: "
+                finmsg += f"{c.LGREY}{order_desc} {c.LBLUE}¦ "
+                finmsg += f"{c.WHITE}{card.title} {c.LBLUE}¦ "
+                finmsg += f"{c.LGREEN}{card.desc1} {c.LBLUE}¦ "
+                finmsg += f"{c.LRED}{card.desc2}"
+                finmsg += f"{c.RES}\n"
+
+            finmsg += f"{c.WHITE}{self.user.name}{c.LGREEN}'s question was"
+            finmsg += f"{c.LBLUE}: {c.WHITE}{self.deck.question}{c.RES}"
+
+            self.channel.send_query(finmsg)
+
+            # gen and send reading
+            self._interpret(self.deck)
+        else:
+            self._usage()
+            return
