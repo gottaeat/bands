@@ -37,7 +37,8 @@ class Tarot:
     MISS_CLEO += 'question. Your responses never include the word "Celtic". '
     MISS_CLEO += "Your responses are always limited to 400 characters. Your "
     MISS_CLEO += "responses never include lists. You always respond with a single "
-    MISS_CLEO += "paragraph."
+    MISS_CLEO += "paragraph. You always end your responses with \"Call me now for "
+    MISS_CLEO += "your free tarot readin'\"."
 
     def __init__(self, channel, user):
         self.channel = channel
@@ -134,7 +135,8 @@ class Tarot:
             return
 
         try:
-            notif_msg = f"{c.LGREEN}Reading for "
+            notif_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
+            notif_msg += f"{c.LGREEN}Reading for "
             notif_msg += f"{c.WHITE}{self.user.name}{c.LBLUE}:{c.RES}\n"
             notif_msg += response.choices[0]["message"]["content"]
 
@@ -158,7 +160,7 @@ class Tarot:
     def _usage(self):
         errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
         errmsg += f"{c.LRED}an argument must be provided: "
-        errmsg += f"{c.LGREEN}[question|last].{c.RES}"
+        errmsg += f"{c.LGREEN}[q <question>|last].{c.RES}"
         self.channel.send_query(errmsg)
 
     # pylint: disable=too-many-statements
@@ -180,16 +182,18 @@ class Tarot:
             # print the cards in the last deck
             cards_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
             cards_msg += f"{c.LGREEN}Cards in the last deck of "
-            cards_msg += f"{self.user.name} are{c.LBLUE}: "
+            cards_msg += f"{c.WHITE}{self.user.name} {c.LGREEN}are{c.LBLUE}: "
 
             for index, card in enumerate(self.user.tarot_deck.cards):
                 cards_msg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}] "
                 cards_msg += f"{c.WHITE}{card.title}{c.LBLUE}, "
 
-            cards_msg = re.sub(r", $", f"{c.RES}", cards_msg)
+            cards_msg = re.sub(r", $", f"{c.RES}\n", cards_msg)
 
+            cards_msg += f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
             cards_msg += f"{c.WHITE}{self.user.name}{c.LGREEN}'s question was"
-            cards_msg += f"{c.LBLUE}: {c.WHITE}{self.deck.question}{c.RES}"
+            cards_msg += f"{c.LBLUE}: {c.WHITE}{self.user.tarot_deck.question}"
+            cards_msg += f"{c.RES}"
 
             self.channel.send_query(cards_msg)
 
@@ -197,7 +201,7 @@ class Tarot:
             self._interpret(self.user.tarot_deck)
 
         # case 2: gen a deck and interpret it, and store it
-        elif user_args[0] == "question":
+        elif user_args[0] == "q":
             if len(user_args) == 1:
                 errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
                 errmsg += f"{c.LRED}question query is missing.{c.RES}"
@@ -226,7 +230,8 @@ class Tarot:
             self.user.tarot_deck = self.deck
 
             # prompt
-            finmsg = f"{c.LGREEN}Generating deck for "
+            finmsg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
+            finmsg += f"{c.LGREEN}Generating deck for "
             finmsg += f"{c.WHITE}{self.user.name}{c.LBLUE}:{c.RES}\n"
 
             for index, card in enumerate(self.deck.cards):
@@ -241,8 +246,10 @@ class Tarot:
                 finmsg += f"{c.LRED}{card.desc2}"
                 finmsg += f"{c.RES}\n"
 
+            finmsg += f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
             finmsg += f"{c.WHITE}{self.user.name}{c.LGREEN}'s question was"
-            finmsg += f"{c.LBLUE}: {c.WHITE}{self.deck.question}{c.RES}"
+            finmsg += f"{c.LBLUE}: {c.WHITE}{self.deck.question}"
+            finmsg += f"{c.RES}"
 
             self.channel.send_query(finmsg)
 
