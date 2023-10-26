@@ -29,6 +29,16 @@ ac = ANSIColors()
 class Server:
     USER_NICKLIMIT = 30
 
+    _CHANNEL_CMDS = {
+        ":?advice": Advice,
+        ":?bands": Finance,
+        ":?help": Help,
+        ":?piss": Piss,
+        ":?tarot": Tarot,
+    }
+
+    _USER_CMDS = {":?auth": Auth, ":?openai": OpenAIHandler}
+
     def __init__(self):
         # ServerConfig()<-AI()<-CLI()<-ConfigYAML()
         self.ai = None
@@ -162,20 +172,26 @@ class Server:
                 user = user_obj
                 break
 
-        if cmd == ":?advice":
-            Advice(channel, user).print(user_args)
+        tstamp = int(time.strftime("%s"))
 
-        if cmd == ":?bands":
-            Finance(channel).print()
+        if not channel.tstamp:
+            channel.tstamp = tstamp
 
-        if cmd == ":?help":
-            Help(channel).print()
+            self._CHANNEL_CMDS[cmd](channel, user, user_args)
 
-        if cmd == ":?piss":
-            Piss(channel, user).print(user_args)
+            return
 
-        if cmd == ":?tarot":
-            Tarot(channel, user).print(user_args)
+        if user_name != self.admin:
+            if tstamp - channel.tstamp < 2:
+                self.logger.warning(
+                    "ignoring cmd %s in %s (ratelimited)", cmd, channel.name
+                )
+
+                return
+
+        channel.tstamp = tstamp
+
+        self._CHANNEL_CMDS[cmd](channel, user, user_args)
 
     def _handle_pm(self, user_name, cmd, user_args):
         if len(self.user_obj) == 0 or user_name not in self.users:
@@ -186,11 +202,26 @@ class Server:
                 user = user_obj
                 break
 
-        if cmd == ":?auth":
-            Auth(user).print(user_args)
+        tstamp = int(time.strftime("%s"))
 
-        if cmd == ":?openai":
-            OpenAIHandler(user).print(user_args)
+        if not user.tstamp:
+            user.tstamp = tstamp
+
+            self._USER_CMDS[cmd](user, user_args)
+
+            return
+
+        if user_name != self.admin:
+            if tstamp - user.tstamp < 2:
+                self.logger.warning(
+                    "ignoring cmd %s in %s (ratelimited)", cmd, user.name
+                )
+
+                return
+
+        user.tstamp = tstamp
+
+        self._USER_CMDS[cmd](user, user_args)
 
     # -- irc handling -- #
     def _handle_join(self, botname_with_vhost, channel_name):
@@ -447,20 +478,21 @@ class Server:
                         cmd = line.split()[3]
                         args = line.split()[4:]
 
-                        self.logger.info(
-                            "[%s/%s] %s %s", user, channel.name, cmd, " ".join(args)
-                        )
+                        if cmd in self._CHANNEL_CMDS:
+                            self.logger.info(
+                                "[%s/%s] %s %s", user, channel.name, cmd, " ".join(args)
+                            )
 
-                        Thread(
-                            target=self._handle_channel_msg,
-                            args=[
-                                channel,
-                                user,
-                                cmd,
-                                args,
-                            ],
-                            daemon=True,
-                        ).start()
+                            Thread(
+                                target=self._handle_channel_msg,
+                                args=[
+                                    channel,
+                                    user,
+                                    cmd,
+                                    args,
+                                ],
+                                daemon=True,
+                            ).start()
 
                     # user PRIVMSG
                     if line.split()[2] == self.botname:
@@ -470,15 +502,16 @@ class Server:
 
                         self.logger.info("[%s/PM] %s %s", user, cmd, " ".join(args))
 
-                        Thread(
-                            target=self._handle_pm,
-                            args=[
-                                user,
-                                cmd,
-                                args,
-                            ],
-                            daemon=True,
-                        ).start()
+                        if cmd in self._USER_CMDS:
+                            Thread(
+                                target=self._handle_pm,
+                                args=[
+                                    user,
+                                    cmd,
+                                    args,
+                                ],
+                                daemon=True,
+                            ).start()
 
                 # NICK handling (user nick changes)
                 if line.split()[1] == "NICK":
