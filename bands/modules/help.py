@@ -6,10 +6,14 @@ c = MIRCColors()
 
 # pylint: disable=too-few-public-methods
 class Help:
-    def __init__(self, channel):
+    def __init__(self, channel, user, user_args):
         self.channel = channel
+        self.user = user  # unused
+        self.user_args = user_args  # unused
 
-    def print(self):
+        self._run()
+
+    def _run(self):
         msg = f"{c.WHITE}├ {c.LRED}usage{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LRED}channel{c.RES}\n"
         msg += f"{c.WHITE}│ │ ├ {c.LGREEN}?advice{c.RES} {{target}}\n"

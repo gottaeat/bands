@@ -6,11 +6,14 @@ c = MIRCColors()
 
 # pylint: disable=too-few-public-methods
 class Auth:
-    def __init__(self, user):
+    def __init__(self, user, user_args):
         self.user = user
+        self.user_args = user_args
 
-    def _run(self, user_args):
-        if len(user_args) == 0:
+        self._run()
+
+    def _run(self):
+        if len(self.user_args) == 0:
             self.user.server.logger.warning(
                 "%s ran ?auth without providing a secret", self.user.name
             )
@@ -21,7 +24,7 @@ class Auth:
 
             return
 
-        if user_args[0] == self.user.server.secret:
+        if self.user_args[0] == self.user.server.secret:
             self.user.server.admin = self.user.name
 
             self.user.server.logger.warning(
@@ -40,6 +43,3 @@ class Auth:
         errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
         errmsg += f"{c.LRED}secret is incorrect.{c.RES}"
         self.user.send_query(errmsg)
-
-    def print(self, user_args):
-        self._run(user_args)

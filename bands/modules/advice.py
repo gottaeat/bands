@@ -13,25 +13,28 @@ c = MIRCColors()
 class Advice:
     ADV_FILE = f"{os.path.dirname(os.path.realpath(__file__))}/../files/advices.json"
 
-    def __init__(self, channel, user):
+    def __init__(self, channel, user, user_args):
         self.channel = channel
         self.user = user
+        self.user_args = user_args
 
         self.adv_data = None
+
+        self.channel.send_query(self._run())
 
     def _parse_json(self):
         with open(self.ADV_FILE, "r", encoding="utf-8") as adv_file:
             self.adv_data = json.loads(adv_file.read())["advices"]
 
-    def _run(self, user_args):
-        if user_args:
-            if len(user_args) > 1:
+    def _run(self):
+        if len(self.user_args) > 0:
+            if len(self.user_args) > 1:
                 finmsg = f"{c.WHITE}{self.user.name}{c.LBLUE},{c.RES} "
                 finmsg += f"{c.LRED}multicast advice support disabled.{c.RES}"
 
                 return finmsg
 
-            target = user_args[0]
+            target = self.user_args[0]
         else:
             target = self.user.name
 
@@ -51,6 +54,3 @@ class Advice:
         finmsg += f"{c.GREEN}{advice}{c.RES}\n"
 
         return finmsg
-
-    def print(self, user_args=None):
-        self.channel.send_query(self._run(user_args))

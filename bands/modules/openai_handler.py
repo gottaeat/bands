@@ -10,8 +10,11 @@ c = MIRCColors()
 
 # pylint: disable=too-few-public-methods
 class OpenAIHandler:
-    def __init__(self, user):
+    def __init__(self, user, user_args):
         self.user = user
+        self.user_args = user_args
+
+        self._run()
 
     def _status(self):
         key_index = self.user.server.ai.key_index
@@ -91,7 +94,7 @@ class OpenAIHandler:
         errmsg += f"{c.LRED}usage: {{status|reload}}.{c.RES}"
         self.user.send_query(errmsg)
 
-    def print(self, user_args):
+    def _run(self):
         if self.user.name != self.user.server.admin:
             errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
             errmsg += f"{c.LRED}user {self.user.name} is not authorized to run "
@@ -100,13 +103,13 @@ class OpenAIHandler:
 
             return
 
-        if len(user_args) == 0:
+        if len(self.user_args) == 0:
             self._usage()
             return
 
-        if user_args[0] == "reload":
+        if self.user_args[0] == "reload":
             try:
-                keys_file = user_args[1]
+                keys_file = self.user_args[1]
             except IndexError:
                 errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
                 errmsg += f"{c.LRED}must supply a keys file.{c.RES}"
@@ -115,7 +118,7 @@ class OpenAIHandler:
                 return
 
             self._reload(keys_file)
-        elif user_args[0] == "status":
+        elif self.user_args[0] == "status":
             self._status()
         else:
             self._usage()

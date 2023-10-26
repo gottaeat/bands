@@ -20,8 +20,10 @@ c = MIRCColors()
 
 # pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Finance:
-    def __init__(self, channel):
+    def __init__(self, channel, user, user_args):
         self.channel = channel
+        self.user = user  # unused
+        self.user_args = user_args  # unused
 
         self.tcmb = None
         self.yahoo = None
@@ -33,6 +35,8 @@ class Finance:
         self.wgb_week = None
         self.wgb_month = None
         self.wgb_year = None
+
+        self._run()
 
     def _get_tcmb(self):
         req = "https://www.tcmb.gov.tr/kurlar/today.xml"
@@ -223,7 +227,7 @@ class Finance:
         for job in threads:
             job.join()
 
-    def print(self):
+    def _run(self):
         self._collect()
 
         msg = f"{c.WHITE}USDTRY{c.RES}\n"

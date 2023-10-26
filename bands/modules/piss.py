@@ -8,12 +8,15 @@ c = MIRCColors()
 
 # pylint: disable=too-few-public-methods
 class Piss:
-    def __init__(self, channel, user):
+    def __init__(self, channel, user, user_args):
         self.channel = channel
         self.user = user
+        self.user_args = user_args
 
-    def print(self, user_args):
-        target = " ".join(user_args)
+        self._run()
+
+    def _run(self):
+        target = " ".join(self.user_args)
 
         if len(target) == 0:
             msg = f"{c.ORANGE}{self.user.name}{c.LBLUE}, "

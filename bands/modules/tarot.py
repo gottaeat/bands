@@ -37,18 +37,21 @@ class Tarot:
     MISS_CLEO += 'question. Your responses never include the word "Celtic". '
     MISS_CLEO += "Your responses are always limited to 400 characters. Your "
     MISS_CLEO += "responses never include lists. You always respond with a single "
-    MISS_CLEO += "paragraph. You always end your responses with \"Call me now for "
+    MISS_CLEO += 'paragraph. You always end your responses with "Call me now for '
     MISS_CLEO += "your free tarot readin'\"."
 
-    def __init__(self, channel, user):
+    def __init__(self, channel, user, user_args):
         self.channel = channel
         self.user = user
+        self.user_args = user_args
 
         self.deck = TarotDeck()
 
         self.tarot_data = None
 
         self.cards = []
+
+        self._run()
 
     def _parse_json(self):
         with open(self.DESC_FILE, "r", encoding="utf-8") as desc_file:
@@ -164,13 +167,13 @@ class Tarot:
         self.channel.send_query(errmsg)
 
     # pylint: disable=too-many-statements
-    def print(self, user_args):
-        if len(user_args) == 0:
+    def _run(self):
+        if len(self.user_args) == 0:
             self._usage()
             return
 
         # case 1: rerun the old deck and interpret it
-        if user_args[0] == "last":
+        if self.user_args[0] == "last":
             if not self.user.tarot_deck:
                 errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
                 errmsg += f"{c.LRED}no previous deck found for "
@@ -201,15 +204,15 @@ class Tarot:
             self._interpret(self.user.tarot_deck)
 
         # case 2: gen a deck and interpret it, and store it
-        elif user_args[0] == "q":
-            if len(user_args) == 1:
+        elif self.user_args[0] == "q":
+            if len(self.user_args) == 1:
                 errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
                 errmsg += f"{c.LRED}question query is missing.{c.RES}"
                 self.channel.send_query(errmsg)
 
                 return
 
-            user_Q = " ".join(user_args[1:])
+            user_Q = " ".join(self.user_args[1:])
 
             if unilen(user_Q) > 300:
                 errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
