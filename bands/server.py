@@ -236,6 +236,21 @@ class Server:
 
             self.stop()
 
+    def _handle_nick_change(self, user_name, user_new_name):
+        if user_name in self.users:
+            self.logger.info(
+                "%s changed their nick to %s, updating the user_obj",
+                user_name,
+                user_new_name,
+            )
+
+            for user_obj in self.user_obj:
+                if user_obj.name == user_name:
+                    user = user_obj
+                    break
+
+            user.name = user_new_name
+
     # -- stages -- #
     # stage 1: open socket that we will pass around for the entire server instance
     def _connect(self):
@@ -464,6 +479,20 @@ class Server:
                             ],
                             daemon=True,
                         ).start()
+
+                # NICK handling (user nick changes)
+                if line.split()[1] == "NICK":
+                    user_name = strip_user(line.split()[0])
+                    user_new_name = line.split()[2]
+
+                    Thread(
+                        target=self._handle_nick_change,
+                        args=[
+                            user_name,
+                            user_new_name,
+                        ],
+                        daemon=True,
+                    ).start()
 
     # -- CLI() interactions -- #
     def run(self):
