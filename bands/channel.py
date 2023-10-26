@@ -11,6 +11,8 @@ class Channel:
 
         self.char_limit = None
 
+        self.tstamp = None
+
     def send_query(self, msg):
         if "\n" in msg:
             for line in msg.split("\n"):
