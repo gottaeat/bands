@@ -75,11 +75,9 @@ class CLI:
         config.parse_yaml()
 
         # init ai
-        self.logger.info("initializing AI()")
-
-        ai = AI()
+        ai = AI(self.debug)
         ai.keys = config.openai_keys
-        ai.rotate_key()
+        ai.first_run()
 
         # pass the same ai instance to all servers
         for server in config.servers:
