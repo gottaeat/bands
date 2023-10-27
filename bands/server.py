@@ -3,7 +3,7 @@ import socket
 import ssl
 import time
 
-from threading import Thread
+from threading import Thread, Lock
 
 from .util import strip_user
 from .util import strip_color
@@ -71,6 +71,7 @@ class Server:
         self.buffer = b""
 
         # halt when cli.py catches TERM/INT
+        self.mutex = Lock()
         self.halt = None
         self.connected = None
 
@@ -108,10 +109,12 @@ class Server:
     # -- receiving -- #
     # pylint: disable=inconsistent-return-statements
     def _decode_data(self, data):
-        if len(data) == 0 and not self.halt:
-            self.logger.warning("received nothing")
-            self.stop()
-            return
+        if len(data) == 0:
+            with self.mutex:
+                if not self.halt:
+                    self.logger.warning("received nothing")
+                    self.stop()
+                    return
 
         data = self.buffer + data
 
@@ -335,7 +338,11 @@ class Server:
         self._send_nick()
         self._send_user()
 
-        while not self.halt:
+        while True:
+            with self.mutex:
+                if self.halt:
+                    break
+
             try:
                 recv_data = self.conn.recv(512)
             # pylint: disable=bare-except
@@ -407,7 +414,11 @@ class Server:
     # stage 3: final infinite loop
     def _loop(self):
         # pylint: disable=too-many-nested-blocks
-        while not self.halt:
+        while True:
+            with self.mutex:
+                if self.halt:
+                    break
+
             try:
                 recv_data = self.conn.recv(512)
             # pylint: disable=bare-except
@@ -538,8 +549,9 @@ class Server:
         self._loop()
 
     def stop(self):
-        self.logger.warning("halting")
-        self.halt = True
+        with self.mutex:
+            self.logger.warning("halting")
+            self.halt = True
 
         if self.connected:
             try:
