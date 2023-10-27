@@ -82,6 +82,10 @@ class Tarot:
         for index, card in enumerate(deck.cards):
             cards_str += f"{index+1}. {card.title}\n"
 
+        # get current key index
+        with self.channel.server.ai.mutex:
+            key_index = self.channel.server.ai.key_index
+
         # generate prompt
         prompt = f'The querent\'s question is "{deck.question}". Read the '
         prompt += "following Celtic tarot deck and answer the querent's "
@@ -102,18 +106,20 @@ class Tarot:
         ]
 
         # notify that we're generating the reading
-        notif_msg = (
-            f"{c.GREEN}[{c.LBLUE}I:{self.channel.server.ai.key_index}{c.GREEN}] "
-        )
+        notif_msg = f"{c.GREEN}[{c.LBLUE}I:{key_index}{c.GREEN}] "
         notif_msg += f"{c.LGREEN}Generating reading for "
         notif_msg += f"{c.WHITE}{self.user.name}{c.LBLUE}.{c.RES}"
 
         self.channel.send_query(notif_msg)
 
         # rotate before call
-        self.channel.server.ai.rotate_key()
+        with self.channel.server.ai.mutex:
+            self.channel.server.ai.rotate_key()
 
         # call openai api
+        # the thread safety issue is only within the scope of the pure python
+        # regarding the keys and key rotation logic, so we don't have to acquire
+        # the lock here.
         try:
             response = self.channel.server.ai.openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
