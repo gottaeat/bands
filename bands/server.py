@@ -71,7 +71,6 @@ class Server:
         self.buffer = b""
 
         # halt when cli.py catches TERM/INT
-        self.mutex = Lock()
         self.halt = None
         self.connected = None
 
@@ -110,11 +109,10 @@ class Server:
     # pylint: disable=inconsistent-return-statements
     def _decode_data(self, data):
         if len(data) == 0:
-            with self.mutex:
-                if not self.halt:
-                    self.logger.warning("received nothing")
-                    self.stop()
-                    return
+            if not self.halt:
+                self.logger.warning("received nothing")
+                self.stop()
+                return
 
         data = self.buffer + data
 
@@ -338,11 +336,7 @@ class Server:
         self._send_nick()
         self._send_user()
 
-        while True:
-            with self.mutex:
-                if self.halt:
-                    break
-
+        while not self.halt:
             try:
                 recv_data = self.conn.recv(512)
             # pylint: disable=bare-except
@@ -414,11 +408,7 @@ class Server:
     # stage 3: final infinite loop
     def _loop(self):
         # pylint: disable=too-many-nested-blocks
-        while True:
-            with self.mutex:
-                if self.halt:
-                    break
-
+        while not self.halt:
             try:
                 recv_data = self.conn.recv(512)
             # pylint: disable=bare-except
@@ -549,9 +539,8 @@ class Server:
         self._loop()
 
     def stop(self):
-        with self.mutex:
-            self.logger.warning("halting")
-            self.halt = True
+        self.logger.warning("halting")
+        self.halt = True
 
         if self.connected:
             try:
