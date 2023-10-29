@@ -77,7 +77,7 @@ class Server:
 
     # -- sending -- #
     def send_raw(self, msg):
-        self.logger.debug("%s %s", f"{ac.BRED}-->{ac.RES}", strip_color(msg))
+        self.logger.debug("%s %s", f"{ac.BRED}-->{ac.RES}", strip_color(msg.rstrip("\r\n")))
 
         try:
             self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
@@ -431,7 +431,7 @@ class Server:
                 if not line:
                     continue
 
-                self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line)
+                self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
                 # PING handling
                 if line.split()[0] == "PING":
