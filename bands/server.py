@@ -3,7 +3,7 @@ import socket
 import ssl
 import time
 
-from threading import Thread, Lock
+from threading import Thread
 
 from .util import strip_user
 from .util import strip_color
@@ -76,7 +76,9 @@ class Server:
 
     # -- sending -- #
     def send_raw(self, msg):
-        self.logger.debug("%s %s", f"{ac.BRED}-->{ac.RES}", strip_color(msg.rstrip("\r\n")))
+        self.logger.debug(
+            "%s %s", f"{ac.BRED}-->{ac.RES}", strip_color(msg.rstrip("\r\n"))
+        )
 
         try:
             self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
@@ -282,6 +284,14 @@ class Server:
                     break
 
             user.name = user_new_name
+
+            if user_name == self.admin:
+                self.logger.info(
+                    "%s was also set as the admin user, updating",
+                    user_name,
+                )
+
+                self.admin = user_new_name
 
     # -- stages -- #
     # stage 1: open socket that we will pass around for the entire server instance
