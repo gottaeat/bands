@@ -278,6 +278,9 @@ class Server:
                 user_new_name,
             )
 
+            self.users.remove(user_name)
+            self.users.append(user_new_name)
+
             for user_obj in self.user_obj:
                 if user_obj.name == user_name:
                     user = user_obj
