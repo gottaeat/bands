@@ -20,7 +20,7 @@ class Help:
         msg += f"{c.WHITE}│ │ ├ {c.LGREEN}?bands{c.RES}\n"
         msg += f"{c.WHITE}│ │ ├ {c.LGREEN}?help{c.RES}\n"
         msg += f"{c.WHITE}│ │ ├ {c.LGREEN}?piss{c.RES}   [target]\n"
-        msg += f"{c.WHITE}│ │ └ {c.LGREEN}?tarot{c.RES}  {{last}}\n"
+        msg += f"{c.WHITE}│ │ └ {c.LGREEN}?tarot{c.RES}  has its own detailed help prompt\n"
         msg += f"{c.WHITE}│ └ {c.LRED}user{c.RES}\n"
         msg += f"{c.WHITE}│   ├ {c.LGREEN}?auth{c.RES}   [secret]\n"
         msg += f"{c.WHITE}│   └ {c.LGREEN}?openai{c.RES} [reload|status]\n"
