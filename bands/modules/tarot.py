@@ -53,6 +53,7 @@ class Tarot:
 
         self._run()
 
+    # actual tarot bits
     def _parse_json(self):
         with open(self.DESC_FILE, "r", encoding="utf-8") as desc_file:
             self.tarot_data = json.loads(desc_file.read())["tarot"]
@@ -76,6 +77,12 @@ class Tarot:
         for _ in range(0, 10):
             self.deck.cards.append(self.cards.pop(random.randrange(len(self.cards))))
 
+    def _gen_deck(self):
+        self._parse_json()
+        self._gen_cards()
+        self._pull()
+
+    # openai hookup
     def _interpret(self, deck):
         # stringify cards
         cards_str = ""
@@ -138,7 +145,8 @@ class Tarot:
 
             errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
             errmsg += f"{c.LRED}create() failed but your deck has been stored, "
-            errmsg += f"you can retry using {c.LGREEN}?tarot last{c.LRED}.{c.RES}"
+            errmsg += f"you can retry using {c.LGREEN}`?tarot read addq "
+            errmsg += f"<question>`{c.LRED}.{c.RES}"
 
             self.channel.send_query(errmsg)
             return
@@ -159,111 +167,159 @@ class Tarot:
 
             errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
             errmsg += f"{c.LRED}Failed parsing response but your deck has been"
-            errmsg += f"stored, you can retry using {c.LGREEN}?tarot last"
+            errmsg += f"stored, you can retry using {c.LGREEN}?tarot read last"
             errmsg += f"{c.LRED}.{c.RES}"
 
             self.channel.send_query(errmsg)
 
+    # cmd handling
+    def _pretty_cards(self):
+        msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
+        msg += f"{c.LGREEN}Cards in the deck of {c.WHITE}{self.user.name} "
+        msg += f"{c.LGREEN}are{c.LBLUE}: "
+
+        for index, card in enumerate(self.user.tarot_deck.cards):
+            msg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}] "
+            msg += f"{c.WHITE}{card.title}{c.LBLUE}, "
+
+        msg = re.sub(r", $", f"{c.RES}\n", msg)
+
+        msg += f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
+        msg += f"{c.WHITE}{self.user.name}{c.LGREEN}'s question was"
+        msg += f"{c.LBLUE}: {c.WHITE}{self.user.tarot_deck.question}"
+        msg += f"{c.RES}"
+
+        self.channel.send_query(msg)
+
+    # pylint: disable=line-too-long
+    def _cmd_help(self):
+        msg = f"{c.LRED}usage{c.RES}\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}help{c.RES}    print this prompt\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}read{c.RES}\n"
+        msg += f"{c.WHITE}│ ├ {c.YELLOW}q{c.RES}     take in a question, generate a deck, and feed them\n"
+        msg += f"{c.WHITE}│ │{c.RES}       both to the openai api for a reading\n"
+        msg += f"{c.WHITE}│ ├ {c.YELLOW}last{c.RES}  provide a reading for the last stored tarot deck\n"
+        msg += f"{c.WHITE}│ │{c.RES}       and question for the user\n"
+        msg += f"{c.WHITE}│ └ {c.YELLOW}addq{c.RES}  add a question to the user's deck or replace the\n"
+        msg += f"{c.WHITE}│  {c.RES}       existing one\n"
+        msg += f"{c.WHITE}└ {c.LGREEN}pull{c.RES}    simply create a deck for the user, print the cards\n"
+        msg += "          in it with their descriptions, and the meaning of\n"
+        msg += "          the order which they are pulled in."
+
+        self.channel.send_query(msg)
+
+    def _cmd_pull(self):
+        self._gen_deck()
+        self.user.tarot_deck = self.deck
+
+        msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
+        msg += f"{c.LGREEN}Generated deck for "
+        msg += f"{c.WHITE}{self.user.name}{c.LBLUE}:{c.RES}\n"
+
+        for index, card in enumerate(self.user.tarot_deck.cards):
+            order_title = self.tarot_data["card_order"][index]["title"]
+            order_desc = self.tarot_data["card_order"][index]["desc"]
+
+            msg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}]"
+            msg += f"[{c.LCYAN}{order_title}{c.GREEN}]{c.LBLUE}: "
+            msg += f"{c.LGREY}{order_desc} {c.LBLUE}¦ "
+            msg += f"{c.WHITE}{card.title} {c.LBLUE}¦ "
+            msg += f"{c.LGREEN}{card.desc1} {c.LBLUE}¦ "
+            msg += f"{c.LRED}{card.desc2}"
+            msg += f"{c.RES}\n"
+
+        self.channel.send_query(msg)
+
+    def _cmd_read_q(self, user_Q):
+        self._gen_deck()
+        self.user.tarot_deck = self.deck
+
+        self.user.tarot_deck.question = user_Q
+
+        self._pretty_cards()
+
+        self._interpret(self.user.tarot_deck)
+
+    def _cmd_read_addq(self, user_Q):
+        self.user.tarot_deck.question = user_Q
+
+        msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
+        msg += f"{c.WHITE}{self.user.name}{c.LGREEN}'s question has "
+        msg += f"been saved.{c.RES}"
+        self.channel.send_query(msg)
+
+    def _cmd_read_last(self):
+        if not self.user.tarot_deck.question:
+            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+            errmsg += f"{c.LRED}deck does not have a question attached "
+            errmsg += f"to it. run {c.LGREEN}?tarot read addq <question> "
+            errmsg += f"{c.LRED}to add a question.{c.RES}"
+            self.channel.send_query(errmsg)
+
             return
 
-    def _usage(self):
-        errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
-        errmsg += f"{c.LRED}an argument must be provided: "
-        errmsg += f"{c.LGREEN}[q <question>|last].{c.RES}"
-        self.channel.send_query(errmsg)
+        self._pretty_cards()
+        self._interpret(self.user.tarot_deck)
 
-    # pylint: disable=too-many-statements
+    # pylint: disable=too-many-return-statements,too-many-branches
     def _run(self):
-        if len(self.user_args) == 0:
-            self._usage()
+        if len(self.user_args) == 0 or self.user_args[0] == "help":
+            self._cmd_help()
             return
 
-        # case 1: rerun the old deck and interpret it
-        if self.user_args[0] == "last":
-            if not self.user.tarot_deck:
-                errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
-                errmsg += f"{c.LRED}no previous deck found for "
-                errmsg += f"{self.user.name}.{c.RES}"
-                self.channel.send_query(errmsg)
+        if self.user_args[0] == "pull":
+            self._cmd_pull()
+            return
 
-                return
-
-            # print the cards in the last deck
-            cards_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
-            cards_msg += f"{c.LGREEN}Cards in the last deck of "
-            cards_msg += f"{c.WHITE}{self.user.name} {c.LGREEN}are{c.LBLUE}: "
-
-            for index, card in enumerate(self.user.tarot_deck.cards):
-                cards_msg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}] "
-                cards_msg += f"{c.WHITE}{card.title}{c.LBLUE}, "
-
-            cards_msg = re.sub(r", $", f"{c.RES}\n", cards_msg)
-
-            cards_msg += f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
-            cards_msg += f"{c.WHITE}{self.user.name}{c.LGREEN}'s question was"
-            cards_msg += f"{c.LBLUE}: {c.WHITE}{self.user.tarot_deck.question}"
-            cards_msg += f"{c.RES}"
-
-            self.channel.send_query(cards_msg)
-
-            # gen and send reading
-            self._interpret(self.user.tarot_deck)
-
-        # case 2: gen a deck and interpret it, and store it
-        elif self.user_args[0] == "q":
+        if self.user_args[0] == "read":
             if len(self.user_args) == 1:
                 errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
-                errmsg += f"{c.LRED}question query is missing.{c.RES}"
+                errmsg += f"{c.LRED}an argument is required.{c.RES}"
                 self.channel.send_query(errmsg)
 
                 return
 
-            user_Q = " ".join(self.user_args[1:])
+            if self.user_args[1] == "addq" or self.user_args[1] == "last":
+                if not self.user.tarot_deck:
+                    errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                    errmsg += f"{c.LRED}no previous deck found for "
+                    errmsg += f"{self.user.name}.{c.RES}"
+                    self.channel.send_query(errmsg)
 
-            if unilen(user_Q) > 300:
-                errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
-                errmsg += f"{c.LRED}question query is longer than 300 "
-                errmsg += f"characters.{c.RES}"
-                self.channel.send_query(errmsg)
+                    return
 
+            # ?tarot read last
+            if self.user_args[1] == "last":
+                self._cmd_read_last()
                 return
 
-            # set q
-            self.deck.question = user_Q
+            if self.user_args[1] == "q" or self.user_args[1] == "addq":
+                if len(self.user_args) == 2:
+                    errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                    errmsg += f"{c.LRED}question query is missing.{c.RES}"
+                    self.channel.send_query(errmsg)
 
-            # set deck
-            self._parse_json()
-            self._gen_cards()
-            self._pull()
+                    return
 
-            self.user.tarot_deck = self.deck
+                user_Q = " ".join(self.user_args[2:])
 
-            # prompt
-            finmsg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
-            finmsg += f"{c.LGREEN}Generating deck for "
-            finmsg += f"{c.WHITE}{self.user.name}{c.LBLUE}:{c.RES}\n"
+                if unilen(user_Q) > 300:
+                    errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+                    errmsg += f"{c.LRED}question query is longer than 300 "
+                    errmsg += f"characters.{c.RES}"
+                    self.channel.send_query(errmsg)
 
-            for index, card in enumerate(self.deck.cards):
-                order_title = self.tarot_data["card_order"][index]["title"]
-                order_desc = self.tarot_data["card_order"][index]["desc"]
+                    return
 
-                finmsg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}]"
-                finmsg += f"[{c.LCYAN}{order_title}{c.GREEN}]{c.LBLUE}: "
-                finmsg += f"{c.LGREY}{order_desc} {c.LBLUE}¦ "
-                finmsg += f"{c.WHITE}{card.title} {c.LBLUE}¦ "
-                finmsg += f"{c.LGREEN}{card.desc1} {c.LBLUE}¦ "
-                finmsg += f"{c.LRED}{card.desc2}"
-                finmsg += f"{c.RES}\n"
+            # ?tarot read q <question>
+            if self.user_args[1] == "q":
+                self._cmd_read_q(user_Q)
+                return
 
-            finmsg += f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
-            finmsg += f"{c.WHITE}{self.user.name}{c.LGREEN}'s question was"
-            finmsg += f"{c.LBLUE}: {c.WHITE}{self.deck.question}"
-            finmsg += f"{c.RES}"
+            # ?tarot read addq <question>
+            if self.user_args[1] == "addq":
+                self._cmd_read_addq(user_Q)
+                return
 
-            self.channel.send_query(finmsg)
-
-            # gen and send reading
-            self._interpret(self.deck)
         else:
-            self._usage()
-            return
+            self._cmd_help()
