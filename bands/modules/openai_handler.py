@@ -17,13 +17,12 @@ class OpenAIHandler:
         self._run()
 
     def _status(self):
-        with self.user.server.ai.mutex:
-            key_index = self.user.server.ai.key_index
+        key_index = self.user.server.ai.key_index
 
-            try:
-                key_total = len(self.user.server.ai.keys)
-            except TypeError:
-                key_total = "none"
+        try:
+            key_total = len(self.user.server.ai.keys)
+        except TypeError:
+            key_total = "none"
 
         msg = f"{c.WHITE}OpenAI Status{c.RES}\n"
         msg += f"{c.WHITE}├ {c.LRED}Current key index {c.LBLUE}→{c.RES} {key_index}\n"
@@ -75,16 +74,15 @@ class OpenAIHandler:
                 return
 
         with self.user.server.ai.mutex:
-            self.user.server.ai.keys = openai_keys
-            self.user.server.ai.rotate_key()
+           self.user.server.ai.key_index = -1
+           self.user.server.ai.rotate_key()
 
-        with self.user.server.ai.mutex:
-            if not self.user.server.ai.keys:
-                errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
-                errmsg += f"{c.LRED}no keys found.{c.RES}"
-                self.user.send_query(errmsg)
+        if not self.user.server.ai.keys:
+            errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
+            errmsg += f"{c.LRED}no keys found.{c.RES}"
+            self.user.send_query(errmsg)
 
-                return
+            return
 
         notif_msg = f"{c.GREEN}[{c.LBLUE}I{c.GREEN}] "
         notif_msg += f"{c.LGREEN}Success.{c.RES}"
