@@ -74,8 +74,8 @@ class OpenAIHandler:
                 return
 
         with self.user.server.ai.mutex:
-           self.user.server.ai.key_index = -1
-           self.user.server.ai.rotate_key()
+            self.user.server.ai.key_index = -1
+            self.user.server.ai.rotate_key()
 
         if not self.user.server.ai.keys:
             errmsg = f"{c.GREEN}[{c.LRED}E{c.GREEN}] "
