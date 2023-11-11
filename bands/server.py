@@ -147,7 +147,8 @@ class Server:
 
     # -- context handling -- #
     def _gen_channel(self, channel_name):
-        self.channels.append(channel_name)
+        if channel_name not in self.channels:
+            self.channels.append(channel_name)
 
         chan = Channel(self)
         chan.name = channel_name
