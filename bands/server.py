@@ -84,7 +84,8 @@ class Server:
             self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
         # pylint: disable=bare-except
         except:
-            self.logger.exception("send failed")
+            if not self.halt:
+                self.logger.exception("send failed")
 
     def _send_pong(self, data):
         self.send_raw(re.sub(r"PING", "PONG", data.rstrip("\r\n")))
