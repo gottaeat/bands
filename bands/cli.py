@@ -79,9 +79,12 @@ class CLI:
         ai.keys = config.openai_keys
         ai.first_run()
 
-        # pass the same ai instance to all servers
         for server in config.servers:
+            # pass the same ai instance to all servers
             server.ai = ai
+            # pass in ourselves to allow for the Server() objects to be
+            # manipulated via the auth'ed user
+            server.cli = self
 
         # start servers
         self.logger.info(
@@ -120,6 +123,7 @@ class CLI:
                 logger.info(line)
 
             s.ai = server.ai
+            s.cli = server.cli
             s.name = server.name
             s.address = server.address
             s.port = server.port

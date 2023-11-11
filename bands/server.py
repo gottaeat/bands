@@ -43,6 +43,9 @@ class Server:
         # ServerConfig()<-AI()<-CLI()<-ConfigYAML()
         self.ai = None
 
+        # to alter the list of Server()s
+        self.cli = None
+
         # haul in the same logger
         self.logger = None
 
