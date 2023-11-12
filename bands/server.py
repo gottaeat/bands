@@ -465,6 +465,10 @@ class Server:
                 if line.split()[0] == "PING":
                     Thread(target=self._send_pong, args=[line], daemon=True).start()
 
+                # KILL handling
+                if line.split()[0] == "ERROR" and line.split()[1] == "Killed":
+                    self.logger.warning("we got killed")
+
                 # JOIN handling
                 if (
                     strip_user(line.split()[0]) == self.botname
