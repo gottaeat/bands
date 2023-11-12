@@ -117,6 +117,7 @@ class CLI:
             msg += f"botname     : {server.botname}\n"
             msg += f"channels    : {server.channels}\n"
             msg += f"secret      : {server.secret}\n"
+            msg += f"passwd      : {server.passwd}\n"
             msg += f"tls         : {server.tls}\n"
             msg += f"verify_tls  : {server.verify_tls}\n"
             msg += f"scroll_speed: {server.scroll_speed}"
@@ -132,6 +133,7 @@ class CLI:
             s.botname = server.botname
             s.channels = server.channels
             s.secret = server.secret
+            s.passwd = server.passwd
             s.tls = server.tls
             s.verify_tls = server.verify_tls
             s.scroll_speed = server.scroll_speed

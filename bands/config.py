@@ -14,6 +14,7 @@ class ServerConfig:
         self.channels = []
         self.secret = None
 
+        self.passwd = None
         self.tls = None
         self.verify_tls = None
         self.scroll_speed = None
@@ -157,6 +158,17 @@ class ConfigYAML:
                 svconf.secret = str(server["secret"])
             except ValueError:
                 self.logger.exception("invalid server secret")
+
+            # server.passwd
+            try:
+                svconf.passwd = str(server["passwd"])
+            except ValueError:
+                self.logger.exception("invalid server passwd")
+            except KeyError:
+                pass
+
+            if svconf.passwd == "None":
+                self.logger.error("server passwd cannot be blank")
 
             # server.tls
             try:
