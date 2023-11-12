@@ -76,9 +76,13 @@ class CLI:
 
         # init ai
         ai = AI(self.debug)
-        ai.keys = config.openai_keys
+
+        if config.openai:
+            ai.keys = config.openai.keys
+
         ai.first_run()
 
+        # init servers
         for server in config.servers:
             # pass the same ai instance to all servers
             server.ai = ai
@@ -87,9 +91,7 @@ class CLI:
             server.cli = self
 
         # start servers
-        self.logger.info(
-            "generating Server() instances",
-        )
+        self.logger.info("generating Server() instances")
 
         threads = []
 
