@@ -68,6 +68,7 @@ servers:
     - name: example1
       address: irc.example1.com
       port: 6697
+      passwd: badactors
       botname: bands
       tls: true
       verify_tls: false
