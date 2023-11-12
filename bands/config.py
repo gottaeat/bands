@@ -11,14 +11,19 @@ class ServerConfig:
         self.address = None
         self.port = None
         self.botname = None
-        self.channels = None
+        self.channels = []
         self.secret = None
 
-        self.tls = False
-        self.verify_tls = False
-        self.scroll_speed = 0
+        self.tls = None
+        self.verify_tls = None
+        self.scroll_speed = None
 
         self.ai = None
+
+
+class OpenAIConfig:
+    def __init__(self):
+        self.keys = None
 
 
 class ConfigYAML:
@@ -27,166 +32,178 @@ class ConfigYAML:
 
         self.logger = None
 
-        self.openai_keys = None
+        self.openai = None
         self.servers = []
 
-    # pylint: disable=too-many-branches, too-many-statements
-    def parse_yaml(self):
-        self.logger.info(
-            "parsing configuration",
-        )
-        if os.path.isfile(self.config_file):
-            try:
-                with open(self.config_file, "r", encoding="utf-8") as yaml_file:
-                    yaml_parsed = yaml.load(yaml_file.read(), Loader=yaml.Loader)
-            # pylint: disable=broad-exception-caught
-            except Exception:
-                self.logger.exception("%s parsing has failed", self.config_file)
-        else:
-            self.logger.error("%s is not a file", self.config_file)
+        self.yaml_parsed = None
 
-        # openai
+    def _parse_openai(self):
+        self.logger.info("parsing openai")
+
         try:
-            openai = yaml_parsed["openai"]
+            openai = self.yaml_parsed["openai"]
         except KeyError:
-            openai = None
+            warnmsg = "openai section in the YAML file is missing.\n"
+            warnmsg += "functionality requiring AI() will not work unless\n"
+            warnmsg += "reloaded later on by an authorized user."
 
-            warnmsg = "openai section in the YAML file is missing, functionality "
-            warnmsg += "requiring AI() will not work unless reloaded later on "
-            warnmsg += "by the admin user"
-            self.logger.warning(
-                warnmsg,
-            )
-        except TypeError:
+            for line in warnmsg.split("\n"):
+                self.logger.warning(line)
+
+            return  # config.openai == None
+        # pylint: disable=bare-except
+        except:
+            self.logger.exception("%s parsing has failed", self.config_file)
+
+        try:
+            keys_file = openai["keys_file"]
+        except KeyError:
             self.logger.exception(
-                "%s parsing has failed",
-                self.config_file,
+                "keys_file in the openai section of the YAML file is missing"
             )
 
-        if openai:
-            self.logger.info(
-                "openai section found",
-            )
+        if not keys_file:
+            self.logger.error("keys_file cannot be blank")
+
+        if not os.path.isfile(keys_file):
+            self.logger.error("%s is not a file", keys_file)
+
+        oaiconf = OpenAIConfig()
+
+        self.logger.info("loading openai keys_file")
+
+        try:
+            with open(keys_file, "r", encoding="utf-8") as file:
+                oaiconf.keys = json.loads(file.read())["openai_keys"]
+        # pylint: disable=bare-except
+        except:
+            self.logger.exception("parsing %s failed", keys_file)
+
+        if len(oaiconf.keys) == 0:
+            self.logger.error("%s has no keys", keys_file)
+
+        for key in oaiconf.keys:
             try:
-                keys_file = openai["keys_file"]
+                if key["key"][0:3] != "sk-":
+                    self.logger.error("%s is not a valid OpenAI key", key["key"])
             except KeyError:
-                self.logger.exception(
-                    "keys_file in openai section in the YAML file is missing",
-                )
-            if not os.path.isfile(keys_file):
-                self.logger.error(
-                    "%s is not a file",
-                    keys_file,
-                )
+                self.logger.exception("%s formatting is incorrect", keys_file)
 
-            self.logger.info(
-                "parsing openai keys_file",
-            )
-            try:
-                with open(keys_file, "r", encoding="utf-8") as file:
-                    self.openai_keys = json.loads(file.read())["openai_keys"]
-            # pylint: disable=broad-exception-caught
-            except Exception:
-                self.logger.exception(
-                    "parsing %s failed",
-                    keys_file,
-                )
+        self.openai = oaiconf
 
-            if len(self.openai_keys) == 0:
-                self.logger.error(
-                    "%s has no keys",
-                    keys_file,
-                )
-
-            for key in self.openai_keys:
-                try:
-                    if key["key"][0:3] != "sk-":
-                        self.logger.error(
-                            "%s is not a valid OpenAI key",
-                            key["key"],
-                        )
-                except KeyError:
-                    self.logger.exception(
-                        "%s formatting is incorrect",
-                        keys_file,
-                    )
-
+    # pylint: disable=too-many-branches,too-many-statements
+    def _parse_servers(self):
         # servers
-        self.logger.info(
-            "parsing servers",
-        )
-        try:
-            servers = yaml_parsed["servers"]
-        except KeyError:
-            self.logger.exception(
-                "server section in the YAML file is missing",
-            )
+        self.logger.info("parsing servers")
 
-        server_must_have = [
-            "name",
-            "address",
-            "port",
-            "botname",
-            "channels",
-            "secret",
-        ]
+        try:
+            servers = self.yaml_parsed["servers"]
+        except KeyError:
+            self.logger.exception("server section in the YAML file is missing")
+
+        server_must_have = ["name", "address", "port", "botname", "channels", "secret"]
 
         for server in servers:
             for item in server_must_have:
                 if item not in server.keys():
-                    self.logger.error(
-                        "%s is missing from the YAML.",
-                        item,
-                    )
+                    self.logger.error("%s is missing from the YAML", item)
+                if not server[item]:
+                    self.logger.error("%s cannot be blank", item)
 
-            config = ServerConfig()
-            config.name = str(server["name"])
-            config.address = str(server["address"])
-            config.port = int(server["port"])
-            config.botname = str(server["botname"])
+            svconf = ServerConfig()
 
+            # server.name
+            try:
+                svconf.name = str(server["name"])
+            except ValueError:
+                self.logger.exception("invalid server name")
+
+            # server.address
+            try:
+                svconf.address = str(server["address"])
+            except ValueError:
+                self.logger.exception("invalid server address")
+
+            # server.port
+            try:
+                svconf.port = int(server["port"])
+            except ValueError:
+                self.logger.exception("invalid server port")
+
+            if svconf.port <= 0 or svconf.port > 65535:
+                self.logger.error("%s is not a valid port number.", svconf.port)
+
+            # server.botname
+            try:
+                svconf.botname = str(server["botname"])
+            except ValueError:
+                self.logger.exception("invalid server botname")
+
+            # server.channels
             if len(server["channels"]) == 0:
-                self.logger.error(
-                    "no channels provided for server %s",
-                    server["name"],
-                )
+                self.logger.error("no channels provided for server %s", server["name"])
 
             for channel in server["channels"]:
                 if channel[0] != "#":
-                    self.logger.error(
-                        "channels should start with a #",
-                    )
+                    self.logger.error("channels should start with a #")
 
-            config.channels = server["channels"]
-            config.secret = str(server["secret"])
+                try:
+                    svconf.channels.append(str(channel))
+                except ValueError:
+                    self.logger.exception("invalid channel name: %s", channel)
 
+            # server.secret
+            try:
+                svconf.secret = str(server["secret"])
+            except ValueError:
+                self.logger.exception("invalid server secret")
+
+            # server.tls
             try:
                 if type(server["tls"]).__name__ != "bool":
-                    self.logger.error(
-                        "tls should be a bool",
-                    )
-
-                config.tls = server["tls"]
+                    self.logger.error("tls should be a bool")
             except KeyError:
                 pass
 
+            try:
+                svconf.tls = server["tls"]
+            except KeyError:
+                svconf.tls = False
+
+            # server.verify_tls
             try:
                 if type(server["verify_tls"]).__name__ != "bool":
-                    self.logger.error(
-                        "verify_tls should be a bool",
-                    )
-
-                config.verify_tls = server["verify_tls"]
+                    self.logger.error("verify_tls should be a bool")
             except KeyError:
                 pass
 
             try:
-                config.scroll_speed = int(server["scroll_speed"])
+                svconf.verify_tls = server["verify_tls"]
             except KeyError:
-                pass
+                svconf.verify_tls = False
 
-            self.logger.info(
-                "generated Server() for %s",
-                config.name,
-            )
-            self.servers.append(config)
+            # server.scroll_speed
+            try:
+                svconf.scroll_speed = int(server["scroll_speed"])
+            except KeyError:
+                svconf.scroll_speed = 0
+
+            self.logger.info("generated ServerConfig() for %s", svconf.name)
+            self.servers.append(svconf)
+
+    def parse_yaml(self):
+        # yaml->dict
+        self.logger.info("loading yaml")
+
+        if os.path.isfile(self.config_file):
+            try:
+                with open(self.config_file, "r", encoding="utf-8") as yaml_file:
+                    self.yaml_parsed = yaml.load(yaml_file.read(), Loader=yaml.Loader)
+            # pylint: disable=bare-except
+            except:
+                self.logger.exception("%s parsing has failed", self.config_file)
+        else:
+            self.logger.error("%s is not a file", self.config_file)
+
+        self._parse_openai()
+        self._parse_servers()
