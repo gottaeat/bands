@@ -55,6 +55,7 @@ class Server:
         self.port = None
         self.botname = None
         self.channels = None
+        self.passwd = None
         self.secret = None
         self.tls = None
         self.verify_tls = None
@@ -102,6 +103,10 @@ class Server:
         self.send_raw(
             f"USER {self.botname} {self.botname} {self.address} :{self.botname}"
         )
+
+    def _send_pass(self):
+        self.logger.info("sending PASS")
+        self.send_raw(f"PASS {self.passwd}")
 
     def _send_quit(self, reason):
         self.logger.info("sending QUIT: %s", reason)
@@ -350,6 +355,9 @@ class Server:
         addr_updated = False
         pong_received = False
         sent_ping = False
+
+        if self.passwd:
+            self._send_pass()
 
         self._send_nick()
         self._send_user()
