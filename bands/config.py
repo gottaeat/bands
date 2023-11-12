@@ -56,6 +56,9 @@ class ConfigYAML:
         except:
             self.logger.exception("%s parsing has failed", self.config_file)
 
+        if not openai:
+            self.logger.error("openai section cannot be specified then left blank")
+
         try:
             keys_file = openai["keys_file"]
         except KeyError:
@@ -114,16 +117,10 @@ class ConfigYAML:
             svconf = ServerConfig()
 
             # server.name
-            try:
-                svconf.name = str(server["name"])
-            except ValueError:
-                self.logger.exception("invalid server name")
+            svconf.name = str(server["name"])
 
             # server.address
-            try:
-                svconf.address = str(server["address"])
-            except ValueError:
-                self.logger.exception("invalid server address")
+            svconf.address = str(server["address"])
 
             # server.port
             try:
@@ -135,10 +132,7 @@ class ConfigYAML:
                 self.logger.error("%s is not a valid port number.", svconf.port)
 
             # server.botname
-            try:
-                svconf.botname = str(server["botname"])
-            except ValueError:
-                self.logger.exception("invalid server botname")
+            svconf.botname = str(server["botname"])
 
             # server.channels
             if len(server["channels"]) == 0:
@@ -154,21 +148,16 @@ class ConfigYAML:
                     self.logger.exception("invalid channel name: %s", channel)
 
             # server.secret
-            try:
-                svconf.secret = str(server["secret"])
-            except ValueError:
-                self.logger.exception("invalid server secret")
+            svconf.secret = str(server["secret"])
 
             # server.passwd
             try:
                 svconf.passwd = str(server["passwd"])
-            except ValueError:
-                self.logger.exception("invalid server passwd")
             except KeyError:
                 pass
 
             if svconf.passwd == "None":
-                self.logger.error("server passwd cannot be blank")
+                self.logger.error("server passwd cannot be specified then left blank")
 
             # server.tls
             try:
@@ -197,6 +186,8 @@ class ConfigYAML:
             # server.scroll_speed
             try:
                 svconf.scroll_speed = int(server["scroll_speed"])
+            except ValueError:
+                self.logger.exception("invalid server scroll_speed")
             except KeyError:
                 svconf.scroll_speed = 0
 
