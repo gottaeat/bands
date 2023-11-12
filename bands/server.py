@@ -366,6 +366,9 @@ class Server:
 
             data = self._decode_data(recv_data)
 
+            if not data:
+                continue
+
             for line in data:
                 if not line:
                     continue
@@ -381,6 +384,12 @@ class Server:
 
                     self._send_nick()
                     self._send_user()
+
+                # password protection
+                if line.split()[1] == "464":
+                    self.logger.warning("incorrect password, bailing out")
+
+                    self.stop()
 
                 # welcome msg, need to update the address to match the node we round robined
                 # to for sending the pong
@@ -434,6 +443,9 @@ class Server:
                 self.logger.exception("recv failed")
 
             data = self._decode_data(recv_data)
+
+            if not data:
+                continue
 
             for line in data:
                 if not line:
@@ -551,10 +563,11 @@ class Server:
         self._connect()
         self._send_client()
 
-        for channel in self.channels:
-            self._send_join(channel)
+        if not self.halt:
+            for channel in self.channels:
+                self._send_join(channel)
 
-        self._loop()
+            self._loop()
 
     def stop(self):
         self.logger.warning("halting")
