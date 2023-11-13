@@ -70,11 +70,11 @@ class Server:
         self.user_obj = []
         self.admin = None
 
-        # Server-wide socket
+        # server-wide socket
         self.conn = None
         self.buffer = b""
 
-        # halt when cli.py catches TERM/INT
+        # state
         self.halt = None
         self.connected = None
 
@@ -468,6 +468,8 @@ class Server:
                 # KILL handling
                 if line.split()[0] == "ERROR" and line.split()[1] == "Killed":
                     self.logger.warning("we got killed")
+                    self.connected = False
+                    self.stop()
 
                 # JOIN handling
                 if (
