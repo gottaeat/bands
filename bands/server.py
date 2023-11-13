@@ -599,3 +599,6 @@ class Server:
 
         self.logger.info("closing connection")
         self.conn.close()
+
+        self.logger.info("removing %s from servers list", self.name)
+        self.cli.servers.remove(self)
