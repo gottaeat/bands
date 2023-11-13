@@ -395,7 +395,10 @@ class Server:
 
                 # password protection
                 if line.split()[1] == "464":
-                    self.logger.warning("incorrect password, bailing out")
+                    if self.passwd:
+                        self.logger.warning("incorrect password")
+                    else:
+                        self.logger.warning("a password is required")
 
                     self.stop()
 
