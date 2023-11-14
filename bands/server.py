@@ -80,12 +80,12 @@ class Server:
         self.halt = None
         self.connected = None
 
-        # send_client
-        self.send_client_ping_sent = None
-        self.send_client_ping_tstamp = None
-        self.send_client_pong_received = None
-        self.send_client_pong_timer_stop = None
-        self.send_client_pong_timer_halt = None
+        # client_init
+        self.client_init_ping_sent = None
+        self.client_init_ping_tstamp = None
+        self.client_init_pong_received = None
+        self.client_init_pong_timer_stop = None
+        self.client_init_pong_timer_halt = None
 
     # -- sending -- #
     def send_raw(self, msg):
@@ -323,9 +323,9 @@ class Server:
     def _client_init_pong_timer(self):
         self.logger.info("started PONG timer")
 
-        while not self.send_client_pong_timer_stop:
+        while not self.client_init_pong_timer_stop:
             if (
-                int(time.strftime("%s")) - self.send_client_ping_tstamp
+                int(time.strftime("%s")) - self.client_init_ping_tstamp
                 > self._PONG_TIMEOUT
             ):
                 self.logger.warning(
@@ -333,13 +333,13 @@ class Server:
                     self._PONG_TIMEOUT,
                 )
 
-                if not self.send_client_pong_timer_stop:
+                if not self.client_init_pong_timer_stop:
                     self.connected = False
                     self.stop()
 
             time.sleep(1)
 
-        self.send_client_pong_timer_halt = True
+        self.client_init_pong_timer_halt = True
         self.logger.info("stopped PONG timer")
 
     # -- stages -- #
@@ -401,7 +401,7 @@ class Server:
         self._send_user()
 
         while not self.halt:
-            if self.send_client_pong_timer_stop and addr_updated:
+            if self.client_init_pong_timer_stop and addr_updated:
                 break
 
             try:
@@ -461,13 +461,13 @@ class Server:
                 # 376: end of motd, 422: no motd found, 221: server-wide mode set for user
                 if (
                     line.split()[1] in ("376", "422", "221")
-                    and not self.send_client_ping_sent
+                    and not self.client_init_ping_sent
                 ):
                     self._send_ping()
                     self.logger.info("sent PING before JOINs")
 
-                    self.send_client_ping_sent = True
-                    self.send_client_ping_tstamp = int(time.strftime("%s"))
+                    self.client_init_ping_sent = True
+                    self.client_init_ping_tstamp = int(time.strftime("%s"))
 
                     Thread(target=self._client_init_pong_timer, daemon=True).start()
 
@@ -475,18 +475,18 @@ class Server:
 
                 # wait for the pong, if we received it, switch to _loop()
                 if (
-                    self.send_client_ping_sent
+                    self.client_init_ping_sent
                     and self.address in line.split()[0]
                     and line.split()[1] == "PONG"
                 ):
-                    self.send_client_pong_received = True
-                    self.send_client_pong_timer_stop = True
+                    self.client_init_pong_received = True
+                    self.client_init_pong_timer_stop = True
                     self.logger.info("received PONG")
 
                     continue
 
         while not self.halt:
-            if not self.send_client_pong_timer_halt:
+            if not self.client_init_pong_timer_halt:
                 time.sleep(1)
             else:
                 self.logger.info("%s init done %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
