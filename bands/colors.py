@@ -1,7 +1,10 @@
 # pylint: disable=too-few-public-methods
 class MIRCColors:
     RES = "\x0f"
+
     BOLD = "\x02"
+    ULINE = "\x1f"
+    BLINK = "\x06"  # weechat no likey
 
     WHITE = "\x0300"
     BLACK = "\x0301"
