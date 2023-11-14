@@ -80,6 +80,13 @@ class Server:
         self.halt = None
         self.connected = None
 
+        # send_client
+        self.send_client_ping_sent = None
+        self.send_client_ping_tstamp = None
+        self.send_client_pong_received = None
+        self.send_client_pong_timer_stop = None
+        self.send_client_pong_timer_halt = None
+
     # -- sending -- #
     def send_raw(self, msg):
         self.logger.debug(
@@ -311,10 +318,34 @@ class Server:
 
                 self.admin = user_new_name
 
+    # -- timers -- #
+    # _client_init timer
+    def _client_init_pong_timer(self):
+        self.logger.info("started PONG timer")
+
+        while not self.send_client_pong_timer_stop:
+            if (
+                int(time.strftime("%s")) - self.send_client_ping_tstamp
+                > self._PONG_TIMEOUT
+            ):
+                self.logger.warning(
+                    "did not get a PONG after %s seconds",
+                    self._PONG_TIMEOUT,
+                )
+
+                if not self.send_client_pong_timer_stop:
+                    self.connected = False
+                    self.stop()
+
+            time.sleep(1)
+
+        self.send_client_pong_timer_halt = True
+        self.logger.info("stopped PONG timer")
+
     # -- stages -- #
     # stage 1: open socket that we will pass around for the entire server instance
     def _connect(self):
-        self.logger.info("connecting to %s", self.name)
+        self.logger.info("%s connecting %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
 
         addr = (socket.gethostbyname(self.address), self.port)
 
@@ -353,13 +384,15 @@ class Server:
 
         self.conn.settimeout(None)
 
+        self.logger.info("%s connected %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
         self.connected = True
 
     # stage 2: send NICK and USER, update address, send PING, hand over to channel handling
-    def _send_client(self):
-        addr_updated = False
-        pong_received = False
-        ping_sent = False
+    # pylint: disable=too-many-statements
+    def _client_init(self):
+        self.logger.info("%s initing client %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+
+        addr_updated = None
 
         if self.passwd:
             self._send_pass()
@@ -368,14 +401,14 @@ class Server:
         self._send_user()
 
         while not self.halt:
+            if self.send_client_pong_timer_stop and addr_updated:
+                break
+
             try:
                 recv_data = self.conn.recv(512)
             # pylint: disable=bare-except
             except:
-                errmsg = "decoding error while trying to grab the network "
-                errmsg = "welcome message for %s"
-
-                self.logger.exception(errmsg, self.name)
+                self.logger.exception("recv error during _client_init()")
 
             data = self._decode_data(recv_data)
 
@@ -388,15 +421,21 @@ class Server:
 
                 self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
+                # respond to PING
                 if line.split()[0] == "PING":
                     Thread(target=self._send_pong, args=[line], daemon=True).start()
 
+                    continue
+
                 # fix name colissions
                 if line.split()[1] == "433":
+                    self.logger.info("nick colission occured, updating")
                     self.botname = f"{self.botname}0"
 
                     self._send_nick()
                     self._send_user()
+
+                    continue
 
                 # password protection
                 if line.split()[1] == "464":
@@ -407,50 +446,55 @@ class Server:
 
                     self.stop()
 
+                    continue
+
                 # welcome msg, need to update the address to match the node we round robined
                 # to for sending the pong
                 if line.split()[1] == "001":
                     self.address = line.split()[0]
-
                     addr_updated = True
+                    self.logger.info("updated address")
+
+                    continue
 
                 # need to send ping before joins for networks like rizon
                 # 376: end of motd, 422: no motd found, 221: server-wide mode set for user
-                if line.split()[1] in ("376", "422", "221") and not ping_sent:
+                if (
+                    line.split()[1] in ("376", "422", "221")
+                    and not self.send_client_ping_sent
+                ):
                     self._send_ping()
-
                     self.logger.info("sent PING before JOINs")
 
-                    ping_sent = True
-                    ping_tstamp = int(time.strftime("%s"))
+                    self.send_client_ping_sent = True
+                    self.send_client_ping_tstamp = int(time.strftime("%s"))
 
-                # wait for the pong, if we received it, switch to _loop()
-                try:
-                    if ping_sent:
-                        if (
-                            self.address in line.split()[0]
-                            and line.split()[1] == "PONG"
-                        ):
-                            pong_received = True
+                    Thread(target=self._client_init_pong_timer, daemon=True).start()
 
-                            self.logger.info("received PONG")
-
-                        if int(time.strftime("%s")) - ping_tstamp > self._PONG_TIMEOUT:
-                            self.logger.warning(
-                                "did not get a PONG after %s seconds",
-                                self._PONG_TIMEOUT,
-                            )
-
-                            self.connected = False
-                            self.stop()
-                except UnboundLocalError:
                     continue
 
-            if pong_received and addr_updated:
+                # wait for the pong, if we received it, switch to _loop()
+                if (
+                    self.send_client_ping_sent
+                    and self.address in line.split()[0]
+                    and line.split()[1] == "PONG"
+                ):
+                    self.send_client_pong_received = True
+                    self.send_client_pong_timer_stop = True
+                    self.logger.info("received PONG")
+
+                    continue
+
+        while not self.halt:
+            if not self.send_client_pong_timer_halt:
+                time.sleep(1)
+            else:
+                self.logger.info("%s init done %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
                 break
 
     # stage 3: final infinite loop
     def _loop(self):
+        self.logger.info("%s entered the loop %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
         # pylint: disable=too-many-nested-blocks
         while not self.halt:
             try:
@@ -534,7 +578,12 @@ class Server:
 
                         if cmd in self._CHANNEL_CMDS:
                             self.logger.info(
-                                "[%s/%s] %s %s", user, channel.name, cmd, " ".join(args)
+                                "%s%s%s %s %s",
+                                f"{ac.BMGN}[{ac.BWHI}{user}",
+                                f"{ac.BRED}/",
+                                f"{ac.BGRN}{channel.name}{ac.BMGN}]",
+                                f"{ac.BCYN}{cmd}",
+                                f"{' '.join(args)}{ac.RES}",
                             )
 
                             Thread(
@@ -554,7 +603,14 @@ class Server:
                         cmd = line.split()[3]
                         args = line.split()[4:]
 
-                        self.logger.info("[%s/PM] %s %s", user, cmd, " ".join(args))
+                        self.logger.info(
+                            "%s%s%s %s %s",
+                            f"{ac.BMGN}[{ac.BWHI}{user}",
+                            f"{ac.BRED}/",
+                            f"{ac.BGRN}PM{ac.BMGN}]",
+                            f"{ac.BCYN}{cmd}",
+                            f"{' '.join(args)}{ac.RES}",
+                        )
 
                         if cmd in self._USER_CMDS:
                             Thread(
@@ -584,16 +640,17 @@ class Server:
     # -- CLI() interactions -- #
     def run(self):
         self._connect()
-        self._send_client()
+        self._client_init()
 
         if not self.halt:
+            self.logger.info("%s joining channels %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
             for channel in self.channels:
                 self._send_join(channel)
 
             self._loop()
 
     def stop(self):
-        self.logger.warning("halting")
+        self.logger.warning("%s stopping %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
         self.halt = True
 
         if self.connected:
