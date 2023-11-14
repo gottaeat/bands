@@ -517,12 +517,15 @@ class Server:
                 # PING handling
                 if line.split()[0] == "PING":
                     Thread(target=self._send_pong, args=[line], daemon=True).start()
+                    continue
 
                 # KILL handling
                 if line.split()[0] == "ERROR" and line.split()[1] == "Killed":
                     self.logger.warning("we got killed")
                     self.connected = False
                     self.stop()
+
+                    continue
 
                 # JOIN handling
                 if (
@@ -535,6 +538,8 @@ class Server:
                         daemon=True,
                     ).start()
 
+                    continue
+
                 # INVITE handling
                 if line.split()[1] == "INVITE":
                     Thread(
@@ -542,6 +547,8 @@ class Server:
                         args=[strip_user(line.split()[0]), line.split()[3]],
                         daemon=True,
                     ).start()
+
+                    continue
 
                 # KICK handling
                 if line.split()[1] == "KICK" and line.split()[3] == self.botname:
@@ -555,6 +562,8 @@ class Server:
                         daemon=True,
                     ).start()
 
+                    continue
+
                 # mode +b handling
                 if line.split()[1] == "474":
                     Thread(
@@ -562,6 +571,8 @@ class Server:
                         args=[line.split()[3]],
                         daemon=True,
                     ).start()
+
+                    continue
 
                 # PRIVMSG handling
                 if line.split()[1] == "PRIVMSG":
@@ -597,6 +608,8 @@ class Server:
                                 daemon=True,
                             ).start()
 
+                            continue
+
                     # user PRIVMSG
                     if line.split()[2] == self.botname:
                         user = strip_user(line.split()[0])
@@ -623,6 +636,8 @@ class Server:
                                 daemon=True,
                             ).start()
 
+                            continue
+
                 # NICK handling (user nick changes)
                 if line.split()[1] == "NICK":
                     user_name = strip_user(line.split()[0])
@@ -636,6 +651,8 @@ class Server:
                         ],
                         daemon=True,
                     ).start()
+
+                    continue
 
     # -- CLI() interactions -- #
     def run(self):
