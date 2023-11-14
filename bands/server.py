@@ -29,7 +29,8 @@ ac = ANSIColors()
 class Server:
     USER_NICKLIMIT = 30
 
-    _PONG_TIMEOUT = 30
+    _PONG_TIMEOUT = 60
+    _PING_INTERVAL = 120
 
     _CHANNEL_CMDS = {
         ":?advice": Advice,
@@ -86,6 +87,12 @@ class Server:
         self.client_init_pong_received = None
         self.client_init_pong_timer_stop = None
         self.client_init_pong_timer_halt = None
+
+        # loop
+        self.loop_ping_sent = None
+        self.loop_ping_tstamp = None
+        self.loop_pong_received = None
+        self.loop_pong_tstamp = None
 
     # -- sending -- #
     def send_raw(self, msg):
@@ -342,6 +349,47 @@ class Server:
         self.client_init_pong_timer_halt = True
         self.logger.info("stopped PONG timer")
 
+    # _loop timers
+    def _loop_ping_timer(self):
+        self.logger.info("started keepalive PING sender")
+
+        while not self.halt:
+            self._send_ping()
+            self.loop_ping_sent = True
+            self.loop_ping_tstamp = int(time.strftime("%s"))
+
+            self.logger.info("sent keepalive PING")
+
+            self._loop_pong_timer()
+
+            time_till_pong = int(time.strftime("%s")) - self.loop_pong_tstamp
+            time_sleep = self._PING_INTERVAL - time_till_pong
+
+            self.logger.info("keepalive PONG sender: sleeping for %s", time_sleep)
+
+            time.sleep(time_sleep)
+
+    def _loop_pong_timer(self):
+        self.logger.info("started keepalive PONG timer")
+
+        while not self.loop_pong_received:
+            if int(time.strftime("%s")) - self.loop_ping_tstamp > self._PONG_TIMEOUT:
+                self.logger.warning(
+                    "did not get a PONG after %s seconds",
+                    self._PONG_TIMEOUT,
+                )
+
+                if not self.loop_pong_received:
+                    self.connected = False
+                    self.stop()
+
+            time.sleep(1)
+
+        self.loop_ping_sent = None
+        self.loop_ping_tstamp = None
+        self.loop_pong_received = None
+        self.logger.info("stopped keepalive PONG timer")
+
     # -- stages -- #
     # stage 1: open socket that we will pass around for the entire server instance
     def _connect(self):
@@ -495,6 +543,9 @@ class Server:
     # stage 3: final infinite loop
     def _loop(self):
         self.logger.info("%s entered the loop %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+
+        Thread(target=self._loop_ping_timer, daemon=True).start()
+
         # pylint: disable=too-many-nested-blocks
         while not self.halt:
             try:
@@ -517,6 +568,18 @@ class Server:
                 # PING handling
                 if line.split()[0] == "PING":
                     Thread(target=self._send_pong, args=[line], daemon=True).start()
+                    continue
+
+                # PONG handling
+                if (
+                    self.client_init_ping_sent
+                    and self.address in line.split()[0]
+                    and line.split()[1] == "PONG"
+                ):
+                    self.loop_pong_received = True
+                    self.loop_pong_tstamp = int(time.strftime("%s"))
+                    self.logger.info("received keepalive PONG")
+
                     continue
 
                 # KILL handling
