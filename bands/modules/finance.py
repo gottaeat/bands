@@ -221,6 +221,9 @@ class Finance:
         threads.append(binance)
         threads.append(wgb)
 
+        msg = f"{c.INFO} scraping..."
+        self.channel.send_query(msg)
+
         for job in threads:
             job.start()
 
