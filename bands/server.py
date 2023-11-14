@@ -29,6 +29,8 @@ ac = ANSIColors()
 class Server:
     USER_NICKLIMIT = 30
 
+    _PONG_TIMEOUT = 30
+
     _CHANNEL_CMDS = {
         ":?advice": Advice,
         ":?bands": Finance,
@@ -90,6 +92,9 @@ class Server:
         except:
             if not self.halt:
                 self.logger.exception("send failed")
+
+    def _send_ping(self):
+        self.send_raw(f"PING {self.address}")
 
     def _send_pong(self, data):
         self.send_raw(re.sub(r"PING", "PONG", data.rstrip("\r\n")))
@@ -354,7 +359,7 @@ class Server:
     def _send_client(self):
         addr_updated = False
         pong_received = False
-        sent_ping = False
+        ping_sent = False
 
         if self.passwd:
             self._send_pass()
@@ -411,17 +416,17 @@ class Server:
 
                 # need to send ping before joins for networks like rizon
                 # 376: end of motd, 422: no motd found, 221: server-wide mode set for user
-                if line.split()[1] in ("376", "422", "221") and not sent_ping:
-                    self.send_raw(f"PING {self.address}")
+                if line.split()[1] in ("376", "422", "221") and not ping_sent:
+                    self._send_ping()
 
                     self.logger.info("sent PING before JOINs")
 
-                    sent_ping = True
+                    ping_sent = True
                     ping_tstamp = int(time.strftime("%s"))
 
                 # wait for the pong, if we received it, switch to _loop()
                 try:
-                    if sent_ping:
+                    if ping_sent:
                         if (
                             self.address in line.split()[0]
                             and line.split()[1] == "PONG"
@@ -430,13 +435,14 @@ class Server:
 
                             self.logger.info("received PONG")
 
-                        if int(time.strftime("%s")) - ping_tstamp > 30:
-                            self.conn.close()
-
-                            self.logger.error(
-                                "%s never responded to the PING, closing connection",
-                                self.name,
+                        if int(time.strftime("%s")) - ping_tstamp > self._PONG_TIMEOUT:
+                            self.logger.warning(
+                                "did not get a PONG after %s seconds",
+                                self._PONG_TIMEOUT,
                             )
+
+                            self.connected = False
+                            self.stop()
                 except UnboundLocalError:
                     continue
 
