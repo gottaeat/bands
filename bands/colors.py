@@ -23,6 +23,10 @@ class MIRCColors:
     GREY = "\x0314"
     LGREY = "\x0315"
 
+    INFO = f"{GREEN}[{LBLUE}I{GREEN}]{RES}"
+    WARN = f"{GREEN}[{GREEN}W{GREEN}]{RES}"
+    ERR = f"{GREEN}[{LRED}E{GREEN}]{RES}"
+
     def __init__(self):
         pass
 
