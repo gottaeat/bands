@@ -19,18 +19,14 @@ class Piss:
         target = " ".join(self.user_args)
 
         if len(target) == 0:
-            msg = f"{c.ORANGE}{self.user.name}{c.LBLUE}, "
-            msg += f"{c.YELLOW}on who?{c.RES}"
-            self.channel.send_query(msg)
-
+            errmsg = f"{c.ERR} on who?"
+            self.channel.send_query(errmsg)
             return
 
         if unilen(target) > self.channel.server.USER_NICKLIMIT:
-            msg = f"{c.ORANGE}{self.user.name}{c.LBLUE}, {c.YELLOW}target "
-            msg += f"{c.LRED}is wider than {self.channel.server.USER_NICKLIMIT} "
-            msg += f"chars.{c.RES}"
-            self.channel.send_query(msg)
-
+            errmsg = f"{c.ERR} pissee is wider than "
+            errmsg += f"{self.channel.server.USER_NICKLIMIT} chars."
+            self.channel.send_query(errmsg)
             return
 
         msg = f"     {c.WHITE}ë{c.RES} \n"
