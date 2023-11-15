@@ -744,7 +744,7 @@ class Server:
         self.logger.debug("shutting down socket (RDWR)")
         self.conn.shutdown(socket.SHUT_RDWR)
 
-        self.logger.info("closing connection")
+        self.logger.warning("%s closing connection %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
         self.conn.close()
 
         self.logger.info("removing %s from servers list", self.name)
