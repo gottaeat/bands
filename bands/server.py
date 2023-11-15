@@ -115,17 +115,17 @@ class Server:
         self.send_raw(re.sub(r"PING", "PONG", data.rstrip("\r\n")))
 
     def _send_nick(self):
-        self.logger.info("sending NICK")
+        self.logger.debug("sending NICK")
         self.send_raw(f"NICK {self.botname}")
 
     def _send_user(self):
-        self.logger.info("sending USER")
+        self.logger.debug("sending USER")
         self.send_raw(
             f"USER {self.botname} {self.botname} {self.address} :{self.botname}"
         )
 
     def _send_pass(self):
-        self.logger.info("sending PASS")
+        self.logger.debug("sending PASS")
         self.send_raw(f"PASS {self.passwd}")
 
     def _send_quit(self, reason):
@@ -182,7 +182,7 @@ class Server:
         chan.name = channel_name
         self.channel_obj.append(chan)
 
-        self.logger.info("generated channel %s", chan.name)
+        self.logger.debug("generated channel %s", chan.name)
 
     def _gen_user(self, user_name):
         self.users.append(user_name)
@@ -193,7 +193,7 @@ class Server:
 
         self.user_obj.append(user)
 
-        self.logger.info("generated user %s (%s)", user.name, user.char_limit)
+        self.logger.debug("generated user %s (%s)", user.name, user.char_limit)
 
     # -- cmd handling -- #
     def _handle_channel_msg(self, channel, user_name, cmd, user_args):
@@ -273,7 +273,7 @@ class Server:
                 f"{botname_with_vhost} PRIVMSG {channel.name} :\r\n".encode("utf-8")
             )
 
-            self.logger.info(
+            self.logger.debug(
                 "char_limit for %s is set to %s", channel.name, channel.char_limit
             )
 
@@ -302,7 +302,7 @@ class Server:
 
     def _handle_nick_change(self, user_name, user_new_name):
         if user_name in self.users:
-            self.logger.info(
+            self.logger.debug(
                 "%s changed their nick to %s, updating the user_obj",
                 user_name,
                 user_new_name,
@@ -319,7 +319,7 @@ class Server:
             user.name = user_new_name
 
             if user_name == self.admin:
-                self.logger.info(
+                self.logger.debug(
                     "%s was also set as the admin user, updating",
                     user_name,
                 )
@@ -329,7 +329,7 @@ class Server:
     # -- timers -- #
     # _client_init timer
     def _client_init_pong_timer(self):
-        self.logger.info("started PONG timer")
+        self.logger.debug("started PONG timer")
 
         while not self.client_init_pong_timer_stop:
             if (
@@ -348,30 +348,30 @@ class Server:
             time.sleep(1)
 
         self.client_init_pong_timer_halt = True
-        self.logger.info("stopped PONG timer")
+        self.logger.debug("stopped PONG timer")
 
     # _loop timers
     def _loop_ping_timer(self):
-        self.logger.info("started keepalive PING sender")
+        self.logger.debug("started keepalive PING sender")
 
         while not self.halt:
             self._send_ping()
             self.loop_ping_sent = True
             self.loop_ping_tstamp = int(time.strftime("%s"))
 
-            self.logger.info("sent keepalive PING")
+            self.logger.debug("sent keepalive PING")
 
             self._loop_pong_timer()
 
             time_till_pong = int(time.strftime("%s")) - self.loop_pong_tstamp
             time_sleep = self._PING_INTERVAL - time_till_pong
 
-            self.logger.info("keepalive PONG sender: sleeping for %s", time_sleep)
+            self.logger.debug("keepalive PONG sender: sleeping for %s", time_sleep)
 
             time.sleep(time_sleep)
 
     def _loop_pong_timer(self):
-        self.logger.info("started keepalive PONG timer")
+        self.logger.debug("started keepalive PONG timer")
 
         while not self.loop_pong_received:
             if int(time.strftime("%s")) - self.loop_ping_tstamp > self._PONG_TIMEOUT:
@@ -389,7 +389,7 @@ class Server:
         self.loop_ping_sent = None
         self.loop_ping_tstamp = None
         self.loop_pong_received = None
-        self.logger.info("stopped keepalive PONG timer")
+        self.logger.debug("stopped keepalive PONG timer")
 
     # -- stages -- #
     # stage 1: open socket that we will pass around for the entire server instance
@@ -502,7 +502,7 @@ class Server:
                 if line.split()[1] == "001":
                     self.address = line.split()[0]
                     addr_updated = True
-                    self.logger.info("updated address")
+                    self.logger.debug("updated address")
 
                     continue
 
@@ -513,7 +513,7 @@ class Server:
                     and not self.client_init_ping_sent
                 ):
                     self._send_ping()
-                    self.logger.info("sent PING before JOINs")
+                    self.logger.debug("sent PING before JOINs")
 
                     self.client_init_ping_sent = True
                     self.client_init_ping_tstamp = int(time.strftime("%s"))
@@ -530,7 +530,7 @@ class Server:
                 ):
                     self.client_init_pong_received = True
                     self.client_init_pong_timer_stop = True
-                    self.logger.info("received PONG")
+                    self.logger.debug("received PONG")
 
                     continue
 
@@ -579,7 +579,7 @@ class Server:
                 ):
                     self.loop_pong_received = True
                     self.loop_pong_tstamp = int(time.strftime("%s"))
-                    self.logger.info("received keepalive PONG")
+                    self.logger.debug("received keepalive PONG")
 
                     continue
 
@@ -741,7 +741,7 @@ class Server:
             except:
                 self.logger.warning("sending quit failed")
 
-        self.logger.info("shutting down socket (RDWR)")
+        self.logger.debug("shutting down socket (RDWR)")
         self.conn.shutdown(socket.SHUT_RDWR)
 
         self.logger.info("closing connection")
