@@ -15,12 +15,13 @@ from .user import User
 
 from .modules.advice import Advice
 from .modules.finance import Finance
-from .modules.help import Help
+from .modules.channel_help import ChannelHelp
 from .modules.piss import Piss
 from .modules.tarot import Tarot
 
 from .modules.auth import Auth
 from .modules.openai_handler import OpenAIHandler
+from .modules.user_help import UserHelp
 
 ac = ANSIColors()
 
@@ -35,12 +36,12 @@ class Server:
     _CHANNEL_CMDS = {
         ":?advice": Advice,
         ":?bands": Finance,
-        ":?help": Help,
+        ":?help": ChannelHelp,
         ":?piss": Piss,
         ":?tarot": Tarot,
     }
 
-    _USER_CMDS = {":?auth": Auth, ":?openai": OpenAIHandler}
+    _USER_CMDS = {":?auth": Auth, ":?help": UserHelp, ":?openai": OpenAIHandler}
 
     def __init__(self):
         # ServerConfig()<-AI()<-CLI()<-ConfigYAML()
