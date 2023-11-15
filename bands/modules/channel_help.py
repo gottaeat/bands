@@ -15,7 +15,7 @@ class ChannelHelp:
 
     def _run(self):
         msg = f"{c.WHITE}├ {c.LRED}usage\n"
-        msg += f"{c.WHITE}│ ├ {c.LGREEN}?advice{c.RES} {target}\n"
+        msg += f"{c.WHITE}│ ├ {c.LGREEN}?advice{c.RES} {{target}}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?bands{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?help{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?piss{c.RES}   [target]\n"
