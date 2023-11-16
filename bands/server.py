@@ -21,6 +21,7 @@ from .modules.tarot import Tarot
 
 from .modules.auth import Auth
 from .modules.openai_handler import OpenAIHandler
+from .modules.rcon import RCon
 from .modules.user_help import UserHelp
 
 ac = ANSIColors()
@@ -41,7 +42,12 @@ class Server:
         ":?tarot": Tarot,
     }
 
-    _USER_CMDS = {":?auth": Auth, ":?help": UserHelp, ":?openai": OpenAIHandler}
+    _USER_CMDS = {
+        ":?auth": Auth,
+        ":?help": UserHelp,
+        ":?openai": OpenAIHandler,
+        ":?rcon": RCon,
+    }
 
     def __init__(self):
         # ServerConfig()<-AI()<-CLI()<-ConfigYAML()
