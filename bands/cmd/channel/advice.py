@@ -11,7 +11,9 @@ c = MIRCColors()
 
 # pylint: disable=too-few-public-methods
 class Advice:
-    ADV_FILE = f"{os.path.dirname(os.path.realpath(__file__))}/../files/advices.json"
+    ADV_FILE = (
+        f"{os.path.dirname(os.path.realpath(__file__))}/../../static/advices.json"
+    )
 
     def __init__(self, channel, user, user_args):
         self.channel = channel
