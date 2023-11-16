@@ -13,16 +13,16 @@ from .colors import ANSIColors
 from .channel import Channel
 from .user import User
 
-from .modules.advice import Advice
-from .modules.finance import Finance
-from .modules.channel_help import ChannelHelp
-from .modules.piss import Piss
-from .modules.tarot import Tarot
+from .cmd.channel.advice import Advice
+from .cmd.channel.finance import Finance
+from .cmd.channel.help import ChannelHelp
+from .cmd.channel.piss import Piss
+from .cmd.channel.tarot import Tarot
 
-from .modules.auth import Auth
-from .modules.openai_handler import OpenAIHandler
-from .modules.rcon import RCon
-from .modules.user_help import UserHelp
+from .cmd.user.auth import Auth
+from .cmd.user.openai_handler import OpenAIHandler
+from .cmd.user.rcon import RCon
+from .cmd.user.help import UserHelp
 
 ac = ANSIColors()
 
