@@ -13,16 +13,8 @@ from .colors import ANSIColors
 from .channel import Channel
 from .user import User
 
-from .cmd.channel.advice import Advice
-from .cmd.channel.finance import Finance
-from .cmd.channel.help import ChannelHelp
-from .cmd.channel.piss import Piss
-from .cmd.channel.tarot import Tarot
-
-from .cmd.user.auth import Auth
-from .cmd.user.openai_handler import OpenAIHandler
-from .cmd.user.rcon import RCon
-from .cmd.user.help import UserHelp
+from .cmd import channel as CCMD
+from .cmd import user as UCMD
 
 ac = ANSIColors()
 
@@ -35,18 +27,18 @@ class Server:
     _PING_INTERVAL = 120
 
     _CHANNEL_CMDS = {
-        ":?advice": Advice,
-        ":?bands": Finance,
-        ":?help": ChannelHelp,
-        ":?piss": Piss,
-        ":?tarot": Tarot,
+        ":?advice": CCMD.advice.Advice,
+        ":?bands": CCMD.finance.Finance,
+        ":?help": CCMD.help.Help,
+        ":?piss": CCMD.piss.Piss,
+        ":?tarot": CCMD.tarot.Tarot,
     }
 
     _USER_CMDS = {
-        ":?auth": Auth,
-        ":?help": UserHelp,
-        ":?openai": OpenAIHandler,
-        ":?rcon": RCon,
+        ":?auth": UCMD.auth.Auth,
+        ":?help": UCMD.help.Help,
+        ":?openai": UCMD.openai_handler.OpenAIHandler,
+        ":?rcon": UCMD.rcon.RCon,
     }
 
     def __init__(self):
