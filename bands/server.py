@@ -175,30 +175,48 @@ class Server:
 
     # -- context handling -- #
     def _gen_channel(self, channel_name):
+        # self.channels
         if channel_name not in self.channels:
             self.channels.append(channel_name)
 
-        chan = Channel(self)
-        chan.name = channel_name
-        self.channel_obj.append(chan)
+            self.logger.debug("added %s to channels", channel_name)
 
-        self.logger.debug("generated channel %s", chan.name)
+        # self.channel_obj
+        channel_objs = []
+        for chan in self.channel_obj:
+            channel_objs.append(chan.name)
+
+        if channel_name not in channel_objs:
+            chan = Channel(self)
+            chan.name = channel_name
+            self.channel_obj.append(chan)
+
+            self.logger.debug("generated channel object for %s", channel_name)
 
     def _gen_user(self, user_name):
-        self.users.append(user_name)
+        # self.users
+        if user_name not in self.channels:
+            self.users.append(user_name)
 
-        user = User(self)
-        user.name = user_name
-        user.char_limit = 512 - len(f"PRIVMSG {user} :".encode("utf-8"))
+        # self.user_obj
+        user_objs = []
+        for user in self.user_obj:
+            user_objs.append(user.name)
 
-        self.user_obj.append(user)
+        if user_name not in user_objs:
+            user = User(self)
+            user.name = user_name
+            user.char_limit = 512 - len(f"PRIVMSG {user} :".encode("utf-8"))
 
-        self.logger.debug("generated user %s (%s)", user.name, user.char_limit)
+            self.user_obj.append(user)
+
+            self.logger.debug(
+                "generated user object for %s (%s)", user.name, user.char_limit
+            )
 
     # -- cmd handling -- #
     def _handle_channel_msg(self, channel, user_name, cmd, user_args):
-        if len(self.user_obj) == 0 or user_name not in self.users:
-            self._gen_user(user_name)
+        self._gen_user(user_name)
 
         for user_obj in self.user_obj:
             if user_obj.name == user_name:
@@ -260,8 +278,7 @@ class Server:
     def _handle_join(self, botname_with_vhost, channel_name):
         channel_name = re.sub(r"^:", "", channel_name)
 
-        if len(self.channel_obj) == 0 or channel_name not in self.channels:
-            self._gen_channel(channel_name)
+        self._gen_channel(channel_name)
 
         for chan in self.channel_obj:
             if chan.name == channel_name:
@@ -269,7 +286,7 @@ class Server:
                 break
 
         if not channel.char_limit:
-            channel.char_limit = 508 - len(
+            channel.char_limit = 512 - len(
                 f"{botname_with_vhost} PRIVMSG {channel.name} :\r\n".encode("utf-8")
             )
 
@@ -744,7 +761,9 @@ class Server:
         self.logger.debug("shutting down socket (RDWR)")
         self.conn.shutdown(socket.SHUT_RDWR)
 
-        self.logger.warning("%s closing connection %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+        self.logger.warning(
+            "%s closing connection %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES
+        )
         self.conn.close()
 
         self.logger.info("removing %s from servers list", self.name)
