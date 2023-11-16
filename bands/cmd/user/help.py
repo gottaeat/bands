@@ -5,7 +5,7 @@ c = MIRCColors()
 
 
 # pylint: disable=too-few-public-methods
-class UserHelp:
+class Help:
     def __init__(self, user, user_args):
         self.user = user
         self.user_args = user_args
