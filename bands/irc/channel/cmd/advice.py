@@ -2,7 +2,7 @@ import json
 import os
 import random
 
-from bands.util import unilen
+from bands.irc.util import unilen
 from bands.colors import MIRCColors
 
 # pylint: disable=invalid-name
@@ -12,7 +12,7 @@ c = MIRCColors()
 # pylint: disable=too-few-public-methods
 class Advice:
     ADV_FILE = (
-        f"{os.path.dirname(os.path.realpath(__file__))}/../../static/advices.json"
+        f"{os.path.dirname(os.path.realpath(__file__))}/../../../static/advices.json"
     )
 
     def __init__(self, channel, user, user_args):

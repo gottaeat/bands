@@ -1,5 +1,4 @@
-from bands.util import unilen
-from bands.util import drawbox
+from bands.irc.util import unilen, drawbox
 from bands.colors import MIRCColors
 
 # pylint: disable=invalid-name

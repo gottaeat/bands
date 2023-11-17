@@ -4,7 +4,7 @@ import random
 import re
 
 from bands.colors import MIRCColors
-from bands.util import unilen
+from bands.irc.util import unilen
 
 # pylint: disable=invalid-name
 c = MIRCColors()
@@ -27,7 +27,7 @@ class TarotDeck:
 # pylint: disable=inconsistent-return-statements
 class Tarot:
     DESC_FILE = (
-        f"{os.path.dirname(os.path.realpath(__file__))}/../../static/tarot_desc.json"
+        f"{os.path.dirname(os.path.realpath(__file__))}/../../../static/tarot_desc.json"
     )
 
     MISS_CLEO = "You are a Rastafarian speaking tarot reader mimicking American "

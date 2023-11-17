@@ -10,7 +10,7 @@ from threading import Thread
 
 from bs4 import BeautifulSoup
 
-from bands.util import drawbox
+from bands.irc.util import drawbox
 from bands.colors import MIRCColors
 
 

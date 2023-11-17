@@ -1,15 +1,16 @@
 import time
 
-from .util import wrap_bytes
+from bands.irc.util import wrap_bytes
 
 
 # pylint: disable=too-few-public-methods
-class Channel:
+class User:
     def __init__(self, server):
         self.server = server
         self.name = None
 
         self.char_limit = None
+        self.tarot_deck = None
 
         self.tstamp = None
 

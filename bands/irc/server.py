@@ -5,16 +5,16 @@ import time
 
 from threading import Thread
 
+from bands.colors import ANSIColors
+
 from .util import strip_user
 from .util import strip_color
 
-from .colors import ANSIColors
-
 from .channel import Channel
-from .user import User
+from .channel import cmd as CCMD
 
-from .cmd import channel as CCMD
-from .cmd import user as UCMD
+from .user import User
+from .user import cmd as UCMD
 
 ac = ANSIColors()
 
@@ -27,18 +27,18 @@ class Server:
     _PING_INTERVAL = 120
 
     _CHANNEL_CMDS = {
-        ":?advice": CCMD.advice.Advice,
-        ":?bands": CCMD.finance.Finance,
-        ":?help": CCMD.help.Help,
-        ":?piss": CCMD.piss.Piss,
-        ":?tarot": CCMD.tarot.Tarot,
+        ":?advice": CCMD.Advice,
+        ":?bands": CCMD.Finance,
+        ":?help": CCMD.Help,
+        ":?piss": CCMD.Piss,
+        ":?tarot": CCMD.Tarot,
     }
 
     _USER_CMDS = {
-        ":?auth": UCMD.auth.Auth,
-        ":?help": UCMD.help.Help,
-        ":?openai": UCMD.openai_handler.OpenAIHandler,
-        ":?rcon": UCMD.rcon.RCon,
+        ":?auth": UCMD.Auth,
+        ":?help": UCMD.Help,
+        ":?openai": UCMD.OpenAIHandler,
+        ":?rcon": UCMD.RCon,
     }
 
     def __init__(self):
