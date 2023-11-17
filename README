@@ -1,62 +1,52 @@
 bands
 =====
 └ bands/
-  ├ ai.py               → source of AI() class, instantiates an openai object
-  │                       that gets passed down to all of the Server()
-  │                       instances.
-  ├ channel.py          → Channel() class, instantiated for every channel,
-  │                       stores the character limit, gets passed down to every
-  │                       channel-specific module for them to have access to
-  │                       Server() resources, allows for context to be stored.
-  ├ cli.py              → takes in a YAML file, creates an AI() instance and
-  │                       instantiates all the Server()'s using the resources
-  │                       within the YAML, passes the AI() to every Server() and
-  │                       runs all the Server()'s in their own Thread().
-  ├ config.py           → parses the provided YAML, creates ServerConfig()
-  │                       objects and provides the keys for the AI() to be
-  │                       instentiated.
-  ├ server.py           → handles everything irc. creates a socket, sends in the
-  │                       client details, enters an infinite loop and handles
-  │                       channel/user/server events within it.
-  ├ user.py             → User() class, 1:1 in behavior to the Channel() class,
-  │                       without storing any context.
-  ├ util.py             → collection of functions that are shared within the
-  │                       rest of the codebase.
-  ├ files/
-  │ ├ advices.json      → file parsed by the Advice() module.
-  │ └ tarot_desc.json   → file parsed by the Tarot() module.
-  └ modules/
-    ├ advice.py         → provides the user, and if specified, the target, with
-    │                     pre-set advices.
-    ├ auth.py           → sets the Server().admin attribute if the query matches
-    │                     the Server().secret, allowing the query user to run
-    │                     privileged commands.
-    ├ finance.py        → finance API scraper, scraping TCMB, Yahoo, XE, Forbes
-    │                     and Binance for forex rates and World Government Bonds
-    │                     for CDS.
-    ├ help.py           → help prompt providing syntactic help for user and
-    │                     channel specific commands.
-    ├ openai_handler.py → allows for the AI() status to be queried and the keys
-    │                     to be updated via private queries from the admin user.
-    ├ piss.py           → allows for a funny little humorous joke for a fun time
-    │                     between friends.
-    └ tarot.py          → creates a tarot deck, prints the a prompt containing
-                          the title and descriptions of the cards in the deck,
-                          explains the meaning of the order that the cards are
-                          pulled, and hits up the OpenAI API for a reading.
-
-expected openai keys_file format
---------------------------------
-{
-  "openai_keys": [
-      {
-        "key": "sk-"
-      },
-      {
-        "key": "sk-"
-      }
-    ]
-}
+  ├ ai.py                   → AI(): instantiate an openai object that will get
+  │                           passed down to all Server()s.
+  ├ cli.py                  → CLI(): take in a YAML, get it parsed, create an
+  │                           AI()<-OpenAIConfig() + Server()s<-ServerConfig()s,
+  │                           pass every Server() the AI(), spawn a Thread() for
+  │                           every Server()
+  ├ colors.py               → ANSI and MIRC escapes for colors and formatting.
+  ├ config.py               → ConfigYAML(): parse YAML, generate OpenAIConfig()
+  │                           and ServerConfig()
+  ├ irc/
+  │ ├ channel/
+  │ │ ├ channel.py          → Channel(): instantiated for every channel joined,
+  │ │ │                       stores the character limit and allows cmd's to
+  │ │ │                       have access to Server() resources.
+  │ │ ├ cmd/
+  │ │ │ ├ advice.py         → Advice(): provides the user, and if specified, the
+  │ │ │ │                     target, with pre-set advices, mostly to motivate the
+  │ │ │ │                     target in regard to moving.
+  │ │ │ ├ finance.py        → Finance(): finance API scraper, scraping TCMB,
+  │ │ │ │                     Yahoo, XE, Forbes and Binance for forex rates and
+  │ │ │ │                     World Government Bonds for CDS.
+  │ │ │ ├ help.py           → Help(): channel specific command help prompt.
+  │ │ │ ├ piss.py           → Piss(): allow for a funny little humorous joke
+  │ │ │ │                     for a fun time between friends.
+  │ │ │ └ tarot.py          → Tarot(): verbose tarot deck generator with openai
+  │ │ │                       powered reading support.
+  │ ├ server.py             → Server(): create a socket, sends in the client
+  │ │                         details, enters an infinite loop and handles
+  │ │                         channel/user/server events within it.
+  │ ├ user/
+  │ │ ├ cmd/
+  │ │ │ ├ auth.py           → Auth(): set the admin user or Server()
+  │ │ │ ├ help.py           → Help(): user specific command help prompt.
+  │ │ │ ├ openai_handler.py → OpenAIHandler: allow for manipulating the AI()
+  │ │ │ │                     state.
+  │ │ │ └ rcon.py           → RCon(): allow for connection state to be queried
+  │ │ │                       or manipulated.
+  │ │ └ user.py             → User(): instantiated for every user that interacts
+  │ │                         with the bot, via either using channel cmd's or by
+  │ │                         PRIVMSGing the bot. also holds per-user tarot deck
+  │ │                         and question.
+  │ └ util.py               → collection of functions shared by irc/ components.
+  ├ log.py                  → Custom StreamHandler and Formatter.
+  └ static/
+      ├ advices.json        → file parsed by Advice().
+      └ tarot_desc.json     → file parsed by Tarot().
 
 
 config.yaml example
@@ -89,3 +79,17 @@ servers:
         - "#goodchannel"
         - "#badchannel"
       secret: verysecret
+
+
+expected openai keys_file format
+--------------------------------
+{
+  "openai_keys": [
+      {
+        "key": "sk-"
+      },
+      {
+        "key": "sk-"
+      }
+    ]
+}
