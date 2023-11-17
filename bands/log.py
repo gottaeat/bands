@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from bands.colors import ANSIColors
+from .colors import ANSIColors
 
 c = ANSIColors()
 

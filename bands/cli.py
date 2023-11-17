@@ -6,10 +6,9 @@ from threading import Thread
 
 from .ai import AI
 from .config import ConfigYAML
-from .server import Server
-
-from .log import ShutdownHandler
+from .irc.server import Server
 from .log import BandsFormatter
+from .log import ShutdownHandler
 
 
 # pylint: disable=too-few-public-methods,too-many-statements

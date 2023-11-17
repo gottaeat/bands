@@ -4,8 +4,8 @@ from threading import Lock
 
 import openai
 
-from .log import ShutdownHandler
 from .log import BandsFormatter
+from .log import ShutdownHandler
 
 
 # pylint: disable=too-few-public-methods
