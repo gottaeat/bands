@@ -6,9 +6,16 @@ from threading import Thread
 
 from .ai import AI
 from .config import ConfigYAML
+
 from .irc.server import Server
+from .irc.socket import Socket
+
 from .log import BandsFormatter
 from .log import ShutdownHandler
+
+from .colors import ANSIColors
+
+ac = ANSIColors()
 
 
 # pylint: disable=too-few-public-methods,too-many-statements
@@ -107,37 +114,57 @@ class CLI:
             logger.addHandler(handler)
             logger.addHandler(ShutdownHandler())
 
-            s = Server()
+            # conn
+            socket = Socket()
+            socket.address = server.address
+            socket.port = server.port
+            socket.tls = server.tls
+            socket.verify_tls = server.verify_tls
 
-            s.logger = logger
+            socket.logger = logger
 
-            msg = f"address     : {server.address}\n"
-            msg += f"port        : {server.port}\n"
-            msg += f"botname     : {server.botname}\n"
-            msg += f"channels    : {server.channels}\n"
-            msg += f"secret      : {server.secret}\n"
-            msg += f"passwd      : {server.passwd}\n"
-            msg += f"tls         : {server.tls}\n"
-            msg += f"verify_tls  : {server.verify_tls}\n"
-            msg += f"scroll_speed: {server.scroll_speed}"
+            # server
+            s = Server(socket)
 
-            for line in msg.split("\n"):
-                logger.info(line)
-
-            s.ai = server.ai
-            s.cli = server.cli
+            # yaml
             s.name = server.name
-            s.address = server.address
-            s.port = server.port
             s.botname = server.botname
             s.channels = server.channels
             s.secret = server.secret
             s.passwd = server.passwd
-            s.tls = server.tls
-            s.verify_tls = server.verify_tls
             s.scroll_speed = server.scroll_speed
 
+            # cli
+            s.ai = server.ai
+            s.cli = server.cli
+            s.logger = logger
+
             self.servers.append(s)
+
+            # u go girl
+            msg = f"{ac.BWHI}{server.name}{ac.RES}\n"
+            msg += f"{ac.BWHI}├ {ac.BRED}conn{ac.RES}\n"
+            msg += (
+                f"{ac.BWHI}│ ├ {ac.BGRN}address      {ac.RES}{server.address}{ac.RES}\n"
+            )
+            msg += f"{ac.BWHI}│ ├ {ac.BGRN}port         {ac.RES}{server.port}{ac.RES}\n"
+            msg += f"{ac.BWHI}│ ├ {ac.BGRN}tls          {ac.RES}{server.tls}{ac.RES}\n"
+            msg += f"{ac.BWHI}│ └ {ac.BGRN}verify_tls   {ac.RES}{server.verify_tls}{ac.RES}\n"
+            msg += f"{ac.BWHI}└ {ac.BRED}server{ac.RES}\n"
+            msg += (
+                f"{ac.BWHI}  ├ {ac.BGRN}botname      {ac.RES}{server.botname}{ac.RES}\n"
+            )
+            msg += f"{ac.BWHI}  ├ {ac.BGRN}channels     {ac.RES}{server.channels}{ac.RES}\n"
+            msg += (
+                f"{ac.BWHI}  ├ {ac.BGRN}secret       {ac.RES}{server.secret}{ac.RES}\n"
+            )
+            msg += (
+                f"{ac.BWHI}  ├ {ac.BGRN}passwd       {ac.RES}{server.passwd}{ac.RES}\n"
+            )
+            msg += f"{ac.BWHI}  └ {ac.BGRN}scroll_speed {ac.RES}{server.scroll_speed}{ac.RES}"
+
+            for line in msg.split("\n"):
+                logger.info(line)
 
             p = Thread(target=s.run)
             threads.append(p)
