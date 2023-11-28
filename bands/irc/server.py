@@ -1,6 +1,4 @@
 import re
-import socket
-import ssl
 import time
 
 from threading import Thread
@@ -41,44 +39,30 @@ class Server:
         ":?rcon": UCMD.RCon,
     }
 
-    def __init__(self):
-        # ServerConfig()<-AI()<-CLI()<-ConfigYAML()
-        self.ai = None
+    def __init__(self, socket):
+        # socket
+        self.socket = socket
 
-        # to alter the list of Server()s
-        self.cli = None
-
-        # haul in the same logger
-        self.logger = None
-
-        # ServerConfig()<-CLI()<-ConfigYAML()
+        # yaml
         self.name = None
-        self.address = None
-        self.port = None
         self.botname = None
         self.channels = None
         self.passwd = None
         self.secret = None
-        self.tls = None
-        self.verify_tls = None
         self.scroll_speed = None
 
-        # channels: not overwriting the channels attrib since that is used for
-        # faster lookups
+        # CLI
+        self.ai = None
+        self.cli = None
+        self.logger = None
+
+        # channels
         self.channel_obj = []
 
         # users
         self.users = []
         self.user_obj = []
         self.admin = None
-
-        # server-wide socket
-        self.conn = None
-        self.buffer = b""
-
-        # state
-        self.halt = None
-        self.connected = None
 
         # client_init
         self.client_init_ping_sent = None
@@ -100,14 +84,14 @@ class Server:
         )
 
         try:
-            self.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
+            self.socket.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
         # pylint: disable=bare-except
         except:
-            if not self.halt:
+            if not self.socket.halt:
                 self.logger.exception("send failed")
 
     def _send_ping(self):
-        self.send_raw(f"PING {self.address}")
+        self.send_raw(f"PING {self.socket.address}")
 
     def _send_pong(self, data):
         self.send_raw(re.sub(r"PING", "PONG", data.rstrip("\r\n")))
@@ -119,7 +103,7 @@ class Server:
     def _send_user(self):
         self.logger.debug("sending USER")
         self.send_raw(
-            f"USER {self.botname} {self.botname} {self.address} :{self.botname}"
+            f"USER {self.botname} {self.botname} {self.socket.address} :{self.botname}"
         )
 
     def _send_pass(self):
@@ -138,19 +122,19 @@ class Server:
     # pylint: disable=inconsistent-return-statements
     def _decode_data(self, data):
         if len(data) == 0:
-            if not self.halt:
+            if not self.socket.halt:
                 self.logger.warning("received nothing")
                 self.stop()
                 return
 
-        data = self.buffer + data
+        data = self.socket.buffer + data
 
         data_split = data.split(b"\r\n")
 
         if data_split[-1] != b"":
-            self.buffer += data_split[-1]
+            self.socket.buffer += data_split[-1]
         else:
-            self.buffer = b""
+            self.socket.buffer = b""
 
         data_split = data_split[:-1]
 
@@ -357,7 +341,7 @@ class Server:
                 )
 
                 if not self.client_init_pong_timer_stop:
-                    self.connected = False
+                    self.socket.connected = False
                     self.stop()
 
             time.sleep(1)
@@ -369,7 +353,7 @@ class Server:
     def _loop_ping_timer(self):
         self.logger.debug("started keepalive PING sender")
 
-        while not self.halt:
+        while not self.socket.halt:
             self._send_ping()
             self.loop_ping_sent = True
             self.loop_ping_tstamp = int(time.strftime("%s"))
@@ -396,7 +380,7 @@ class Server:
                 )
 
                 if not self.loop_pong_received:
-                    self.connected = False
+                    self.socket.connected = False
                     self.stop()
 
             time.sleep(1)
@@ -407,51 +391,7 @@ class Server:
         self.logger.debug("stopped keepalive PONG timer")
 
     # -- stages -- #
-    # stage 1: open socket that we will pass around for the entire server instance
-    def _connect(self):
-        self.logger.info("%s connecting %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
-
-        addr = (socket.gethostbyname(self.address), self.port)
-
-        if self.tls:
-            ssl_context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_CLIENT)
-
-            if not self.verify_tls:
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-            else:
-                ssl_context.check_hostname = True
-
-        self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # libera ircd takes its time, 10 seems to work however
-        self.conn.settimeout(10)
-
-        if self.tls:
-            if not self.verify_tls:
-                self.conn = ssl_context.wrap_socket(self.conn)
-            else:
-                self.conn = ssl_context.wrap_socket(
-                    self.conn, server_hostname=self.address
-                )
-
-        try:
-            self.conn.connect(addr)
-        except ssl.SSLCertVerificationError:
-            self.logger.exception(
-                "attempting to connect with TLS failed",
-            )
-        except TimeoutError:
-            self.logger.exception(
-                "connection timed out",
-            )
-
-        self.conn.settimeout(None)
-
-        self.logger.info("%s connected %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
-        self.connected = True
-
-    # stage 2: send NICK and USER, update address, send PING, hand over to channel handling
+    # stage 1: send NICK and USER, update address, send PING, hand over to channel handling
     # pylint: disable=too-many-statements
     def _client_init(self):
         self.logger.info("%s initing client %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
@@ -464,12 +404,12 @@ class Server:
         self._send_nick()
         self._send_user()
 
-        while not self.halt:
+        while not self.socket.halt:
             if self.client_init_pong_timer_stop and addr_updated:
                 break
 
             try:
-                recv_data = self.conn.recv(512)
+                recv_data = self.socket.conn.recv(512)
             # pylint: disable=bare-except
             except:
                 self.logger.exception("recv error during _client_init()")
@@ -515,7 +455,7 @@ class Server:
                 # welcome msg, need to update the address to match the node we round robined
                 # to for sending the pong
                 if line.split()[1] == "001":
-                    self.address = line.split()[0]
+                    self.socket.address = line.split()[0]
                     addr_updated = True
                     self.logger.debug("updated address")
 
@@ -540,7 +480,7 @@ class Server:
                 # wait for the pong, if we received it, switch to _loop()
                 if (
                     self.client_init_ping_sent
-                    and self.address in line.split()[0]
+                    and self.socket.address in line.split()[0]
                     and line.split()[1] == "PONG"
                 ):
                     self.client_init_pong_received = True
@@ -549,23 +489,23 @@ class Server:
 
                     continue
 
-        while not self.halt:
+        while not self.socket.halt:
             if not self.client_init_pong_timer_halt:
                 time.sleep(1)
             else:
                 self.logger.info("%s init done %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
                 break
 
-    # stage 3: final infinite loop
+    # stage 2: final infinite loop
     def _loop(self):
         self.logger.info("%s entered the loop %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
 
         Thread(target=self._loop_ping_timer, daemon=True).start()
 
         # pylint: disable=too-many-nested-blocks
-        while not self.halt:
+        while not self.socket.halt:
             try:
-                recv_data = self.conn.recv(512)
+                recv_data = self.socket.conn.recv(512)
             # pylint: disable=bare-except
             except:
                 self.logger.exception("recv failed")
@@ -589,7 +529,7 @@ class Server:
                 # PONG handling
                 if (
                     self.client_init_ping_sent
-                    and self.address in line.split()[0]
+                    and self.socket.address in line.split()[0]
                     and line.split()[1] == "PONG"
                 ):
                     self.loop_pong_received = True
@@ -601,7 +541,7 @@ class Server:
                 # KILL handling
                 if line.split()[0] == "ERROR" and line.split()[1] == "Killed":
                     self.logger.warning("we got killed")
-                    self.connected = False
+                    self.socket.connected = False
                     self.stop()
 
                     continue
@@ -735,10 +675,11 @@ class Server:
 
     # -- CLI() interactions -- #
     def run(self):
-        self._connect()
+        self.socket.connect()
+
         self._client_init()
 
-        if not self.halt:
+        if not self.socket.halt:
             self.logger.info("%s joining channels %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
             for channel in self.channels:
                 self._send_join(channel)
@@ -747,22 +688,16 @@ class Server:
 
     def stop(self):
         self.logger.warning("%s stopping %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
-        self.halt = True
+        self.socket.halt = True
 
-        if self.connected:
+        if self.socket.connected:
             try:
                 self._send_quit("quitting.")
             # pylint: disable=bare-except
             except:
                 self.logger.warning("sending quit failed")
 
-        self.logger.debug("shutting down socket (RDWR)")
-        self.conn.shutdown(socket.SHUT_RDWR)
-
-        self.logger.warning(
-            "%s closing connection %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES
-        )
-        self.conn.close()
+        self.socket.disconnect()
 
         self.logger.info("removing %s from servers list", self.name)
         self.cli.servers.remove(self)
