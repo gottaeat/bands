@@ -102,8 +102,10 @@ class FinalLoop:
 
                 self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
+                line_s = line.split(' ')
+
                 # PING handling
-                if line.split()[0] == "PING":
+                if line_s[0] == "PING":
                     Thread(
                         target=self.sock_ops.send_pong, args=[line], daemon=True
                     ).start()
@@ -112,8 +114,8 @@ class FinalLoop:
                 # PONG handling
                 if (
                     self.ping_sent
-                    and self.socket.address in line.split()[0]
-                    and line.split()[1] == "PONG"
+                    and self.socket.address in line_s[0]
+                    and line_s[1] == "PONG"
                 ):
                     self.pong_received = True
                     self.pong_tstamp = int(time.strftime("%s"))
@@ -122,7 +124,7 @@ class FinalLoop:
                     continue
 
                 # KILL handling
-                if line.split()[0] == "ERROR" and line.split()[1] == "Killed":
+                if line_s[0] == "ERROR" and line_s[1] == "Killed":
                     self.logger.warning("we got killed")
                     self.socket.connected = False
                     self.server.stop()
@@ -131,61 +133,61 @@ class FinalLoop:
 
                 # JOIN handling
                 if (
-                    strip_user(line.split()[0]) == self.server.botname
-                    and line.split()[1] == "JOIN"
+                    strip_user(line_s[0]) == self.server.botname
+                    and line_s[1] == "JOIN"
                 ):
                     Thread(
                         target=self.handle.join,
-                        args=[line.split()[0], line.split()[2]],
+                        args=[line_s[0], line_s[2]],
                         daemon=True,
                     ).start()
 
                     continue
 
                 # INVITE handling
-                if line.split()[1] == "INVITE":
+                if line_s[1] == "INVITE":
                     Thread(
                         target=self.handle.invite,
-                        args=[strip_user(line.split()[0]), line.split()[3]],
+                        args=[strip_user(line_s[0]), line_s[3]],
                         daemon=True,
                     ).start()
 
                     continue
 
                 # KICK handling
-                if line.split()[1] == "KICK" and line.split()[3] == self.server.botname:
+                if line_s[1] == "KICK" and line_s[3] == self.server.botname:
                     Thread(
                         target=self.handle.kick,
                         args=[
-                            strip_user(line.split()[0]),
-                            line.split()[2],
-                            line.split()[4],
+                            strip_user(line_s[0]),
+                            line_s[2],
+                            line_s[4],
                         ],
                         daemon=True,
                     ).start()
 
                 # mode +b handling
-                if line.split()[1] == "474":
+                if line_s[1] == "474":
                     Thread(
                         target=self.handle.ban,
-                        args=[line.split()[3]],
+                        args=[line_s[3]],
                         daemon=True,
                     ).start()
 
                     continue
 
                 # PRIVMSG handling
-                if line.split()[1] == "PRIVMSG":
+                if line_s[1] == "PRIVMSG":
                     # channel PRIVMSG
-                    if line.split()[2] in self.channels:
+                    if line_s[2] in self.channels:
                         for chan in self.channel_obj:
-                            if chan.name == line.split()[2]:
+                            if chan.name == line_s[2]:
                                 channel = chan
                                 break
 
-                        user = strip_user(line.split()[0])
-                        cmd = line.split()[3]
-                        args = line.split()[4:]
+                        user = strip_user(line_s[0])
+                        cmd = line_s[3]
+                        args = line_s[4:]
 
                         if cmd in ChanCMD.CMDS:
                             self.logger.info(
@@ -211,10 +213,10 @@ class FinalLoop:
                             continue
 
                     # user PRIVMSG
-                    if line.split()[2] == self.server.botname:
-                        user = strip_user(line.split()[0])
-                        cmd = line.split()[3]
-                        args = line.split()[4:]
+                    if line_s[2] == self.server.botname:
+                        user = strip_user(line_s[0])
+                        cmd = line_s[3]
+                        args = line_s[4:]
 
                         self.logger.info(
                             "%s%s%s %s %s",
@@ -239,9 +241,9 @@ class FinalLoop:
                             continue
 
                 # NICK handling (user nick changes)
-                if line.split()[1] == "NICK":
-                    user_name = strip_user(line.split()[0])
-                    user_new_name = line.split()[2]
+                if line_s[1] == "NICK":
+                    user_name = strip_user(line_s[0])
+                    user_new_name = line_s[2]
 
                     Thread(
                         target=self.handle.nick_change,

@@ -78,8 +78,10 @@ class ClientInit:
 
                 self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
+                line_s = line.split(' ')
+
                 # respond to PING
-                if line.split()[0] == "PING":
+                if line_s[0] == "PING":
                     Thread(
                         target=self.sock_ops.send_pong, args=[line], daemon=True
                     ).start()
@@ -87,7 +89,7 @@ class ClientInit:
                     continue
 
                 # fix name colissions
-                if line.split()[1] == "433":
+                if line_s[1] == "433":
                     self.logger.info("nick colission occured, updating")
                     self.server.botname = f"{self.server.botname}0"
 
@@ -97,7 +99,7 @@ class ClientInit:
                     continue
 
                 # password protection
-                if line.split()[1] == "464":
+                if line_s[1] == "464":
                     if self.server.passwd:
                         self.logger.warning("incorrect password")
                     else:
@@ -109,8 +111,8 @@ class ClientInit:
 
                 # welcome msg, need to update the address to match the node we round robined
                 # to for sending the pong
-                if line.split()[1] == "001":
-                    self.socket.address = line.split()[0]
+                if line_s[1] == "001":
+                    self.socket.address = line_s[0]
                     addr_updated = True
                     self.logger.debug("updated address")
 
@@ -118,7 +120,7 @@ class ClientInit:
 
                 # need to send ping before joins for networks like rizon
                 # 376: end of motd, 422: no motd found, 221: server-wide mode set for user
-                if line.split()[1] in ("376", "422", "221") and not self.ping_sent:
+                if line_s[1] in ("376", "422", "221") and not self.ping_sent:
                     self.sock_ops.send_ping()
                     self.logger.debug("sent PING before JOINs")
 
@@ -131,8 +133,8 @@ class ClientInit:
                 # wait for the pong, if we received it, switch to _loop()
                 if (
                     self.ping_sent
-                    and self.socket.address in line.split()[0]
-                    and line.split()[1] == "PONG"
+                    and self.socket.address in line_s[0]
+                    and line_s[1] == "PONG"
                 ):
                     self.pong_received = True
                     self.ping_timer_stop = True
