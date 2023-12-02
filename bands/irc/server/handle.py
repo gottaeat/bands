@@ -1,3 +1,4 @@
+import datetime
 import re
 import time
 
@@ -189,3 +190,37 @@ class Handle:
                 )
 
                 self.server.admin = user_new_name
+
+    def channel_topic_msg(self, channel_name, msg):
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
+                break
+
+        try:
+            channel.topic_msg = " ".join(msg).lstrip(":")
+        # pylint: disable=bare-except
+        except:
+            self.logger.warning("setting the topic for %s failed", channel_name)
+
+    def channel_topic_meta(self, channel_name, userline, tstamp):
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
+                break
+
+        try:
+            channel.topic_user = userline.lstrip(":")
+        # pylint: disable=bare-except
+        except:
+            self.logger.warning("setting the topic user for %s failed", channel_name)
+
+        try:
+            channel.topic_tstamp = datetime.datetime.fromtimestamp(
+                int(tstamp)
+            ).strftime("%Y/%m/%d %T")
+        # pylint: disable=bare-except
+        except:
+            self.logger.warning(
+                "setting the topic timestamp for %s failed", channel_name
+            )
