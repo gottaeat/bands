@@ -78,7 +78,7 @@ class ClientInit:
 
                 self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
-                line_s = line.split(' ')
+                line_s = line.split()
 
                 # respond to PING
                 if line_s[0] == "PING":
