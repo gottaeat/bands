@@ -104,8 +104,7 @@ class FinalLoop:
 
                 line_s = line.split()
 
-                # topic
-                # 1. channel topic msg on join
+                # initial topic message
                 if (
                     self.socket.address in line_s[0]
                     and line_s[1] == "332"
@@ -113,14 +112,14 @@ class FinalLoop:
                     and line_s[3] in self.channels
                 ):
                     Thread(
-                        target=self.handle.channel_topic_msg,
+                        target=self.handle.initial_topic_msg,
                         args=[line_s[3], line_s[4:]],
                         daemon=True,
                     ).start()
 
                     continue
 
-                # channel topic meta on join
+                # initial topic meta
                 if (
                     self.socket.address in line_s[0]
                     and line_s[1] == "333"
@@ -128,24 +127,18 @@ class FinalLoop:
                     and line_s[3] in self.channels
                 ):
                     Thread(
-                        target=self.handle.channel_topic_meta,
+                        target=self.handle.initial_topic_meta,
                         args=[line_s[3], line_s[4], line_s[5]],
                         daemon=True,
                     ).start()
 
                     continue
 
-                # channel topic msg and meta w/ TOPIC
+                # TOPIC handling
                 if line_s[1] == "TOPIC" and line_s[2] in self.channels:
                     Thread(
-                        target=self.handle.channel_topic_msg,
-                        args=[line_s[2], line_s[3:]],
-                        daemon=True,
-                    ).start()
-
-                    Thread(
-                        target=self.handle.channel_topic_meta,
-                        args=[line_s[2], line_s[0], time.strftime("%s")],
+                        target=self.handle.topic,
+                        args=[line_s[2], line_s[0], line_s[3:]],
                         daemon=True,
                     ).start()
 
