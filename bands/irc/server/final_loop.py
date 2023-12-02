@@ -102,13 +102,61 @@ class FinalLoop:
 
                 self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
-                line_s = line.split(' ')
+                line_s = line.split()
+
+                # topic
+                # 1. channel topic msg on join
+                if (
+                    self.socket.address in line_s[0]
+                    and line_s[1] == "332"
+                    and line_s[2] == self.server.botname
+                    and line_s[3] in self.channels
+                ):
+                    Thread(
+                        target=self.handle.channel_topic_msg,
+                        args=[line_s[3], line_s[4:]],
+                        daemon=True,
+                    ).start()
+
+                    continue
+
+                # channel topic meta on join
+                if (
+                    self.socket.address in line_s[0]
+                    and line_s[1] == "333"
+                    and line_s[2] == self.server.botname
+                    and line_s[3] in self.channels
+                ):
+                    Thread(
+                        target=self.handle.channel_topic_meta,
+                        args=[line_s[3], line_s[4], line_s[5]],
+                        daemon=True,
+                    ).start()
+
+                    continue
+
+                # channel topic msg and meta w/ TOPIC
+                if line_s[1] == "TOPIC" and line_s[2] in self.channels:
+                    Thread(
+                        target=self.handle.channel_topic_msg,
+                        args=[line_s[2], line_s[3:]],
+                        daemon=True,
+                    ).start()
+
+                    Thread(
+                        target=self.handle.channel_topic_meta,
+                        args=[line_s[2], line_s[0], time.strftime("%s")],
+                        daemon=True,
+                    ).start()
+
+                    continue
 
                 # PING handling
                 if line_s[0] == "PING":
                     Thread(
                         target=self.sock_ops.send_pong, args=[line], daemon=True
                     ).start()
+
                     continue
 
                 # PONG handling
@@ -132,10 +180,7 @@ class FinalLoop:
                     continue
 
                 # JOIN handling
-                if (
-                    strip_user(line_s[0]) == self.server.botname
-                    and line_s[1] == "JOIN"
-                ):
+                if strip_user(line_s[0]) == self.server.botname and line_s[1] == "JOIN":
                     Thread(
                         target=self.handle.join,
                         args=[line_s[0], line_s[2]],
