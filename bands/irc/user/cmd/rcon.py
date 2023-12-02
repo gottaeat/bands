@@ -21,10 +21,13 @@ class RCon:
         msg = f"{c.INFO} active connections are:\n"
 
         for server in self.user.server.cli.servers:
-            msg += f"→ {c.LRED}{server.name}{c.RES}\n"
+            msg += f"└ {c.LRED}{server.name}{c.RES}\n"
 
             for chan in server.channel_obj:
-                msg += f"  → {c.LGREEN}{chan.name}\n"
+                msg += f"  {c.WHITE}└ {c.LGREEN}{chan.name}{c.RES}\n"
+                msg += f"    {c.WHITE}├ {c.YELLOW}topic  {c.RES}{chan.topic_msg}\n"
+                msg += f"    {c.WHITE}├ {c.YELLOW}set by {c.RES}{chan.topic_user}\n"
+                msg += f"    {c.WHITE}└ {c.YELLOW}date   {c.RES}{chan.topic_tstamp}\n"
 
         self.user.send_query(msg)
 
