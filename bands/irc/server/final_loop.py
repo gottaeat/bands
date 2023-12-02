@@ -6,7 +6,7 @@ import bands.irc.channel.cmd as ChanCMD
 import bands.irc.user.cmd as UserCMD
 
 from bands.colors import ANSIColors
-from bands.irc.util import strip_user
+from bands.irc.util import chop_userline
 
 from .handle import Handle
 
@@ -173,7 +173,10 @@ class FinalLoop:
                     continue
 
                 # JOIN handling
-                if strip_user(line_s[0]) == self.server.botname and line_s[1] == "JOIN":
+                if (
+                    chop_userline(line_s[0])["nick"] == self.server.botname
+                    and line_s[1] == "JOIN"
+                ):
                     Thread(
                         target=self.handle.join,
                         args=[line_s[0], line_s[2]],
@@ -186,7 +189,7 @@ class FinalLoop:
                 if line_s[1] == "INVITE":
                     Thread(
                         target=self.handle.invite,
-                        args=[strip_user(line_s[0]), line_s[3]],
+                        args=[chop_userline(line_s[0])["nick"], line_s[3]],
                         daemon=True,
                     ).start()
 
@@ -197,7 +200,7 @@ class FinalLoop:
                     Thread(
                         target=self.handle.kick,
                         args=[
-                            strip_user(line_s[0]),
+                            chop_userline(line_s[0])["nick"],
                             line_s[2],
                             line_s[4],
                         ],
@@ -223,7 +226,7 @@ class FinalLoop:
                                 channel = chan
                                 break
 
-                        user = strip_user(line_s[0])
+                        user = chop_userline(line_s[0])["nick"]
                         cmd = line_s[3]
                         args = line_s[4:]
 
@@ -252,7 +255,7 @@ class FinalLoop:
 
                     # user PRIVMSG
                     if line_s[2] == self.server.botname:
-                        user = strip_user(line_s[0])
+                        user = chop_userline(line_s[0])["strip"]
                         cmd = line_s[3]
                         args = line_s[4:]
 
@@ -280,7 +283,7 @@ class FinalLoop:
 
                 # NICK handling (user nick changes)
                 if line_s[1] == "NICK":
-                    user_name = strip_user(line_s[0])
+                    user_name = chop_userline(line_s[0])["nick"]
                     user_new_name = line_s[2]
 
                     Thread(
