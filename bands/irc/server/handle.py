@@ -191,36 +191,66 @@ class Handle:
 
                 self.server.admin = user_new_name
 
-    def channel_topic_msg(self, channel_name, msg):
+    def initial_topic_msg(self, channel_name, msg):
         for chan in self.channel_obj:
             if chan.name == channel_name:
                 channel = chan
                 break
 
         try:
-            channel.topic_msg = " ".join(msg).lstrip(":")
+            topic_msg = " ".join(msg).lstrip(":")
         # pylint: disable=bare-except
         except:
             self.logger.warning("setting the topic for %s failed", channel_name)
+            return
 
-    def channel_topic_meta(self, channel_name, userline, tstamp):
+        channel.topic_msg = topic_msg
+
+        self.logger.info("topic for %s: %s", channel_name, topic_msg)
+
+    def initial_topic_meta(self, channel_name, userline, tstamp):
         for chan in self.channel_obj:
             if chan.name == channel_name:
                 channel = chan
                 break
 
         try:
-            channel.topic_user = userline.lstrip(":")
-        # pylint: disable=bare-except
-        except:
-            self.logger.warning("setting the topic user for %s failed", channel_name)
-
-        try:
-            channel.topic_tstamp = datetime.datetime.fromtimestamp(
-                int(tstamp)
-            ).strftime("%Y/%m/%d %T")
+            topic_tstamp = datetime.datetime.fromtimestamp(int(tstamp)).strftime(
+                "%Y/%m/%d %T"
+            )
         # pylint: disable=bare-except
         except:
             self.logger.warning(
                 "setting the topic timestamp for %s failed", channel_name
             )
+            return
+
+        channel.topic_user = userline
+        channel.topic_tstamp = topic_tstamp
+
+        self.logger.info(
+            "topic for %s set by %s at %s", channel_name, userline, topic_tstamp
+        )
+
+    def topic(self, channel_name, userline, msg):
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
+                break
+
+        try:
+            topic_msg = " ".join(msg).lstrip(":")
+        # pylint: disable=bare-except
+        except:
+            self.logger.warning("updating the topic for %s failed", channel_name)
+            return
+
+        topic_user = userline.lstrip(":")
+
+        channel.topic_msg = topic_msg
+        channel.topic_user = topic_user
+        channel.topic_tstamp = time.strftime("%Y/%m/%d %T")
+
+        self.logger.info(
+            "topic for %s updated by %s to: %s", channel_name, topic_user, topic_msg
+        )
