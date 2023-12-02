@@ -3,16 +3,19 @@ import time
 from bands.irc.util import wrap_bytes
 
 
-# pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods,too-many-instance-attributes
 class Channel:
     def __init__(self, server):
         self.server = server
         self.sock_ops = server.sock_ops
 
+        # props
         self.name = None
+        self.topic_msg = None
+        self.topic_user = None
+        self.topic_tstamp = None
 
         self.char_limit = None
-
         self.tstamp = None
 
     def send_query(self, msg):
