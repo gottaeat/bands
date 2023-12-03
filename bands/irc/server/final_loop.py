@@ -174,8 +174,8 @@ class FinalLoop:
 
                 # JOIN handling
                 if (
-                    chop_userline(line_s[0])["nick"] == self.server.botname
-                    and line_s[1] == "JOIN"
+                    line_s[1] == "JOIN"
+                    and chop_userline(line_s[0])["nick"] == self.server.botname
                 ):
                     Thread(
                         target=self.handle.join,
@@ -255,7 +255,7 @@ class FinalLoop:
 
                     # user PRIVMSG
                     if line_s[2] == self.server.botname:
-                        user = chop_userline(line_s[0])["strip"]
+                        user = chop_userline(line_s[0])["nick"]
                         cmd = line_s[3]
                         args = line_s[4:]
 
