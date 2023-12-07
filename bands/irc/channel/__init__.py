@@ -1,1 +1,1 @@
-from .channel import Channel
+from .channel import Channel, ChannelUser
