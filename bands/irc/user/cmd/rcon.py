@@ -39,7 +39,6 @@ class RCon:
             self.user.send_query(errmsg)
             return
 
-        print(msg)
         self.user.sock_ops.send_raw(msg)
 
     def _dc(self):
