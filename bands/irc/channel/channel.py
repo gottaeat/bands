@@ -15,6 +15,8 @@ class Channel:
         self.topic_user = None
         self.topic_tstamp = None
 
+        self.user_list = []
+
         self.char_limit = None
         self.tstamp = None
 
@@ -35,3 +37,21 @@ class Channel:
                     time.sleep(self.server.scroll_speed)
             else:
                 self.sock_ops.send_raw(f"PRIVMSG {self.name} :{msg}")
+
+
+class ChannelUser:
+    def __init__(self):
+        self.nick = None
+        self.ircname = None
+        self.hostname = None
+        self.ident = None
+
+        # modes
+        self.owner = None  # ~
+        self.admin = None  # &
+        self.op = None  # @
+        self.hop = None  # %
+        self.voiced = None  # +
+
+        # context
+        self.tarot_deck = None
