@@ -31,6 +31,17 @@ class RCon:
 
         self.user.send_query(msg)
 
+    def _raw(self):
+        msg = " ".join(self.user_args[1:])
+
+        if len(msg) == 0:
+            errmsg = f"{c.ERR} no message provided."
+            self.user.send_query(errmsg)
+            return
+
+        print(msg)
+        self.user.sock_ops.send_raw(msg)
+
     def _dc(self):
         server_names = self.user_args[1:]
 
@@ -71,6 +82,10 @@ class RCon:
 
         if self.user_args[0] == "dc":
             self._dc()
+            return
+
+        if self.user_args[0] == "raw":
+            self._raw()
             return
 
         self._usage()
