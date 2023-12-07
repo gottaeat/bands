@@ -104,6 +104,28 @@ class FinalLoop:
 
                 line_s = line.split()
 
+                # -- keepalives -- #
+                # PING handling
+                if line_s[0] == "PING":
+                    Thread(
+                        target=self.sock_ops.send_pong, args=[line], daemon=True
+                    ).start()
+
+                    continue
+
+                # PONG handling
+                if (
+                    self.ping_sent
+                    and self.socket.address in line_s[0]
+                    and line_s[1] == "PONG"
+                ):
+                    self.pong_received = True
+                    self.pong_tstamp = int(time.strftime("%s"))
+                    self.logger.debug("received keepalive PONG")
+
+                    continue
+
+                # -- topic -- #
                 # initial topic message
                 if (
                     self.socket.address in line_s[0]
@@ -144,23 +166,17 @@ class FinalLoop:
 
                     continue
 
-                # PING handling
-                if line_s[0] == "PING":
+                # WHO handling
+                if line_s[1] == "352" and line_s[3] in self.channels:
+                    channel_name = line_s[3]
+                    userline = chop_userline(f"{line_s[7]}!{line_s[4]}@{line_s[5]}")
+                    user_props = line_s[8]
+
                     Thread(
-                        target=self.sock_ops.send_pong, args=[line], daemon=True
+                        target=self.handle.who,
+                        args=[channel_name, userline, user_props],
+                        daemon=True,
                     ).start()
-
-                    continue
-
-                # PONG handling
-                if (
-                    self.ping_sent
-                    and self.socket.address in line_s[0]
-                    and line_s[1] == "PONG"
-                ):
-                    self.pong_received = True
-                    self.pong_tstamp = int(time.strftime("%s"))
-                    self.logger.debug("received keepalive PONG")
 
                     continue
 
@@ -172,7 +188,7 @@ class FinalLoop:
 
                     continue
 
-                # JOIN handling
+                # bot JOIN handling
                 if (
                     line_s[1] == "JOIN"
                     and chop_userline(line_s[0])["nick"] == self.server.botname
@@ -185,7 +201,7 @@ class FinalLoop:
 
                     continue
 
-                # INVITE handling
+                # bot INVITE handling
                 if line_s[1] == "INVITE":
                     Thread(
                         target=self.handle.invite,
@@ -195,7 +211,7 @@ class FinalLoop:
 
                     continue
 
-                # KICK handling
+                # bot KICK handling
                 if line_s[1] == "KICK" and line_s[3] == self.server.botname:
                     Thread(
                         target=self.handle.kick,
@@ -207,7 +223,7 @@ class FinalLoop:
                         daemon=True,
                     ).start()
 
-                # mode +b handling
+                # bot banned
                 if line_s[1] == "474":
                     Thread(
                         target=self.handle.ban,
