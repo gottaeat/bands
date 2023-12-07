@@ -6,7 +6,7 @@ import bands.irc.channel.cmd as ChanCMD
 import bands.irc.user.cmd as UserCMD
 
 from bands.irc.user import User
-from bands.irc.channel import Channel
+from bands.irc.channel import Channel, ChannelUser
 
 
 class Handle:
@@ -142,6 +142,9 @@ class Handle:
                 "char_limit for %s is set to %s", channel.name, channel.char_limit
             )
 
+        self.sock_ops.send_raw(f"WHO {channel_name}")
+        self.logger.debug("sent WHO for %s", channel_name)
+
     def invite(self, user, channel_name):
         self.logger.info("%s has invited us to %s", user, channel_name)
         self.sock_ops.send_join(channel_name)
@@ -254,3 +257,23 @@ class Handle:
         self.logger.info(
             "topic for %s updated by %s to: %s", channel_name, topic_user, topic_msg
         )
+
+    def who(self, channel_name, userline, user_props):
+        user = ChannelUser()
+        user.nick = userline["nick"]
+        user.ircname = userline["ircname"]
+        user.hostname = userline["hostname"]
+        user.ident = userline["ident"]
+
+        user.owner = "~" in user_props
+        user.admin = "&" in user_props
+        user.op = "@" in user_props
+        user.hop = "%" in user_props
+        user.voiced = "+" in user_props
+
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
+                break
+
+        channel.user_list.append(user)
