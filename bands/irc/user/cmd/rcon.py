@@ -14,6 +14,7 @@ class RCon:
 
     def _usage(self):
         msg = f"{c.WHITE}  ├ {c.LGREEN}dc{c.RES}     [server name]\n"
+        msg = f"{c.WHITE}  ├ {c.LGREEN}raw{c.RES}    [raw irc line]\n"
         msg += f"{c.WHITE}  └ {c.LGREEN}status{c.RES}"
         self.user.send_query(msg)
 
@@ -27,7 +28,27 @@ class RCon:
                 msg += f"  {c.WHITE}└ {c.LGREEN}{chan.name}{c.RES}\n"
                 msg += f"    {c.WHITE}├ {c.YELLOW}topic  {c.RES}{chan.topic_msg}\n"
                 msg += f"    {c.WHITE}├ {c.YELLOW}set by {c.RES}{chan.topic_user}\n"
-                msg += f"    {c.WHITE}└ {c.YELLOW}date   {c.RES}{chan.topic_tstamp}\n"
+                msg += f"    {c.WHITE}├ {c.YELLOW}date   {c.RES}{chan.topic_tstamp}\n"
+                msg += f"    {c.WHITE}└ {c.YELLOW}users: \n"
+
+                for user in chan.user_list:
+                    userstr = ""
+
+                    if user.owner:
+                        userstr += "~"
+                    if user.admin:
+                        userstr += "&"
+                    if user.op:
+                        userstr += "@"
+                    if user.hop:
+                        userstr += "%"
+                    if user.voiced:
+                        userstr += "+"
+
+                    userstr += f"{user.nick} ({user.ircname}@{user.hostname}, "
+                    userstr += f"ident: {user.ident})"
+
+                    msg += f"      {c.LRED}→{c.RES} {userstr} \n"
 
         self.user.send_query(msg)
 
