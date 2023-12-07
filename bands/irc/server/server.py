@@ -34,6 +34,9 @@ class Server:
         # socket_ops
         self.sock_ops = None
 
+        # ircv3
+        self.caps = []
+
         # channels
         self.channel_obj = []
 
