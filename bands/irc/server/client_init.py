@@ -1,3 +1,4 @@
+import re
 import time
 
 from threading import Thread
@@ -50,15 +51,20 @@ class ClientInit:
         self.logger.info("%s initing client %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
 
         addr_updated = None
+        cap_requested = None
+        cap_ackd = None
 
-        if self.server.passwd:
-            self.sock_ops.send_pass()
+        # CAP stage #1: start cap negotiation
+        self.sock_ops.send_raw("CAP LS 302")
+        self.logger.debug("sent CAP LS request")
 
-        self.sock_ops.send_nick()
-        self.sock_ops.send_user()
+        # CAP stage #2: dud join to use the error as a notifier of the CAP LS
+        # being over
+        self.sock_ops.send_raw("JOIN :")
+        self.logger.debug("sent dud JOIN for CAP LS end notifier")
 
         while not self.socket.halt:
-            if self.ping_timer_stop and addr_updated:
+            if self.ping_timer_stop and addr_updated and cap_ackd:
                 break
 
             try:
@@ -79,6 +85,69 @@ class ClientInit:
                 self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
 
                 line_s = line.split()
+
+                # CAP
+                if line_s[1] == "CAP" and line_s[2] == "*":
+                    # CAP stage #3: parse and store server CAPS
+                    if line_s[3] == "LS":
+                        self.logger.debug("received CAP LS response")
+
+                        if line_s[4] == "*":
+                            start_index = 5
+                        else:
+                            start_index = 4
+
+                        for item in line_s[start_index:]:
+                            self.server.caps.append(re.sub(r"^:", "", item))
+
+                        continue
+
+                    # CAP stage #5: if server ACKs our REQ for multi-prefix,
+                    # send client details
+                    ackd_caps = []
+                    if cap_requested and line_s[3] == "ACK":
+                        cap_ackd = True
+
+                        self.logger.debug("received CAP ACK, final server CAPs are:")
+                        for cap in self.server.caps:
+                            self.logger.debug(" - %s", cap)
+
+                        for item in line_s[4:]:
+                            ackd_caps.append(re.sub(r"^:", "", item))
+
+                        if "multi-prefix" in ackd_caps:
+                            self.logger.debug("server gave us multi-prefix CAP")
+                        else:
+                            errmsg = "bands relies on multi-prefix CAP, but the "
+                            errmsg += "server did not offer it, stopping"
+                            self.logger.warning(errmsg)
+
+                            self.socket.connected = False
+                            self.server.stop()
+
+                            return
+
+                        self.sock_ops.send_raw("CAP END")
+                        self.logger.debug("ended CAP negotiation")
+
+                        if self.server.passwd:
+                            self.sock_ops.send_pass()
+
+                        self.sock_ops.send_nick()
+                        self.sock_ops.send_user()
+
+                        continue
+
+                # CAP stage #4: when the dud 451 shows us the LS of the server
+                # is over, send the request for multi-prefix
+                if line_s[1] == "451":
+                    if "multi-prefix" in self.server.caps:
+                        cap_requested = True
+
+                        self.sock_ops.send_raw("CAP REQ :multi-prefix")
+                        self.logger.debug("requested multi-prefix CAP from server.")
+
+                    continue
 
                 # respond to PING
                 if line_s[0] == "PING":
