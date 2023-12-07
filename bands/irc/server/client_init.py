@@ -63,6 +63,12 @@ class ClientInit:
         self.sock_ops.send_raw("JOIN :")
         self.logger.debug("sent dud JOIN for CAP LS end notifier")
 
+        if self.server.passwd:
+            self.sock_ops.send_pass()
+
+        self.sock_ops.send_nick()
+        self.sock_ops.send_user()
+
         while not self.socket.halt:
             if self.ping_timer_stop and addr_updated and cap_ackd:
                 break
@@ -130,12 +136,6 @@ class ClientInit:
                         self.sock_ops.send_raw("CAP END")
                         self.logger.debug("ended CAP negotiation")
 
-                        if self.server.passwd:
-                            self.sock_ops.send_pass()
-
-                        self.sock_ops.send_nick()
-                        self.sock_ops.send_user()
-
                         continue
 
                 # CAP stage #4: when the dud 451 shows us the LS of the server
@@ -181,6 +181,15 @@ class ClientInit:
                 # welcome msg, need to update the address to match the node we round robined
                 # to for sending the pong
                 if line_s[1] == "001":
+                    if not cap_ackd:
+                        errmsg = "bands relies on IRCv3 CAPs at a basic level, "
+                        errmsg += "but the server did not respond to the CAP "
+                        errmsg += "negotiation, stopping"
+                        self.logger.warning(errmsg)
+
+                        self.socket.connected = False
+                        self.server.stop()
+
                     self.socket.address = line_s[0]
                     addr_updated = True
                     self.logger.debug("updated address")
