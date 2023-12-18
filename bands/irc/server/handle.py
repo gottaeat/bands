@@ -5,6 +5,8 @@ import time
 import bands.irc.channel.cmd as ChanCMD
 import bands.irc.user.cmd as UserCMD
 
+from bands.colors import ANSIColors
+
 from bands.irc.user import User
 from bands.irc.channel import Channel, ChannelUser
 
@@ -63,16 +65,32 @@ class Handle:
             )
 
     # -- cmd handling -- #
-    def channel_msg(self, channel, user_name, cmd, user_args):
-        self._gen_user(user_name)
+    def channel_msg(self, channel_name, user_name, cmd, user_args):
+        self.logger.info(
+            "%s%s%s %s %s",
+            f"{ac.BMGN}[{ac.BWHI}{user_name}",
+            f"{ac.BRED}¦",
+            f"{ac.BGRN}{channel_name}{ac.BMGN}]",
+            f"{ac.BCYN}{cmd}",
+            f"{' '.join(user_args)}{ac.RES}",
+        )
 
-        for user_obj in self.user_obj:
-            if user_obj.name == user_name:
-                user = user_obj
+        # get channel object
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
                 break
 
+        # get channeluser object
+        for channeluser in chan.user_list:
+            if channeluser.name == user_name:
+                user = channeluser
+                break
+
+        # set tstamp
         tstamp = int(time.strftime("%s"))
 
+        # if this is channel init
         if not channel.tstamp:
             channel.tstamp = tstamp
 
@@ -80,6 +98,7 @@ class Handle:
 
             return
 
+        # ratelimit if not authed user
         if user_name != self.server.admin:
             if tstamp - channel.tstamp < 2:
                 self.logger.warning(
@@ -88,8 +107,10 @@ class Handle:
 
                 return
 
+        # update tstamp
         channel.tstamp = tstamp
 
+        # exec
         ChanCMD.CMDS[cmd](channel, user, user_args)
 
     def user_msg(self, user_name, cmd, user_args):
