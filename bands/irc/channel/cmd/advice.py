@@ -42,7 +42,7 @@ class Advice:
 
             target = self.user_args[0]
         else:
-            target = self.user.name
+            target = self.user.nick
 
         if unilen(target) > self.channel.server.USER_NICKLIMIT:
             errmsg = f"{c.ERR} person in need of advice is wider than "

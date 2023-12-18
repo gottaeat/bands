@@ -29,7 +29,7 @@ class Piss:
             return
 
         msg = f"     {c.WHITE}ë{c.RES} \n"
-        msg += f"   {c.WHITE}.-║- {c.LBLUE}<- {c.ORANGE}{self.user.name}{c.RES} \n"
+        msg += f"   {c.WHITE}.-║- {c.LBLUE}<- {c.ORANGE}{self.user.nick}{c.RES} \n"
         msg += f"   {c.ORANGE}╭{c.LRED}╰{c.WHITE}\\{c.RES} \n"
         msg += f"   {c.YELLOW}┊{c.WHITE}/ \\{c.RES} \n"
         msg += f"   {c.YELLOW}┊{c.RES} \n"
@@ -38,7 +38,7 @@ class Piss:
         msg = drawbox(msg, "single")
         msg += f"{c.WHITE} → {c.ORANGE}{target} "
         msg += f"{c.WHITE}just got {c.YELLOW}pissed on "
-        msg += f"{c.WHITE}by {c.ORANGE}{self.user.name}"
+        msg += f"{c.WHITE}by {c.ORANGE}{self.user.nick}"
         msg += f"{c.WHITE}.{c.RES}"
 
         self.channel.send_query(msg)

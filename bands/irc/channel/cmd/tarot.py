@@ -109,7 +109,7 @@ class Tarot:
         ]
 
         # notify that we're generating the reading
-        msg = f"{c.INFO} generating reading for {c.WHITE}{self.user.name}{c.RES}."
+        msg = f"{c.INFO} generating reading for {c.WHITE}{self.user.nick}{c.RES}."
         self.channel.send_query(msg)
 
         # rotate before call
@@ -136,13 +136,13 @@ class Tarot:
                 self.channel.server.logger.warning("%s", line)
 
             errmsg = f"{c.ERR} create() failed but deck for "
-            errmsg += f"{c.WHITE}{self.user.name}{c.RES} has been stored, you "
+            errmsg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
             errmsg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
             self.channel.send_query(errmsg)
             return
 
         try:
-            msg = f"{c.INFO} reading for {c.WHITE}{self.user.name}{c.RES}:\n"
+            msg = f"{c.INFO} reading for {c.WHITE}{self.user.nick}{c.RES}:\n"
             msg += response.choices[0]["message"]["content"]
             self.channel.send_query(msg)
         # pylint: disable=broad-exception-caught
@@ -153,7 +153,7 @@ class Tarot:
                 self.channel.server.logger.warning("%s", line)
 
             errmsg = f"{c.ERR} failed parsing response but deck for "
-            errmsg += f"{c.WHITE}{self.user.name}{c.RES} has been stored, you "
+            errmsg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
             errmsg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
             self.channel.send_query(errmsg)
             return
@@ -161,14 +161,14 @@ class Tarot:
     # cmd handling
     def _pretty_cards(self):
         msg = f"{c.INFO} cards in the deck of "
-        msg += f"{c.WHITE}{self.user.name}{c.RES} are: "
+        msg += f"{c.WHITE}{self.user.nick}{c.RES} are: "
 
         for index, card in enumerate(self.user.tarot_deck.cards):
             msg += f"{c.GREEN}[{c.LBLUE}#{index+1:02}{c.GREEN}] "
             msg += f"{c.WHITE}{card.title}{c.LBLUE}, "
 
         msg = re.sub(r", $", f"{c.RES}\n", msg)
-        msg += f"{c.INFO} {c.WHITE}{self.user.name}{c.RES}'s question was: "
+        msg += f"{c.INFO} {c.WHITE}{self.user.nick}{c.RES}'s question was: "
         msg += f"{c.WHITE}{self.user.tarot_deck.question}{c.RES}"
         self.channel.send_query(msg)
 
@@ -193,7 +193,7 @@ class Tarot:
         self._gen_deck()
         self.user.tarot_deck = self.deck
 
-        msg = f"{c.INFO} generated deck for {c.WHITE}{self.user.name}{c.RES}:\n"
+        msg = f"{c.INFO} generated deck for {c.WHITE}{self.user.nick}{c.RES}:\n"
 
         for index, card in enumerate(self.user.tarot_deck.cards):
             order_title = self.tarot_data["card_order"][index]["title"]
@@ -222,12 +222,12 @@ class Tarot:
     def _cmd_read_addq(self, user_Q):
         self.user.tarot_deck.question = user_Q
 
-        msg = f"{c.INFO} {c.WHITE}{self.user.name}{c.RES}'s question has been saved."
+        msg = f"{c.INFO} {c.WHITE}{self.user.nick}{c.RES}'s question has been saved."
         self.channel.send_query(msg)
 
     def _cmd_read_last(self):
         if not self.user.tarot_deck.question:
-            errmsg = f"{c.ERR} {c.WHITE}{self.user.name}{c.RES}'s deck does not "
+            errmsg = f"{c.ERR} {c.WHITE}{self.user.nick}{c.RES}'s deck does not "
             errmsg += "have a question attached, run "
             errmsg += f"{c.LGREEN}?tarot read addq <question>{c.RES} to add a "
             errmsg += "question"
@@ -256,7 +256,7 @@ class Tarot:
             if self.user_args[1] == "addq" or self.user_args[1] == "last":
                 if not self.user.tarot_deck:
                     errmsg = f"{c.ERR} no previous deck found for "
-                    errmsg += f"{c.WHITE}{self.user.name}{c.RES}."
+                    errmsg += f"{c.WHITE}{self.user.nick}{c.RES}."
                     self.channel.send_query(errmsg)
                     return
 
