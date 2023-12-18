@@ -222,38 +222,19 @@ class FinalLoop:
                 # PRIVMSG handling
                 if line_s[1] == "PRIVMSG":
                     # channel PRIVMSG
-                    if line_s[2] in self.channels:
-                        for chan in self.channel_obj:
-                            if chan.name == line_s[2]:
-                                channel = chan
-                                break
+                    if line_s[2] in self.channels and line_s[3] in ChanCMD.CMDS:
+                        Thread(
+                            target=self.handle.channel_msg,
+                            args=[
+                                line_s[2],
+                                chop_userline(line_s[0])["nick"],
+                                line_s[3],
+                                line_s[4:],
+                            ],
+                            daemon=True,
+                        ).start()
 
-                        user = chop_userline(line_s[0])["nick"]
-                        cmd = line_s[3]
-                        args = line_s[4:]
-
-                        if cmd in ChanCMD.CMDS:
-                            self.logger.info(
-                                "%s%s%s %s %s",
-                                f"{ac.BMGN}[{ac.BWHI}{user}",
-                                f"{ac.BRED}/",
-                                f"{ac.BGRN}{channel.name}{ac.BMGN}]",
-                                f"{ac.BCYN}{cmd}",
-                                f"{' '.join(args)}{ac.RES}",
-                            )
-
-                            Thread(
-                                target=self.handle.channel_msg,
-                                args=[
-                                    channel,
-                                    user,
-                                    cmd,
-                                    args,
-                                ],
-                                daemon=True,
-                            ).start()
-
-                            continue
+                        continue
 
                     # user PRIVMSG
                     if line_s[2] == self.server.botname:
