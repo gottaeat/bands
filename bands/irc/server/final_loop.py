@@ -114,11 +114,7 @@ class FinalLoop:
                     continue
 
                 # PONG handling
-                if (
-                    self.ping_sent
-                    and self.socket.address in line_s[0]
-                    and line_s[1] == "PONG"
-                ):
+                if self.ping_sent and line_s[1] == "PONG":
                     self.pong_received = True
                     self.pong_tstamp = int(time.strftime("%s"))
                     self.logger.debug("received keepalive PONG")
@@ -127,12 +123,7 @@ class FinalLoop:
 
                 # -- topic -- #
                 # initial topic message
-                if (
-                    self.socket.address in line_s[0]
-                    and line_s[1] == "332"
-                    and line_s[2] == self.server.botname
-                    and line_s[3] in self.channels
-                ):
+                if line_s[1] == "332":
                     Thread(
                         target=self.handle.initial_topic_msg,
                         args=[line_s[3], line_s[4:]],
@@ -142,12 +133,7 @@ class FinalLoop:
                     continue
 
                 # initial topic meta
-                if (
-                    self.socket.address in line_s[0]
-                    and line_s[1] == "333"
-                    and line_s[2] == self.server.botname
-                    and line_s[3] in self.channels
-                ):
+                if line_s[1] == "333":
                     Thread(
                         target=self.handle.initial_topic_meta,
                         args=[line_s[3], line_s[4], line_s[5]],
@@ -157,7 +143,7 @@ class FinalLoop:
                     continue
 
                 # TOPIC handling
-                if line_s[1] == "TOPIC" and line_s[2] in self.channels:
+                if line_s[1] == "TOPIC":
                     Thread(
                         target=self.handle.topic,
                         args=[line_s[2], line_s[0], line_s[3:]],
@@ -167,7 +153,7 @@ class FinalLoop:
                     continue
 
                 # WHO handling
-                if line_s[1] == "352" and line_s[3] in self.channels:
+                if line_s[1] == "352":
                     channel_name = line_s[3]
                     userline = chop_userline(f"{line_s[7]}!{line_s[4]}@{line_s[5]}")
                     user_props = line_s[8]
