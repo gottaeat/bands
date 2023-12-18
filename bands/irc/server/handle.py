@@ -10,6 +10,7 @@ from bands.colors import ANSIColors
 from bands.irc.user import User
 from bands.irc.channel import Channel, ChannelUser
 
+ac = ANSIColors()
 
 class Handle:
     def __init__(self, server):
@@ -65,10 +66,10 @@ class Handle:
             )
 
     # -- cmd handling -- #
-    def channel_msg(self, channel_name, user_name, cmd, user_args):
+    def channel_msg(self, channel_name, user_nick, cmd, user_args):
         self.logger.info(
             "%s%s%s %s %s",
-            f"{ac.BMGN}[{ac.BWHI}{user_name}",
+            f"{ac.BMGN}[{ac.BWHI}{user_nick}",
             f"{ac.BRED}¦",
             f"{ac.BGRN}{channel_name}{ac.BMGN}]",
             f"{ac.BCYN}{cmd}",
@@ -83,7 +84,7 @@ class Handle:
 
         # get channeluser object
         for channeluser in chan.user_list:
-            if channeluser.name == user_name:
+            if channeluser.nick == user_nick:
                 user = channeluser
                 break
 
@@ -99,7 +100,7 @@ class Handle:
             return
 
         # ratelimit if not authed user
-        if user_name != self.server.admin:
+        if user_nick != self.server.admin:
             if tstamp - channel.tstamp < 2:
                 self.logger.warning(
                     "ignoring cmd %s in %s (ratelimited)", cmd, channel.name
