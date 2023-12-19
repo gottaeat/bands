@@ -12,6 +12,7 @@ from bands.irc.channel import Channel, ChannelUser
 
 ac = ANSIColors()
 
+
 class Handle:
     def __init__(self, server):
         self.server = server
@@ -83,7 +84,7 @@ class Handle:
                 break
 
         # get channeluser object
-        for channeluser in chan.user_list:
+        for channeluser in channel.user_list:
             if channeluser.nick == user_nick:
                 user = channeluser
                 break
