@@ -15,7 +15,7 @@ class Help:
     def _run(self):
         msg = f"{c.WHITE}├ {c.LRED}usage{c.RES}\n"
 
-        if self.user.name == self.user.server.admin:
+        if self.user == self.user.server.admin:
             msg += f"{c.WHITE}│  ├ {c.LGREEN}?auth{c.RES}   [secret]\n"
             msg += f"{c.WHITE}│  ├ {c.LGREEN}?openai{c.RES} [load|status]\n"
             msg += f"{c.WHITE}│  └ {c.LGREEN}?rcon{c.RES}   [dc|raw|status]\n"
