@@ -45,8 +45,7 @@ class RCon:
                     if user.voiced:
                         userstr += "+"
 
-                    userstr += f"{user.nick} ({user.ircname}@{user.hostname}, "
-                    userstr += f"ident: {user.ident})"
+                    userstr += f"{user.nick} ({user.login})"
 
                     msg += f"      {c.LRED}→{c.RES} {userstr} \n"
 
