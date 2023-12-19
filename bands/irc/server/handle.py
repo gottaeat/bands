@@ -182,7 +182,7 @@ class Handle:
 
         for chan in self.channel_obj:
             if chan.name == channel_name:
-                self.channel_obj.remove(channel_name)
+                self.channel_obj.remove(chan)
 
         self.logger.info("we are banned from %s, removing from lists", channel_name)
 
