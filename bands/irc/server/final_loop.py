@@ -156,17 +156,27 @@ class FinalLoop:
                 if line_s[1] == "352":
                     Thread(
                         target=self.handle.who,
+                        args=[line_s[3], line_s[7], line_s[4], line_s[5], line_s[8]],
+                        daemon=True,
+                    ).start()
+
+                    continue
+
+                # NICK handling
+                if line_s[1] == "NICK":
+                    Thread(
+                        target=self.handle.nick,
                         args=[
-                            line_s[3],
-                            chop_userline(f"{line_s[7]}!{line_s[4]}@{line_s[5]}"),
-                            line_s[8],
+                            line_s[0],
+                            line_s[2],
                         ],
                         daemon=True,
                     ).start()
 
                     continue
 
-                # KILL handling
+                # -- bot self related -- #
+                # bot KILL handling
                 if line_s[0] == "ERROR" and line_s[1] == "Killed":
                     self.logger.warning("we got killed")
                     self.socket.connected = False
@@ -180,7 +190,7 @@ class FinalLoop:
                     and chop_userline(line_s[0])["nick"] == self.server.botname
                 ):
                     Thread(
-                        target=self.handle.join,
+                        target=self.handle.bot_join,
                         args=[line_s[0], line_s[2]],
                         daemon=True,
                     ).start()
@@ -190,7 +200,7 @@ class FinalLoop:
                 # bot INVITE handling
                 if line_s[1] == "INVITE":
                     Thread(
-                        target=self.handle.invite,
+                        target=self.handle.bot_invite,
                         args=[chop_userline(line_s[0])["nick"], line_s[3]],
                         daemon=True,
                     ).start()
@@ -200,37 +210,29 @@ class FinalLoop:
                 # bot KICK handling
                 if line_s[1] == "KICK" and line_s[3] == self.server.botname:
                     Thread(
-                        target=self.handle.kick,
-                        args=[
-                            chop_userline(line_s[0])["nick"],
-                            line_s[2],
-                            line_s[4],
-                        ],
-                        daemon=True,
-                    ).start()
-
-                # bot banned
-                if line_s[1] == "474":
-                    Thread(
-                        target=self.handle.ban,
-                        args=[line_s[3]],
+                        target=self.handle.bot_kick,
+                        args=[line_s[0], line_s[2], line_s[4]],
                         daemon=True,
                     ).start()
 
                     continue
 
+                # bot banned
+                if line_s[1] == "474":
+                    Thread(
+                        target=self.handle.bot_ban, args=[line_s[3]], daemon=True
+                    ).start()
+
+                    continue
+
+                # -- cmd trigger -- #
                 # PRIVMSG handling
                 if line_s[1] == "PRIVMSG":
                     # channel PRIVMSG
                     if line_s[2] in self.channels and line_s[3] in ChanCMD.CMDS:
                         Thread(
                             target=self.handle.channel_msg,
-                            args=[
-                                line_s[2],
-                                chop_userline(line_s[0])["nick"],
-                                line_s[3],
-                                line_s[4:],
-                            ],
+                            args=[line_s[2], line_s[0], line_s[3], line_s[4:]],
                             daemon=True,
                         ).start()
 
@@ -263,19 +265,3 @@ class FinalLoop:
                             ).start()
 
                             continue
-
-                # NICK handling (user nick changes)
-                if line_s[1] == "NICK":
-                    user_name = chop_userline(line_s[0])["nick"]
-                    user_new_name = line_s[2]
-
-                    Thread(
-                        target=self.handle.nick_change,
-                        args=[
-                            user_name,
-                            user_new_name,
-                        ],
-                        daemon=True,
-                    ).start()
-
-                    continue
