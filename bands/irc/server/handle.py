@@ -22,9 +22,8 @@ class Handle:
 
         # user and channels
         self.channels = server.channels
-        self.users = server.users
         self.channel_obj = server.channel_obj
-        self.user_obj = server.user_obj
+        self.users = server.users
 
     # -- context handling -- #
     def _gen_channel(self, channel_name):
@@ -46,39 +45,33 @@ class Handle:
 
             self.logger.debug("generated channel object for %s", channel_name)
 
-    def _gen_user(self, user_name):
-        # self.users
-        if user_name not in self.channels:
-            self.users.append(user_name)
+    def _gen_user(self, user_nick, user_login):
+        # if user alread exists, return the corresponding user object
+        for user in self.users:
+            if user.nick == user_nick and user.login == user_login:
+                return user
 
-        # self.user_obj
-        user_objs = []
-        for user in self.user_obj:
-            user_objs.append(user.name)
+        # if user does not exist, create it
+        user = User(self.server)
+        user.nick = user_nick
+        user.login = user_login
+        user.char_limit = 512 - len(f"PRIVMSG {user.nick} :".encode("utf-8"))
 
-        if user_name not in user_objs:
-            user = User(self.server)
-            user.name = user_name
-            user.char_limit = 512 - len(f"PRIVMSG {user} :".encode("utf-8"))
+        self.users.append(user)
 
-            self.user_obj.append(user)
+        self.logger.debug(
+            "generated user object for %s (%s) [%s]",
+            user.nick,
+            user.login,
+            user.char_limit,
+        )
 
-            self.logger.debug(
-                "generated user object for %s (%s)", user.name, user.char_limit
-            )
+        # return the created user obj
+        return user
 
     # -- cmd handling -- #
     def channel_msg(self, channel_name, user_line, cmd, user_args):
         user_nick = chop_userline(user_line)["nick"]
-
-        self.logger.info(
-            "%s%s%s %s %s",
-            f"{ac.BMGN}[{ac.BWHI}{user_nick}",
-            f"{ac.BRED}¦",
-            f"{ac.BGRN}{channel_name}{ac.BMGN}]",
-            f"{ac.BCYN}{cmd}",
-            f"{' '.join(user_args)}{ac.RES}",
-        )
 
         # get channel object
         for chan in self.channel_obj:
@@ -92,6 +85,16 @@ class Handle:
                 user = channeluser
                 break
 
+        # print
+        self.logger.info(
+            "%s%s%s %s %s",
+            f"{ac.BMGN}[{ac.BWHI}{user.nick} ({user.login})",
+            f"{ac.BRED}¦",
+            f"{ac.BGRN}{channel.name}{ac.BMGN}]",
+            f"{ac.BCYN}{cmd}",
+            f"{' '.join(user_args)}{ac.RES}",
+        )
+
         # set tstamp
         tstamp = int(time.strftime("%s"))
 
@@ -103,14 +106,29 @@ class Handle:
 
             return
 
-        # ratelimit if not authed user
-        if user_nick != self.server.admin:
-            if tstamp - channel.tstamp < 2:
-                self.logger.warning(
-                    "ignoring cmd %s in %s (ratelimited)", cmd, channel.name
-                )
+        # see if a User exists for the ChannelUser
+        for serveruser in self.users:
+            if (
+                serveruser.nick == user.nick
+                and serveruser.login == user.login
+            ):
+            corresp_user = serveruser
 
-                return
+        # ratelimit if not authed user
+        ratelimit = True
+
+        try:
+            if corresp_user == self.server.admin:
+                ratelimit = False
+        except UnboundLocalError:
+            pass
+
+        if ratelimit and tstamp - channel.tstamp < 2:
+            self.logger.warning(
+                "ignoring cmd %s in %s (ratelimited)", cmd, channel.name
+            )
+
+            return
 
         # update tstamp
         channel.tstamp = tstamp
@@ -118,14 +136,21 @@ class Handle:
         # exec
         ChanCMD.CMDS[cmd](channel, user, user_args)
 
-    def user_msg(self, user_name, cmd, user_args):
-        if len(self.user_obj) == 0 or user_name not in self.users:
-            self._gen_user(user_name)
+    def user_msg(self, user_line, cmd, user_args):
+        user_line = chop_userline(user_line)
+        user_nick = user_line["nick"]
+        user_login = user_line["login"]
 
-        for user_obj in self.user_obj:
-            if user_obj.name == user_name:
-                user = user_obj
-                break
+        user = self._gen_user(user_nick, user_login)
+
+        self.logger.info(
+            "%s%s%s %s %s",
+            f"{ac.BMGN}[{ac.BWHI}{user.nick}",
+            f"{ac.BRED}/",
+            f"{ac.BGRN}PM{ac.BMGN}]",
+            f"{ac.BCYN}{cmd}",
+            f"{' '.join(user_args)}{ac.RES}",
+        )
 
         tstamp = int(time.strftime("%s"))
 
@@ -136,10 +161,10 @@ class Handle:
 
             return
 
-        if user_name != self.server.admin:
+        if user != self.server.admin:
             if tstamp - user.tstamp < 2:
                 self.logger.warning(
-                    "ignoring cmd %s in %s (ratelimited)", cmd, user.name
+                    "ignoring cmd %s in %s (ratelimited)", cmd, user.nick
                 )
 
                 return
@@ -202,38 +227,51 @@ class Handle:
 
             self.server.stop()
 
-    def nick(self, user_line, new_nick):
+    def nick(self, user_line, user_new_nick):
         user_line = chop_userline(user_line)
-        old_nick = user_line["nick"]
+        user_old_nick = user_line["nick"]
+        user_login = user_line["login"]
 
-        if old_nick == self.server.botname:
-            self.server.botname = new_nick
-            self.logger.info("changed the bot name to %s", new_nick)
+        # 1. channeluser obj
+        for channel in self.channel_obj:
+            for channeluser in channel.user_list:
+                if (
+                    channeluser.nick == user_old_nick
+                    and channeluser.login == user_login
+                ):
+                    self.logger.debug(
+                        "updating %s (%s)'s nick to %s in %s",
+                        channeluser.nick,
+                        channeluser.login,
+                        user_new_nick,
+                        channel.name,
+                    )
 
-        if old_nick in self.users:
-            self.logger.debug(
-                "%s changed their nick to %s, updating the user_obj",
-                old_nick,
-                new_nick,
-            )
+                    channeluser.nick = user_new_nick
 
-            self.users.remove(old_nick)
-            self.users.append(new_nick)
+        # 2. user obj
+        for user_obj in self.users:
+            if user_obj.nick == user_old_nick and user_obj.login == user_login:
+                user = user_obj
+                break
 
-            for user_obj in self.user_obj:
-                if user_obj.name == old_nick:
-                    user = user_obj
-                    break
-
-            user.name = new_nick
-
-            if old_nick == self.server.admin:
+        try:
+            if user:
                 self.logger.debug(
-                    "%s was also set as the admin user, updating",
-                    old_nick,
+                    "%s (%s) changed their nick to %s, updating the user object",
+                    user.nick,
+                    user.login,
+                    user_new_nick,
                 )
 
-                self.server.admin = new_nick
+                user.nick = user_new_nick
+
+                # if user is us
+                if user.nick == self.server.botname:
+                    self.server.botname = user_new_nick
+                    self.logger.info("changed the bot name to %s", user_new_nick)
+        except UnboundLocalError:
+            pass
 
     def initial_topic_msg(self, channel_name, msg):
         for chan in self.channel_obj:
