@@ -6,6 +6,7 @@ import bands.irc.channel.cmd as ChanCMD
 import bands.irc.user.cmd as UserCMD
 
 from bands.colors import ANSIColors
+from bands.irc.util import chop_userline
 
 from bands.irc.user import User
 from bands.irc.channel import Channel, ChannelUser
@@ -67,7 +68,9 @@ class Handle:
             )
 
     # -- cmd handling -- #
-    def channel_msg(self, channel_name, user_nick, cmd, user_args):
+    def channel_msg(self, channel_name, user_line, cmd, user_args):
+        user_nick = chop_userline(user_line)["nick"]
+
         self.logger.info(
             "%s%s%s %s %s",
             f"{ac.BMGN}[{ac.BWHI}{user_nick}",
@@ -146,7 +149,7 @@ class Handle:
         UserCMD.CMDS[cmd](user, user_args)
 
     # -- irc handling -- #
-    def join(self, botname_with_vhost, channel_name):
+    def bot_join(self, botname_with_vhost, channel_name):
         channel_name = re.sub(r"^:", "", channel_name)
 
         self._gen_channel(channel_name)
@@ -168,15 +171,23 @@ class Handle:
         self.sock_ops.send_raw(f"WHO {channel_name}")
         self.logger.debug("sent WHO for %s", channel_name)
 
-    def invite(self, user, channel_name):
+    def bot_invite(self, user, channel_name):
         self.logger.info("%s has invited us to %s", user, channel_name)
         self.sock_ops.send_join(channel_name)
 
-    def kick(self, user, channel_name, reason):
-        self.logger.info("%s has kicked us from %s for: %s", user, channel_name, reason)
+    def bot_kick(self, user_line, channel_name, reason):
+        user_line = chop_userline(user_line)
+
+        self.logger.warning(
+            "%s (%s) has kicked us from %s: %s",
+            user_line[0],
+            user_line[1],
+            channel_name,
+            reason,
+        )
         self.sock_ops.send_join(channel_name)
 
-    def ban(self, channel_name):
+    def bot_ban(self, channel_name):
         if channel_name in self.channels:
             self.channels.remove(channel_name)
 
@@ -191,31 +202,38 @@ class Handle:
 
             self.server.stop()
 
-    def nick_change(self, user_name, user_new_name):
-        if user_name in self.users:
+    def nick(self, user_line, new_nick):
+        user_line = chop_userline(user_line)
+        old_nick = user_line["nick"]
+
+        if old_nick == self.server.botname:
+            self.server.botname = new_nick
+            self.logger.info("changed the bot name to %s", new_nick)
+
+        if old_nick in self.users:
             self.logger.debug(
                 "%s changed their nick to %s, updating the user_obj",
-                user_name,
-                user_new_name,
+                old_nick,
+                new_nick,
             )
 
-            self.users.remove(user_name)
-            self.users.append(user_new_name)
+            self.users.remove(old_nick)
+            self.users.append(new_nick)
 
             for user_obj in self.user_obj:
-                if user_obj.name == user_name:
+                if user_obj.name == old_nick:
                     user = user_obj
                     break
 
-            user.name = user_new_name
+            user.name = new_nick
 
-            if user_name == self.server.admin:
+            if old_nick == self.server.admin:
                 self.logger.debug(
                     "%s was also set as the admin user, updating",
-                    user_name,
+                    old_nick,
                 )
 
-                self.server.admin = user_new_name
+                self.server.admin = new_nick
 
     def initial_topic_msg(self, channel_name, msg):
         for chan in self.channel_obj:
@@ -232,9 +250,9 @@ class Handle:
 
         channel.topic_msg = topic_msg
 
-        self.logger.info("topic for %s: %s", channel_name, topic_msg)
+        self.logger.info("topic for %s: %s", channel.name, channel.topic_msg)
 
-    def initial_topic_meta(self, channel_name, userline, tstamp):
+    def initial_topic_meta(self, channel_name, user_line, tstamp):
         for chan in self.channel_obj:
             if chan.name == channel_name:
                 channel = chan
@@ -251,14 +269,21 @@ class Handle:
             )
             return
 
-        channel.topic_user = userline
+        user_line = chop_userline(user_line)
+
+        channel.topic_nick = user_line["nick"]
+        channel.topic_login = user_line["login"]
         channel.topic_tstamp = topic_tstamp
 
         self.logger.info(
-            "topic for %s set by %s at %s", channel_name, userline, topic_tstamp
+            "topic for %s set by %s (%s) at %s",
+            channel.name,
+            channel.topic_nick,
+            channel.topic_login,
+            channel.topic_tstamp,
         )
 
-    def topic(self, channel_name, userline, msg):
+    def topic(self, channel_name, user_line, msg):
         for chan in self.channel_obj:
             if chan.name == channel_name:
                 channel = chan
@@ -271,20 +296,33 @@ class Handle:
             self.logger.warning("updating the topic for %s failed", channel_name)
             return
 
-        topic_user = userline.lstrip(":")
+        user_line = chop_userline(user_line)
 
         channel.topic_msg = topic_msg
-        channel.topic_user = topic_user
+        channel.topic_nick = user_line["nick"]
+        channel.topic_login = user_line["login"]
         channel.topic_tstamp = time.strftime("%Y/%m/%d %T")
 
         self.logger.info(
-            "topic for %s updated by %s to: %s", channel_name, topic_user, topic_msg
+            "topic for %s updated by %s (%s) to: %s",
+            channel.name,
+            channel.topic_nick,
+            channel.topic_login,
+            channel.topic_msg,
         )
 
-    def who(self, channel_name, userline, user_props):
+    # pylint: disable=too-many-arguments
+    def who(self, channel_name, user_nick, user_ircname, user_hostname, user_props):
+        # get channel obj
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
+                break
+
+        # gen user
         user = ChannelUser()
-        user.nick = userline["nick"]
-        user.login = userline["login"]
+        user.nick = user_nick
+        user.login = f"{user_ircname}@{user_hostname}"
 
         user.owner = "~" in user_props
         user.admin = "&" in user_props
@@ -292,9 +330,5 @@ class Handle:
         user.hop = "%" in user_props
         user.voiced = "+" in user_props
 
-        for chan in self.channel_obj:
-            if chan.name == channel_name:
-                channel = chan
-                break
-
+        # append
         channel.user_list.append(user)
