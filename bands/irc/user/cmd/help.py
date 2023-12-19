@@ -18,12 +18,9 @@ class Help:
         if self.user.name == self.user.server.admin:
             msg += f"{c.WHITE}│  ├ {c.LGREEN}?auth{c.RES}   [secret]\n"
             msg += f"{c.WHITE}│  ├ {c.LGREEN}?openai{c.RES} [load|status]\n"
-            msg += f"{c.WHITE}│  └ {c.LGREEN}?rcon{c.RES}   [dc|status]\n"
-            msg += f"{c.WHITE}└ {c.LRED}src{c.RES}        https://github.com/gottaeat/bands"
+            msg += f"{c.WHITE}│  └ {c.LGREEN}?rcon{c.RES}   [dc|raw|status]\n"
         else:
-            msg += f"{c.WHITE}│  └ {c.LGREEN}?auth{c.RES} [secret]\n"
-            msg += (
-                f"{c.WHITE}└ {c.LRED}src{c.RES}      https://github.com/gottaeat/bands"
-            )
+            msg += f"{c.WHITE}│  └ {c.LGREEN}?auth{c.RES}   [secret]\n"
 
+        msg += f"{c.WHITE}└ {c.LRED}src{c.RES}        https://github.com/gottaeat/bands"
         self.user.send_query(msg)

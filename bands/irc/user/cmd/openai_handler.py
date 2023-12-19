@@ -59,8 +59,8 @@ class OpenAIHandler:
 
     def _usage(self):
         msg = f"{c.WHITE}└ {c.LRED}usage{c.RES}\n"
-        msg += f"{c.WHITE}  └ {c.LGREEN}load{c.RES}   [list of keys]\n"
-        msg += f"{c.WHITE}  ├ {c.LGREEN}status{c.RES}"
+        msg += f"{c.WHITE}  ├ {c.LGREEN}load{c.RES}   [list of keys]\n"
+        msg += f"{c.WHITE}  └ {c.LGREEN}status{c.RES}"
 
         self.user.send_query(msg)
 
