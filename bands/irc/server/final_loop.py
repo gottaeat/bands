@@ -154,13 +154,13 @@ class FinalLoop:
 
                 # WHO handling
                 if line_s[1] == "352":
-                    channel_name = line_s[3]
-                    userline = chop_userline(f"{line_s[7]}!{line_s[4]}@{line_s[5]}")
-                    user_props = line_s[8]
-
                     Thread(
                         target=self.handle.who,
-                        args=[channel_name, userline, user_props],
+                        args=[
+                            line_s[3],
+                            chop_userline(f"{line_s[7]}!{line_s[4]}@{line_s[5]}"),
+                            line_s[8],
+                        ],
                         daemon=True,
                     ).start()
 
