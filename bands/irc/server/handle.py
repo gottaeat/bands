@@ -283,9 +283,7 @@ class Handle:
     def who(self, channel_name, userline, user_props):
         user = ChannelUser()
         user.nick = userline["nick"]
-        user.ircname = userline["ircname"]
-        user.hostname = userline["hostname"]
-        user.ident = userline["ident"]
+        user.login = userline["login"]
 
         user.owner = "~" in user_props
         user.admin = "&" in user_props
