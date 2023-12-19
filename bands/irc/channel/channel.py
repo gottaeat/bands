@@ -42,9 +42,7 @@ class Channel:
 class ChannelUser:
     def __init__(self):
         self.nick = None
-        self.ircname = None
-        self.hostname = None
-        self.ident = None
+        self.login = None
 
         # modes
         self.owner = None  # ~
