@@ -15,7 +15,9 @@ class Auth:
     def _run(self):
         if len(self.user_args) == 0:
             self.user.server.logger.warning(
-                "%s ran ?auth without providing a secret", self.user.name
+                "%s (%s) ran ?auth without providing a secret",
+                self.user.nick,
+                self.user.login,
             )
 
             errmsg = f"{c.ERR} a secret is necessary."
@@ -23,10 +25,13 @@ class Auth:
             return
 
         if self.user_args[0] == self.user.server.secret:
-            self.user.server.admin = self.user.name
+            self.user.server.admin = self.user
 
             self.user.server.logger.warning(
-                "%s now has admin perms in %s", self.user.name, self.user.server.name
+                "%s (%s) now has admin perms in %s",
+                self.user.nick,
+                self.user.login,
+                self.user.server.name,
             )
 
             msg = f"{c.INFO} you are now authorized as the admin user "
@@ -34,7 +39,9 @@ class Auth:
             self.user.send_query(msg)
             return
 
-        self.user.server.logger.warning("%s provided incorrect secret", self.user.name)
+        self.user.server.logger.warning(
+            "%s (%s) provided incorrect secret", self.user.nick, self.user.login
+        )
 
         errmsg = f"{c.ERR} incorrect secret provided."
         self.user.send_query(errmsg)
