@@ -26,9 +26,17 @@ class RCon:
 
             for chan in server.channel_obj:
                 msg += f"  {c.WHITE}└ {c.LGREEN}{chan.name}{c.RES}\n"
-                msg += f"    {c.WHITE}├ {c.YELLOW}topic  {c.RES}{chan.topic_msg}\n"
-                msg += f"    {c.WHITE}├ {c.YELLOW}set by {c.RES}{chan.topic_user}\n"
-                msg += f"    {c.WHITE}├ {c.YELLOW}date   {c.RES}{chan.topic_tstamp}\n"
+
+                if chan.topic_msg:
+                    msg += f"    {c.WHITE}├ {c.YELLOW}topic  {c.RES}{chan.topic_msg}\n"
+                    msg += f"    {c.WHITE}├ {c.YELLOW}set by {c.RES}{chan.topic_nick} "
+                    msg += f"({chan.topic_login})\n"
+                    msg += (
+                        f"    {c.WHITE}├ {c.YELLOW}date   {c.RES}{chan.topic_tstamp}\n"
+                    )
+                else:
+                    msg += f"    {c.WHITE}├ {c.YELLOW}topic  {c.RES}not set\n"
+
                 msg += f"    {c.WHITE}└ {c.YELLOW}users: \n"
 
                 for user in chan.user_list:
