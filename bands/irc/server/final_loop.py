@@ -27,9 +27,8 @@ class FinalLoop:
 
         # user and channels
         self.channels = server.channels
-        self.users = server.users
         self.channel_obj = server.channel_obj
-        self.user_obj = server.user_obj
+        self.users = server.users
 
         # timer
         self.ping_sent = None
@@ -239,29 +238,11 @@ class FinalLoop:
                         continue
 
                     # user PRIVMSG
-                    if line_s[2] == self.server.botname:
-                        user = chop_userline(line_s[0])["nick"]
-                        cmd = line_s[3]
-                        args = line_s[4:]
+                    if line_s[2] == self.server.botname and line_s[3] in UserCMD.CMDS:
+                        Thread(
+                            target=self.handle.user_msg,
+                            args=[line_s[0], line_s[3], line_s[4:]],
+                            daemon=True,
+                        ).start()
 
-                        self.logger.info(
-                            "%s%s%s %s %s",
-                            f"{ac.BMGN}[{ac.BWHI}{user}",
-                            f"{ac.BRED}/",
-                            f"{ac.BGRN}PM{ac.BMGN}]",
-                            f"{ac.BCYN}{cmd}",
-                            f"{' '.join(args)}{ac.RES}",
-                        )
-
-                        if cmd in UserCMD.CMDS:
-                            Thread(
-                                target=self.handle.user_msg,
-                                args=[
-                                    user,
-                                    cmd,
-                                    args,
-                                ],
-                                daemon=True,
-                            ).start()
-
-                            continue
+                        continue
