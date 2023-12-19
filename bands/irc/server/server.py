@@ -42,7 +42,6 @@ class Server:
 
         # users
         self.users = []
-        self.user_obj = []
         self.admin = None
 
     # -- CLI() interactions -- #
