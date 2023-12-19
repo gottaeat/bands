@@ -14,7 +14,7 @@ class RCon:
 
     def _usage(self):
         msg = f"{c.WHITE}  ├ {c.LGREEN}dc{c.RES}     [server name]\n"
-        msg = f"{c.WHITE}  ├ {c.LGREEN}raw{c.RES}    [raw irc line]\n"
+        msg += f"{c.WHITE}  ├ {c.LGREEN}raw{c.RES}    [raw irc line]\n"
         msg += f"{c.WHITE}  └ {c.LGREEN}status{c.RES}"
         self.user.send_query(msg)
 
@@ -22,7 +22,7 @@ class RCon:
         msg = f"{c.INFO} active connections are:\n"
 
         for server in self.user.server.cli.servers:
-            msg += f"└ {c.LRED}{server.name}{c.RES}\n"
+            msg += f"{c.WHITE}└ {c.LRED}{server.name}{c.RES}\n"
 
             for chan in server.channel_obj:
                 msg += f"  {c.WHITE}└ {c.LGREEN}{chan.name}{c.RES}\n"
