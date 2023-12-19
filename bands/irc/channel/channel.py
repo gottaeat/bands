@@ -12,7 +12,8 @@ class Channel:
         # props
         self.name = None
         self.topic_msg = None
-        self.topic_user = None
+        self.topic_nick = None
+        self.topic_login = None
         self.topic_tstamp = None
 
         self.user_list = []
