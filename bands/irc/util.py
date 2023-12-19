@@ -14,20 +14,8 @@ def strip_color(string):
 
 
 def chop_userline(userline):
-    userline_chop_a = userline.split("@")
-    userline_chop_b = userline_chop_a[0].split("!")
-
-    hostname = userline_chop_a[1]
-    ircname = userline_chop_b[1]
-
-    ident = False
-    if ircname[0] == "~":
-        ident = True
-        ircname = ircname.lstrip("~")
-
-    nick = userline_chop_b[0].lstrip(":")
-
-    return {"nick": nick, "ircname": ircname, "hostname": hostname, "ident": ident}
+    chop = userline.lstrip(":").split("!")
+    return {"nick": chop[0], "login": chop[1]}
 
 
 def unilen(string):
