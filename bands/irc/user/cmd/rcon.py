@@ -22,10 +22,13 @@ class RCon:
         msg = f"{c.INFO} active connections are:\n"
 
         for server in self.user.server.cli.servers:
-            msg += f"{c.WHITE}└ {c.LRED}{server.name}{c.RES}\n"
+            msg += f"{c.LRED}{server.name}{c.RES}\n"
+            msg += f"{c.WHITE}├ {c.LGREEN}admin:{c.RES} "
+            msg += f"{server.admin.nick} ({server.admin.login})\n"
+            msg += f"{c.WHITE}└ {c.LGREEN}channels:\n"
 
             for chan in server.channel_obj:
-                msg += f"  {c.WHITE}└ {c.LGREEN}{chan.name}{c.RES}\n"
+                msg += f"  {c.LRED}→ {c.LGREEN}{chan.name}{c.RES}\n"
 
                 if chan.topic_msg:
                     msg += f"    {c.WHITE}├ {c.YELLOW}topic  {c.RES}{chan.topic_msg}\n"
@@ -94,7 +97,7 @@ class RCon:
             sv_objs[server].stop()
 
     def _run(self):
-        if self.user.name != self.user.server.admin:
+        if self.user != self.user.server.admin:
             errmsg = f"{c.ERR} not authorized."
             self.user.send_query(errmsg)
             return
