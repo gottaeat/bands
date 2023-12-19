@@ -108,11 +108,8 @@ class Handle:
 
         # see if a User exists for the ChannelUser
         for serveruser in self.users:
-            if (
-                serveruser.nick == user.nick
-                and serveruser.login == user.login
-            ):
-            corresp_user = serveruser
+            if serveruser.nick == user.nick and serveruser.login == user.login:
+                corresp_user = serveruser
 
         # ratelimit if not authed user
         ratelimit = True
