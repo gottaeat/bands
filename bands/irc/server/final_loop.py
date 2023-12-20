@@ -194,6 +194,16 @@ class FinalLoop:
 
                     continue
 
+                # QUIT handling
+                if line_s[1] == "QUIT":
+                    Thread(
+                        target=self.handle.quit,
+                        args=[line_s[0], line_s[2:]],
+                        daemon=True,
+                    ).start()
+
+                    continue
+
                 # -- bot self related -- #
                 # bot KILL handling
                 if line_s[0] == "ERROR" and line_s[1] == "Killed":
