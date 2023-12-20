@@ -416,6 +416,7 @@ class Handle:
         user_line = chop_userline(user_line)
         user_nick = user_line["nick"]
         user_login = user_line["login"]
+
         reason = " ".join(msg).lstrip(":")
 
         # remove from Channel().user_list's
@@ -443,3 +444,32 @@ class Handle:
                     user.login,
                     reason,
                 )
+
+    def part(self, user_line, channel_name, msg):
+        user_line = chop_userline(user_line)
+        user_nick = user_line["nick"]
+        user_login = user_line["login"]
+
+        reason = " ".join(msg).lstrip(":")
+
+        # get channel object
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
+                break
+
+        # get channeluser object
+        for channeluser in channel.user_list:
+            if channeluser.nick == user_nick and channeluser.login == user_login:
+                user = channeluser
+                break
+
+        channel.user_list.remove(user)
+
+        self.logger.debug(
+            "removed %s (%s) from %s, user left (%s)",
+            user.nick,
+            user.login,
+            channel.name,
+            reason,
+        )
