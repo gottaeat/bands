@@ -175,18 +175,6 @@ class Handle:
         self.logger.info("%s has invited us to %s", user, channel_name)
         self.sock_ops.send_join(channel_name)
 
-    def bot_kick(self, user_line, channel_name, reason):
-        user_line = chop_userline(user_line)
-
-        self.logger.warning(
-            "%s (%s) has kicked us from %s: %s",
-            user_line[0],
-            user_line[1],
-            channel_name,
-            reason,
-        )
-        self.sock_ops.send_join(channel_name)
-
     def bot_ban(self, channel_name):
         if channel_name in self.channels:
             self.channels.remove(channel_name)
@@ -388,3 +376,38 @@ class Handle:
         user.login = user_login
 
         channel.user_list.append(user)
+
+    def kick(self, user_line, channel_name, kicked_user, reason):
+        user_line = chop_userline(user_line)
+        user_nick = user_line["nick"]
+        user_login = user_line["login"]
+
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
+                break
+
+        # bot kicked
+        if kicked_user == self.server.botname:
+            self.logger.warning(
+                "%s (%s) has kicked us from %s: %s",
+                user_nick,
+                user_login,
+                channel.name,
+                reason,
+            )
+
+            self.channels.remove(channel.name)
+            self.channel_obj.remove(channel)
+
+            self.sock_ops.send_join(channel_name)
+
+            return
+
+        # user kicked
+        for channeluser in channel.user_list:
+            if channeluser.nick == kicked_user:
+                user = channeluser
+                break
+
+        channel.user_list.remove(user)
