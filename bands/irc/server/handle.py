@@ -411,3 +411,35 @@ class Handle:
                 break
 
         channel.user_list.remove(user)
+
+    def quit(self, user_line, msg):
+        user_line = chop_userline(user_line)
+        user_nick = user_line["nick"]
+        user_login = user_line["login"]
+        reason = " ".join(msg)
+
+        # remove from Channel().user_list's
+        for channel in self.channel_obj:
+            for channeluser in channel.user_list:
+                if channeluser.nick == user_nick and channeluser.login == user_login:
+                    channel.user_list.remove(channeluser)
+
+                    self.logger.debug(
+                        "removed %s (%s) from %s, user quit (%s)",
+                        channeluser.nick,
+                        channeluser.login,
+                        channel.name,
+                        reason,
+                    )
+
+        # remove from Server().users
+        for user in self.users:
+            if user.nick == user_nick and user.login == user_login:
+                self.users.remove(user)
+
+                self.logger.debug(
+                    "removed %s (%s) from global users, user quit (%s)",
+                    user.nick,
+                    user.login,
+                    reason,
+                )
