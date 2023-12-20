@@ -142,8 +142,8 @@ class Handle:
 
         self.logger.info(
             "%s%s%s %s %s",
-            f"{ac.BMGN}[{ac.BWHI}{user.nick}",
-            f"{ac.BRED}/",
+            f"{ac.BMGN}[{ac.BWHI}{user.nick} ({user.login})",
+            f"{ac.BRED}¦",
             f"{ac.BGRN}PM{ac.BMGN}]",
             f"{ac.BCYN}{cmd}",
             f"{' '.join(user_args)}{ac.RES}",
@@ -229,6 +229,11 @@ class Handle:
         user_old_nick = user_line["nick"]
         user_login = user_line["login"]
 
+        # 0. bot
+        if user_old_nick == self.server.botname:
+            self.server.botname = user_new_nick
+            self.logger.info("changed the bot name to %s", user_new_nick)
+
         # 1. channeluser obj
         for channel in self.channel_obj:
             for channeluser in channel.user_list:
@@ -262,11 +267,6 @@ class Handle:
                 )
 
                 user.nick = user_new_nick
-
-                # if user is us
-                if user.nick == self.server.botname:
-                    self.server.botname = user_new_nick
-                    self.logger.info("changed the bot name to %s", user_new_nick)
         except UnboundLocalError:
             pass
 
