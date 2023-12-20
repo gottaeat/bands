@@ -214,6 +214,16 @@ class FinalLoop:
 
                     continue
 
+                # MODE handling
+                if line_s[1] == "MODE":
+                    Thread(
+                        target=self.handle.mode,
+                        args=[line_s[0], line_s[2], line_s[3], line_s[4:]],
+                        daemon=True,
+                    ).start()
+
+                    continue
+
                 # -- bot self related -- #
                 # bot KILL handling
                 if line_s[0] == "ERROR" and line_s[1] == "Killed":
