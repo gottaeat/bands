@@ -99,3 +99,31 @@ def wrap_bytes(text, size):
             lines.append(word)
 
     return [l.decode() for l in lines]
+
+
+def streamline_modes(modes, user_nicks):
+    operators = ("+", "-")
+
+    fin, last, last_operator = "", "", ""
+    for char in modes:
+        if char in operators:
+            fin += char
+            last_operator = char
+        else:
+            if last not in operators:
+                fin += f"{last_operator}{char}"
+            else:
+                fin += char
+
+        last = char
+
+    modes_split = [fin[i : i + 2] for i in range(0, len(fin), 2)]
+
+    users_n_modes = {}
+    for index, val in enumerate(user_nicks):
+        users_n_modes[val] = {
+            "action": modes_split[index][0] == "+",
+            "mode": modes_split[index][1],
+        }
+
+    return users_n_modes
