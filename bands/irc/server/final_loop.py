@@ -174,25 +174,22 @@ class FinalLoop:
 
                     continue
 
+                # JOIN handling
+                if line_s[1] == "JOIN":
+                    Thread(
+                        target=self.handle.join,
+                        args=[line_s[0], line_s[2]],
+                        daemon=True,
+                    ).start()
+
+                    continue
+
                 # -- bot self related -- #
                 # bot KILL handling
                 if line_s[0] == "ERROR" and line_s[1] == "Killed":
                     self.logger.warning("we got killed")
                     self.socket.connected = False
                     self.server.stop()
-
-                    continue
-
-                # bot JOIN handling
-                if (
-                    line_s[1] == "JOIN"
-                    and chop_userline(line_s[0])["nick"] == self.server.botname
-                ):
-                    Thread(
-                        target=self.handle.bot_join,
-                        args=[line_s[0], line_s[2]],
-                        daemon=True,
-                    ).start()
 
                     continue
 
