@@ -6,7 +6,7 @@ import bands.irc.channel.cmd as ChanCMD
 import bands.irc.user.cmd as UserCMD
 
 from bands.colors import ANSIColors
-from bands.irc.util import chop_userline
+from bands.irc.util import chop_userline, streamline_modes
 
 from bands.irc.user import User
 from bands.irc.channel import Channel, ChannelUser
@@ -473,3 +473,43 @@ class Handle:
             channel.name,
             reason,
         )
+
+    def mode(self, user_line, channel_name, modes, user_nicks):
+        user_line = chop_userline(user_line)
+        user_nick = user_line["nick"]
+        user_login = user_line["login"]
+
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
+                break
+
+        mode_data = streamline_modes(modes, user_nicks)
+        for mode_user, mode_info in mode_data.items():
+            for user_obj in channel.user_list:
+                if user_obj.nick == mode_user:
+                    if mode_info["mode"] == "v":
+                        user_obj.voiced = mode_info["action"]
+
+                    if mode_info["mode"] == "h":
+                        user_obj.hop = mode_info["action"]
+
+                    if mode_info["mode"] == "o":
+                        user_obj.op = mode_info["action"]
+
+                    if mode_info["mode"] == "a":
+                        user_obj.admin = mode_info["action"]
+
+                    if mode_info["mode"] == "q":
+                        user_obj.owner = mode_info["action"]
+
+                    self.logger.debug(
+                        "%s (%s) in %s set mode %s for %s (%s) to %s",
+                        user_nick,
+                        user_login,
+                        channel.name,
+                        mode_info["mode"],
+                        user_obj.nick,
+                        user_obj.login,
+                        mode_info["action"],
+                    )
