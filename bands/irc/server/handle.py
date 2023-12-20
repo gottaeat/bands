@@ -416,7 +416,7 @@ class Handle:
         user_line = chop_userline(user_line)
         user_nick = user_line["nick"]
         user_login = user_line["login"]
-        reason = " ".join(msg)
+        reason = " ".join(msg).lstrip(":")
 
         # remove from Channel().user_list's
         for channel in self.channel_obj:
