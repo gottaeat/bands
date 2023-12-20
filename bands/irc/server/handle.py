@@ -171,28 +171,6 @@ class Handle:
         UserCMD.CMDS[cmd](user, user_args)
 
     # -- irc handling -- #
-    def bot_join(self, botname_with_vhost, channel_name):
-        channel_name = re.sub(r"^:", "", channel_name)
-
-        self._gen_channel(channel_name)
-
-        for chan in self.channel_obj:
-            if chan.name == channel_name:
-                channel = chan
-                break
-
-        if not channel.char_limit:
-            channel.char_limit = 512 - len(
-                f"{botname_with_vhost} PRIVMSG {channel.name} :\r\n".encode("utf-8")
-            )
-
-            self.logger.debug(
-                "char_limit for %s is set to %s", channel.name, channel.char_limit
-            )
-
-        self.sock_ops.send_raw(f"WHO {channel_name}")
-        self.logger.debug("sent WHO for %s", channel_name)
-
     def bot_invite(self, user, channel_name):
         self.logger.info("%s has invited us to %s", user, channel_name)
         self.sock_ops.send_join(channel_name)
@@ -366,4 +344,47 @@ class Handle:
         user.voiced = "+" in user_props
 
         # append
+        channel.user_list.append(user)
+
+    def join(self, user_line, channel_name):
+        # some ircd's send channel name w/ a :
+        channel_name = re.sub(r"^:", "", channel_name)
+
+        user_line_chop = chop_userline(user_line)
+        user_nick = user_line_chop["nick"]
+        user_login = user_line_chop["login"]
+
+        # bot join
+        if user_nick == self.server.botname:
+            self._gen_channel(channel_name)
+
+            for chan in self.channel_obj:
+                if chan.name == channel_name:
+                    channel = chan
+                    break
+
+            if not channel.char_limit:
+                channel.char_limit = 512 - len(
+                    f"{user_line} PRIVMSG {channel.name} :\r\n".encode("utf-8")
+                )
+
+                self.logger.debug(
+                    "char_limit for %s is set to %s", channel.name, channel.char_limit
+                )
+
+            self.sock_ops.send_raw(f"WHO {channel_name}")
+            self.logger.debug("sent WHO for %s", channel_name)
+
+            return
+
+        # user join
+        for chan in self.channel_obj:
+            if chan.name == channel_name:
+                channel = chan
+                break
+
+        user = ChannelUser()
+        user.nick = user_nick
+        user.login = user_login
+
         channel.user_list.append(user)
