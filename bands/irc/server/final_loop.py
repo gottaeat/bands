@@ -184,6 +184,16 @@ class FinalLoop:
 
                     continue
 
+                # KICK handling
+                if line_s[1] == "KICK":
+                    Thread(
+                        target=self.handle.kick,
+                        args=[line_s[0], line_s[2], line_s[3], line_s[4]],
+                        daemon=True,
+                    ).start()
+
+                    continue
+
                 # -- bot self related -- #
                 # bot KILL handling
                 if line_s[0] == "ERROR" and line_s[1] == "Killed":
@@ -198,16 +208,6 @@ class FinalLoop:
                     Thread(
                         target=self.handle.bot_invite,
                         args=[chop_userline(line_s[0])["nick"], line_s[3]],
-                        daemon=True,
-                    ).start()
-
-                    continue
-
-                # bot KICK handling
-                if line_s[1] == "KICK" and line_s[3] == self.server.botname:
-                    Thread(
-                        target=self.handle.bot_kick,
-                        args=[line_s[0], line_s[2], line_s[4]],
                         daemon=True,
                     ).start()
 
