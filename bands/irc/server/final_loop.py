@@ -204,6 +204,16 @@ class FinalLoop:
 
                     continue
 
+                # PART handling
+                if line_s[1] == "PART":
+                    Thread(
+                        target=self.handle.part,
+                        args=[line_s[0], line_s[2], line_s[3:]],
+                        daemon=True,
+                    ).start()
+
+                    continue
+
                 # -- bot self related -- #
                 # bot KILL handling
                 if line_s[0] == "ERROR" and line_s[1] == "Killed":
