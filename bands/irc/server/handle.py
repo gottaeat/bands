@@ -27,23 +27,21 @@ class Handle:
 
     # -- context handling -- #
     def _gen_channel(self, channel_name):
-        # self.channels
-        if channel_name not in self.channels:
-            self.channels.append(channel_name)
+        # if channel already exists, return its object
+        for channel in self.channel_obj:
+            if channel.name == channel_name:
+                return channel
 
-            self.logger.debug("added %s to channels", channel_name)
+        # if not, gen and return it
+        channel = Channel(self.server)
+        channel.name = channel_name
 
-        # self.channel_obj
-        channel_objs = []
-        for chan in self.channel_obj:
-            channel_objs.append(chan.name)
+        self.channel_obj.append(channel)
+        self.channels.append(channel.name)
 
-        if channel_name not in channel_objs:
-            chan = Channel(self.server)
-            chan.name = channel_name
-            self.channel_obj.append(chan)
+        self.logger.debug("generated user object for %s", channel.name)
 
-            self.logger.debug("generated channel object for %s", channel_name)
+        return channel
 
     def _gen_user(self, user_nick, user_login):
         # if user alread exists, return the corresponding user object
@@ -344,12 +342,7 @@ class Handle:
 
         # bot join
         if user_nick == self.server.botname:
-            self._gen_channel(channel_name)
-
-            for chan in self.channel_obj:
-                if chan.name == channel_name:
-                    channel = chan
-                    break
+            channel = self._gen_channel(channel_name)
 
             if not channel.char_limit:
                 channel.char_limit = 512 - len(
@@ -360,8 +353,8 @@ class Handle:
                     "char_limit for %s is set to %s", channel.name, channel.char_limit
                 )
 
-            self.sock_ops.send_raw(f"WHO {channel_name}")
-            self.logger.debug("sent WHO for %s", channel_name)
+            self.sock_ops.send_raw(f"WHO {channel.name}")
+            self.logger.debug("sent WHO for %s", channel.name)
 
             return
 
