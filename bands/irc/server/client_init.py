@@ -50,6 +50,8 @@ class ClientInit:
     def run(self):
         self.logger.info("%s initing client %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
 
+        want_cap = ["multi-prefix"]
+
         addr_updated = None
         cap_requested = None
         cap_ackd = None
@@ -133,6 +135,11 @@ class ClientInit:
 
                             return
 
+                        if "chghost" in ackd_caps:
+                            self.logger.debug("server gave us chghost CAP")
+                        else:
+                            self.logger.warning("server did not offer chghost CAP")
+
                         self.sock_ops.send_raw("CAP END")
                         self.logger.debug("ended CAP negotiation")
 
@@ -142,10 +149,7 @@ class ClientInit:
                 # is over, send the request for multi-prefix
                 if line_s[1] == "451":
                     if "multi-prefix" in self.server.caps:
-                        cap_requested = True
-
-                        self.sock_ops.send_raw("CAP REQ :multi-prefix")
-                        self.logger.debug("requested multi-prefix CAP from server.")
+                        self.logger.debug("server supports multi-prefix CAP")
                     else:
                         errmsg = "bands relies on multi-prefix CAP, but the "
                         errmsg += "server does not support it, stopping"
@@ -155,6 +159,16 @@ class ClientInit:
                         self.server.stop()
 
                         return
+
+                    if "chghost" in self.server.caps:
+                        self.logger.debug("server supports chghost CAP")
+                        want_cap.append("chghost")
+                    else:
+                        self.logger.warning("server does not support chghost CAP")
+
+                    self.sock_ops.send_raw(f"CAP REQ :{' '.join(want_cap)}")
+                    self.logger.debug("requested CAPs from server")
+                    cap_requested = True
 
                     continue
 
