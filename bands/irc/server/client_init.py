@@ -146,6 +146,15 @@ class ClientInit:
 
                         self.sock_ops.send_raw("CAP REQ :multi-prefix")
                         self.logger.debug("requested multi-prefix CAP from server.")
+                    else:
+                        errmsg = "bands relies on multi-prefix CAP, but the "
+                        errmsg += "server does not support it, stopping"
+                        self.logger.warning(errmsg)
+
+                        self.socket.connected = False
+                        self.server.stop()
+
+                        return
 
                     continue
 
