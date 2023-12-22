@@ -95,7 +95,7 @@ class ClientInit:
                 line_s = line.split()
 
                 # CAP
-                if line_s[1] == "CAP" and line_s[2] == "*":
+                if line_s[1] == "CAP":
                     # CAP stage #3: parse and store server CAPS
                     if line_s[3] == "LS":
                         self.logger.debug("received CAP LS response")
