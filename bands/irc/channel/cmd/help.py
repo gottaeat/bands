@@ -19,6 +19,7 @@ class Help:
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?bands{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?help{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?piss{c.RES}   [target]\n"
+        msg += f"{c.WHITE}│ ├ {c.LGREEN}?quake{c.RES}\n"
         msg += (
             f"{c.WHITE}│ └ {c.LGREEN}?tarot{c.RES}  has its own detailed help prompt\n"
         )
