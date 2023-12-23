@@ -378,6 +378,49 @@ class Handle:
         except UnboundLocalError:
             pass
 
+    def chghost(self, user_line, user_new_ircname, user_new_hostname):
+        user_line = chop_userline(user_line)
+        user_nick = user_line["nick"]
+
+        user_old_login = user_line["login"]
+        user_new_login = f"{user_new_ircname}@{user_new_hostname}"
+
+        # 1. channeluser obj
+        for channel in self.channel_obj:
+            for channeluser in channel.user_list:
+                if (
+                    channeluser.nick == user_nick
+                    and channeluser.login == user_old_login
+                ):
+                    self.logger.debug(
+                        "%s (%s) changed host to %s, updating their object for %s",
+                        channeluser.nick,
+                        channeluser.login,
+                        user_new_login,
+                        channel.name,
+                    )
+
+                    channeluser.login = user_new_login
+
+        # 2. user obj
+        for user_obj in self.users:
+            if user_obj.nick == user_nick and user_obj.login == user_old_login:
+                user = user_obj
+                break
+
+        try:
+            if user:
+                self.logger.debug(
+                    "%s (%s) changed host to %s, updating the user object",
+                    user.nick,
+                    user.login,
+                    user_new_login,
+                )
+
+                user.login = user_new_login
+        except UnboundLocalError:
+            pass
+
     def join(self, user_line, channel_name):
         # some ircd's send channel name w/ a :
         channel_name = re.sub(r"^:", "", channel_name)
