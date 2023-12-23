@@ -174,6 +174,14 @@ class FinalLoop:
 
                     continue
 
+                # CHGHOST handling
+                if line_s[1] == "CHGHOST" and "chghost" in self.server.caps:
+                    Thread(
+                        target=self.handle.chghost,
+                        args=[line_s[0], line_s[2], line_s[3]],
+                        daemon=True,
+                    ).start()
+
                 # JOIN handling
                 if line_s[1] == "JOIN":
                     Thread(
