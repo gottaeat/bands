@@ -37,7 +37,11 @@ class Quake:
             re.sub(
                 r"REPLACEUSERNICK",
                 f"{c.LGREEN}{self.user.nick}{c.RES}",
-                self.quake_data.pop(random.randrange(len(self.quake_data))),
+                re.sub(
+                    r"REPLACEBOTNAME",
+                    f"{c.PINK}{self.channel.server.botname}{c.RES}",
+                    self.quake_data.pop(random.randrange(len(self.quake_data))),
+                ),
             ),
         )
 
