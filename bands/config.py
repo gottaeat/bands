@@ -20,6 +20,8 @@ class ServerConfig:
         self.scroll_speed = None
 
         self.ai = None
+        self.quotes_file = None
+        self.cli = None
 
 
 class OpenAIConfig:
@@ -67,13 +69,25 @@ class ConfigYAML:
             self.logger.error("quotes_file cannot be blank")
 
         if not os.path.isfile(quotes_file):
-            self.logger.warning("%s is not a file, creating")
+            self.logger.warning("%s is not a file, creating", quotes_file)
 
-            # pylint: disable=unused-variable
-            with open(quotes_file, "w", encoding="utf-8") as fp:
-                pass
+            with open(quotes_file, "w", encoding="utf-8") as file:
+                file.write(json.dumps({"quotes": []}))
 
-        quoteconf = OpenAIConfig()
+        quoteconf = QuoteConfig()
+
+        self.logger.info("loading quotes quotes_file")
+
+        try:
+            with open(quotes_file, "r", encoding="utf-8") as file:
+                quotes = json.loads(file.read())["quotes"]
+        # pylint: disable=bare-except
+        except:
+            self.logger.exception("parsing %s failed", quotes_file)
+
+        self.logger.info("%s quotes found", len(quotes))
+
+        quoteconf.quotes_file = quotes_file
 
         self.quote = quoteconf
 
@@ -248,4 +262,5 @@ class ConfigYAML:
             self.logger.error("%s is not a file", self.config_file)
 
         self._parse_openai()
+        self._parse_quote()
         self._parse_servers()
