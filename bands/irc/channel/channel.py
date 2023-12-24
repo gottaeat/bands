@@ -54,3 +54,4 @@ class ChannelUser:
 
         # context
         self.tarot_deck = None
+        self.chats = []
