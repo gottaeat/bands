@@ -70,7 +70,7 @@ class Handle:
     # -- object generators end -- #
 
     # -- channel events begin -- #
-    def channel_msg(self, channel_name, user_line, cmd, user_args):
+    def channel_msg(self, channel_name, user_line, msg):
         user_nick = chop_userline(user_line)["nick"]
 
         # get channel object
@@ -85,7 +85,20 @@ class Handle:
                 user = channeluser
                 break
 
-        # print
+        # add msg to chats of user
+        if len(user.chats) >= 10:
+            user.chats = user.chats[1:]
+
+        user.chats.append(re.sub("^:", "", " ".join(msg)))
+
+        # cmd handling
+        if msg[0] not in ChanCMD.CMDS:
+            return
+
+        cmd = msg[0]
+        user_args = msg[1:]
+
+        # print cmd invocation
         self.logger.info(
             "%s%s%s %s %s",
             f"{ac.BMGN}[{ac.BWHI}{user.nick} ({user.login})",
@@ -293,9 +306,13 @@ class Handle:
         UserCMD.CMDS[cmd](user, user_args)
 
     def mode(self, user_line, channel_name, modes, user_nicks):
-        user_line = chop_userline(user_line)
-        user_nick = user_line["nick"]
-        user_login = user_line["login"]
+        try:
+            user_line = chop_userline(user_line)
+            user_nick = user_line["nick"]
+            user_login = user_line["login"]
+        except IndexError:
+            user_nick = "server"
+            user_login = self.server.socket.address
 
         for chan in self.channel_obj:
             if chan.name == channel_name:
