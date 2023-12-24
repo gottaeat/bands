@@ -213,7 +213,7 @@ class ClientInit:
                         self.socket.connected = False
                         self.server.stop()
 
-                    self.socket.address = line_s[0]
+                    self.socket.address = line_s[0].lstrip(":")
                     addr_updated = True
                     self.logger.debug("updated address")
 
