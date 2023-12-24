@@ -92,9 +92,6 @@ class CLI:
         for server in config.servers:
             # pass the same ai instance to all servers
             server.ai = ai
-            # pass in ourselves to allow for the Server() objects to be
-            # manipulated via the auth'ed user
-            server.cli = self
 
         # start servers
         self.logger.info("generating Server() instances")
@@ -136,7 +133,8 @@ class CLI:
 
             # cli
             s.ai = server.ai
-            s.cli = server.cli
+            s.quotes_file = config.quote.quotes_file
+            s.cli = self
             s.logger = logger
 
             self.servers.append(s)
