@@ -2,7 +2,6 @@ import time
 
 from threading import Thread
 
-import bands.irc.channel.cmd as ChanCMD
 import bands.irc.user.cmd as UserCMD
 
 from bands.colors import ANSIColors
@@ -263,10 +262,10 @@ class FinalLoop:
                 # PRIVMSG handling
                 if line_s[1] == "PRIVMSG":
                     # channel PRIVMSG
-                    if line_s[2] in self.channels and line_s[3] in ChanCMD.CMDS:
+                    if line_s[2] in self.channels:
                         Thread(
                             target=self.handle.channel_msg,
-                            args=[line_s[2], line_s[0], line_s[3], line_s[4:]],
+                            args=[line_s[2], line_s[0], line_s[3:]],
                             daemon=True,
                         ).start()
 
