@@ -20,9 +20,8 @@ class Help:
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?help{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?piss{c.RES}   [target]\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?quake{c.RES}\n"
-        msg += (
-            f"{c.WHITE}│ └ {c.LGREEN}?tarot{c.RES}  has its own detailed help prompt\n"
-        )
+        msg += f"{c.WHITE}│ ├ {c.LGREEN}?quote{c.RES}  ?quote help\n"
+        msg += f"{c.WHITE}│ └ {c.LGREEN}?tarot{c.RES}  ?tarot help\n"
         msg += (
             f"{c.WHITE}└ {c.LRED}src{c.RES}       https://github.com/gottaeat/bands\n"
         )
