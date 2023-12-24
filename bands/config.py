@@ -20,8 +20,6 @@ class ServerConfig:
         self.scroll_speed = None
 
         self.ai = None
-        self.quotes_file = None
-        self.cli = None
 
 
 class OpenAIConfig:
