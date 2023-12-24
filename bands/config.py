@@ -27,6 +27,11 @@ class OpenAIConfig:
         self.keys = None
 
 
+class QuoteConfig:
+    def __init__(self):
+        self.quotes_file = None
+
+
 class ConfigYAML:
     def __init__(self, config_file):
         self.config_file = config_file
@@ -34,9 +39,43 @@ class ConfigYAML:
         self.logger = None
 
         self.openai = None
+        self.quote = None
         self.servers = []
 
         self.yaml_parsed = None
+
+    def _parse_quote(self):
+        self.logger.info("parsing quote")
+
+        try:
+            quote = self.yaml_parsed["quote"]
+        # pylint: disable=bare-except
+        except:
+            self.logger.exception("%s parsing has failed", self.config_file)
+
+        if not quote:
+            self.logger.error("quote section cannot be specified then left blank")
+
+        try:
+            quotes_file = quote["quotes_file"]
+        except KeyError:
+            self.logger.exception(
+                "quotes_file in the quote section of the YAML file is missing"
+            )
+
+        if not quotes_file:
+            self.logger.error("quotes_file cannot be blank")
+
+        if not os.path.isfile(quotes_file):
+            self.logger.warning("%s is not a file, creating")
+
+            # pylint: disable=unused-variable
+            with open(quotes_file, "w", encoding="utf-8") as fp:
+                pass
+
+        quoteconf = OpenAIConfig()
+
+        self.quote = quoteconf
 
     def _parse_openai(self):
         self.logger.info("parsing openai")
