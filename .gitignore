@@ -1,3 +1,2 @@
 __pycache__/
-files/*.yaml
-bands/files/openai_keys.json
+files/
