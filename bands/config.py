@@ -27,7 +27,7 @@ class OpenAIConfig:
 
 class QuoteConfig:
     def __init__(self):
-        self.quotes_file = None
+        self.file = None
 
 
 class ConfigYAML:
@@ -83,7 +83,7 @@ class ConfigYAML:
 
         self.logger.info("%s quotes found", len(quotes))
 
-        quoteconf.quotes_file = quotes_file
+        quoteconf.file = quotes_file
 
         self.quote = quoteconf
 
