@@ -19,8 +19,6 @@ class ServerConfig:
         self.verify_tls = None
         self.scroll_speed = None
 
-        self.ai = None
-
 
 class OpenAIConfig:
     def __init__(self):
