@@ -33,7 +33,7 @@ class Quote:
     def read_quotes(self):
         self.logger.info("reading quotes file")
 
-        with open(self.quotes_file, "r", encoding="utf-8") as file:
+        with open(self.file, "r", encoding="utf-8") as file:
             quotes = json.loads(file.read())
 
         return quotes
@@ -41,5 +41,5 @@ class Quote:
     def write_quotes(self, quotes):
         self.logger.info("writing quotes file")
 
-        with open(self.quotes_file, "w", encoding="utf-8") as file:
+        with open(self.file, "w", encoding="utf-8") as file:
             file.write(json.dumps(quotes))
