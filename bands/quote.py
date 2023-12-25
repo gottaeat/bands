@@ -14,7 +14,7 @@ class Quote:
 
         self.mutex = Lock()
 
-        self.quotes_file = None
+        self.file = None
 
     def first_run(self):
         self.logger = logging.getLogger(__name__)
