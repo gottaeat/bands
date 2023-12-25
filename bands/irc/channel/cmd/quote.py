@@ -1,5 +1,4 @@
 import datetime
-import json
 import random
 import time
 
@@ -16,6 +15,8 @@ class Quote:
         self.user = user
         self.user_args = user_args
 
+        self.quote = self.channel.server.quote
+
         self._run()
 
     def _cmd_help(self):
@@ -28,8 +29,8 @@ class Quote:
         self.channel.send_query(msg)
 
     def _cmd_random(self):
-        with open(self.channel.server.quotes_file, "r", encoding="utf-8") as file:
-            quotes = json.loads(file.read())["quotes"]
+        with self.quote.mutex:
+            quotes = self.quote.read_quotes()["quotes"]
 
         if len(quotes) == 0:
             self.channel.send_query(f"{c.ERR} no quotes on record.")
@@ -56,11 +57,11 @@ class Quote:
             self.channel.send_query(f"{c.ERR} must provide a nick.")
             return
 
-        with open(self.channel.server.quotes_file, "r", encoding="utf-8") as file:
-            quotes = json.loads(file.read())
+        with self.quote.mutex:
+            quotes = self.quote.read_quotes()["quotes"]
 
         users_quotes = []
-        for item in quotes["quotes"]:
+        for item in quotes:
             if get_user == item["quoted_user_nick"]:
                 users_quotes.append(item)
 
@@ -128,11 +129,10 @@ class Quote:
             "added_by_login": self.user.login,
         }
 
-        with open(self.channel.server.quotes_file, "r+", encoding="utf-8") as file:
-            quotes = json.loads(file.read())
+        with self.quote.mutex:
+            quotes = self.quote.read_quotes()
             quotes["quotes"].append(quote)
-            file.seek(0)
-            file.write(json.dumps(quotes))
+            self.quote.write_quotes(quotes)
 
         self.channel.send_query(f"{c.INFO} quote added.")
 
