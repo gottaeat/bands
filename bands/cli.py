@@ -5,6 +5,7 @@ import signal
 from threading import Thread
 
 from .ai import AI
+from .quote import Quote
 from .config import ConfigYAML
 
 from .irc.server import Server
@@ -88,10 +89,11 @@ class CLI:
 
         ai.first_run()
 
-        # init servers
-        for server in config.servers:
-            # pass the same ai instance to all servers
-            server.ai = ai
+        # init quotes
+        quote = Quote(self.debug)
+        quote.file = config.quote.file
+
+        quote.first_run()
 
         # start servers
         self.logger.info("generating Server() instances")
@@ -132,8 +134,8 @@ class CLI:
             s.scroll_speed = server.scroll_speed
 
             # cli
-            s.ai = server.ai
-            s.quotes_file = config.quote.quotes_file
+            s.ai = ai
+            s.quote = quote
             s.cli = self
             s.logger = logger
 
