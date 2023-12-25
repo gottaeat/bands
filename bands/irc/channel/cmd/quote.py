@@ -32,12 +32,19 @@ class Quote:
         with self.quote.mutex:
             quotes = self.quote.read_quotes()["quotes"]
 
-        if len(quotes) == 0:
-            self.channel.send_query(f"{c.ERR} no quotes on record.")
+        server_quotes = []
+        for item in quotes:
+            if item["server"] == self.channel.server.name:
+                server_quotes.append(item)
+
+        if len(server_quotes) == 0:
+            errmsg = f"{c.ERR} no quotes on record for {self.channel.server.name}."
+            self.channel.send_query(errmsg)
+
             return
 
-        random.shuffle(quotes)
-        quote = quotes.pop(random.randrange(len(quotes)))
+        random.shuffle(server_quotes)
+        quote = server_quotes.pop(random.randrange(len(server_quotes)))
 
         tstamp = datetime.datetime.fromtimestamp(int(quote["timestamp"])).strftime(
             "%Y/%m/%d %T"
@@ -62,11 +69,16 @@ class Quote:
 
         users_quotes = []
         for item in quotes:
-            if get_user == item["quoted_user_nick"]:
+            if (
+                get_user == item["quoted_user_nick"]
+                and item["server"] == self.channel.server.name
+            ):
                 users_quotes.append(item)
 
         if len(users_quotes) == 0:
-            self.channel.send_query(f"{c.ERR} {get_user} has no recorded quotes.")
+            errmsg = f"{c.ERR} {get_user} has no recorded quotes in {self.channel.server.name}."
+            self.channel.send_query(errmsg)
+
             return
 
         random.shuffle(users_quotes)
