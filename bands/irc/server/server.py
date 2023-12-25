@@ -28,7 +28,7 @@ class Server:
 
         # CLI
         self.ai = None
-        self.quotes_file = None
+        self.quote = None
         self.cli = None
         self.logger = None
 
