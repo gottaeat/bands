@@ -1,17 +1,107 @@
 # bands
-bands is a threaded internet relay chat bot with support for:
-- multiple servers and multiple channels per server, concurrently
-- holds user and channel context
-- ai capabilities via openai with global key rotation
-- pluggable command modules that operate within the context of channels and user
-  private messages
-- per-server secret and authentication via private queries
-- privilege separated command execution such as live connection/ai state
-  manipulation
+bands is a concurrent internet relay chat bot with support for:
+- multiple server and multiple channel per server handling
+- server, channel, channel user and server user context
+- openai with global key rotation
+- channel and server user specific commands
+- per-server secret and authentication for privilege separation
+- state manipulation through private messages
 
 and many more
 
+## installation
+```sh
+git clone --depth=1 https://github.com/gottaeat/bands
+cd bands/
+
+pip install .
+```
+
+## usage
+```sh
+usage: bands [-h] -c C [-d]
+
+bands the IRC bot.
+
+options:
+  -h, --help  show this help message and exit
+  -c C        Configuration YAML file.
+  -d          Enable debugging.
+```
+
+## config YAML example
+```yml
+openai:
+    keys_file: /path/to/openai_keys.json
+
+quote:
+    quotes_file: /path/to/quotes.json
+
+servers:
+    - name: example1
+      address: irc.example1.com
+      port: 6697
+      passwd: badactors
+      botname: bands
+      tls: true
+      verify_tls: false
+      scroll_speed: 0
+      channels:
+        - "#goodchannel"
+        - "#badchannel"
+      secret: verysecret
+
+    - name: example2
+      address: irc.example2.com
+      port: 6697
+      botname: bands
+      tls: true
+      verify_tls: false
+      scroll_speed: 0
+      channels:
+        - "#goodchannel"
+        - "#badchannel"
+      secret: verysecret
+```
+
+## openai.keys_file formatting
+```json
+{
+  "openai_keys": [
+      {
+        "key": "sk-"
+      },
+      {
+        "key": "sk-"
+      }
+    ]
+}
+```
+
+## quotes.quotes_file formatting
+```json
+{
+  "quotes": [
+    {
+      "timestamp": "1703415894",
+      "quoted_user_nick": "user",
+      "quoted_user_login": "~mike@example.com",
+      "quoted_msg": "i should NOT say this",
+      "channel": "#awful",
+      "server": "examplenet",
+      "added_by_nick": "mike",
+      "added_by_login": "~mike@fbi.gov"
+    }
+  ]
+}
+```
+
+do note that the quotes file will be auto generated if not found.
+
 ## directory breakdown
+as of the time of the commit, this does not represent the current state of the
+project
+
 ```txt
 └ bands/
   ├ ai.py                   → AI(): instantiate an openai object to be passed
@@ -79,50 +169,4 @@ and many more
   └ static/
     ├ advices.json          → file parsed by Advice().
     └ tarot_desc.json       → file parsed by Tarot().
-```
-
-## config YAML example
-```yml
-openai:
-    keys_file: /path/to/openai_keys.json
-
-servers:
-    - name: example1
-      address: irc.example1.com
-      port: 6697
-      passwd: badactors
-      botname: bands
-      tls: true
-      verify_tls: false
-      scroll_speed: 0
-      channels:
-        - "#goodchannel"
-        - "#badchannel"
-      secret: verysecret
-
-    - name: example2
-      address: irc.example2.com
-      port: 6697
-      botname: bands
-      tls: true
-      verify_tls: false
-      scroll_speed: 0
-      channels:
-        - "#goodchannel"
-        - "#badchannel"
-      secret: verysecret
-```
-
-## expected openai keys_file format
-```json
-{
-  "openai_keys": [
-      {
-        "key": "sk-"
-      },
-      {
-        "key": "sk-"
-      }
-    ]
-}
 ```
