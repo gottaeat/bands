@@ -70,7 +70,7 @@ class Quote:
         users_quotes = []
         for item in quotes:
             if (
-                get_user == item["quoted_user_nick"]
+                get_user.lower() == item["quoted_user_nick"].lower()
                 and item["server"] == self.channel.server.name
             ):
                 users_quotes.append(item)
@@ -111,7 +111,7 @@ class Quote:
 
         # get ChannelUser
         for channeluser in self.channel.user_list:
-            if channeluser.nick == quoted_user:
+            if channeluser.nick.lower() == quoted_user.lower():
                 user = channeluser
                 break
 
