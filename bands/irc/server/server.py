@@ -43,7 +43,10 @@ class Server:
 
         # users
         self.users = []
+
+        # admin
         self.admin = None
+        self.bad_pw_attempts = 0
 
     # -- CLI() interactions -- #
     def run(self):
