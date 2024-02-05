@@ -16,6 +16,7 @@ class User:
         self.tarot_deck = None
 
         self.tstamp = None
+        self.bad_pw_attempts = 0
 
     def send_query(self, msg):
         if "\n" in msg:
