@@ -34,33 +34,29 @@ class FinalLoop:
         self.ping_tstamp = None
         self.pong_received = None
         self.pong_tstamp = None
+        self.kill_timer = None
 
-    def _ping_timer(self):
-        self.logger.debug("started keepalive PING sender")
+    def _ping_sender(self):
+        self.logger.debug("PING sender started")
 
         while not self.socket.halt:
             self.sock_ops.send_ping()
+            self.logger.debug("PING sent")
+
             self.ping_sent = True
             self.ping_tstamp = int(time.strftime("%s"))
 
-            self.logger.debug("sent keepalive PING")
-
             self._pong_timer()
-
-            time_till_pong = int(time.strftime("%s")) - self.pong_tstamp
-            time_sleep = self.server.PING_INTERVAL - time_till_pong
-
-            self.logger.debug("keepalive PONG sender: sleeping for %s", time_sleep)
-
-            time.sleep(time_sleep)
+            self._ping_timer()
 
     def _pong_timer(self):
-        self.logger.debug("started keepalive PONG timer")
+        self.logger.debug("PONG timer started")
 
+        # sleep till we receive a PONG, if the timeout is exceeded, kill socket
         while not self.pong_received:
             if int(time.strftime("%s")) - self.ping_tstamp > self.server.PONG_TIMEOUT:
                 self.logger.warning(
-                    "did not get a PONG after %s seconds",
+                    "PONG timeout: %s, stopping",
                     self.server.PONG_TIMEOUT,
                 )
 
@@ -70,16 +66,49 @@ class FinalLoop:
 
             time.sleep(1)
 
+        # if we did get a PONG, reset state
         self.ping_sent = None
         self.ping_tstamp = None
         self.pong_received = None
-        self.logger.debug("stopped keepalive PONG timer")
+        self.kill_timer = None
+        self.logger.debug("PONG timer stopped")
+
+    def _ping_timer(self):
+        # we sent a PING, got a PONG, now we sleep for the remaning amount of
+        # seconds deducted from 120 seconds since the time we received the PONG
+        self.logger.debug("PING timer started")
+
+        if not self.socket.halt:
+            sleep_for = self.server.PING_INTERVAL - (
+                int(time.strftime("%s")) - self.pong_tstamp
+            )
+
+            self.logger.debug("PING timer sleeping for %s", sleep_for)
+
+            time_slept = 0
+            while time_slept != sleep_for:
+                # if we get a PING from server while we are waiting for sending
+                # a PING ourselves, reset the timer.
+                if self.kill_timer:
+                    sleep_for = self.server.PING_INTERVAL - (
+                        int(time.strftime("%s")) - self.pong_tstamp
+                    )
+
+                    time_slept = 0
+                    self.kill_timer = None
+
+                    self.logger.debug(
+                        "PING timer interrupted, sleeping for %s", sleep_for
+                    )
+
+                time.sleep(1)
+                time_slept += 1
 
     # pylint: disable=too-many-branches,too-many-statements
     def run(self):
         self.logger.info("%s entered the loop %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
 
-        Thread(target=self._ping_timer, daemon=True).start()
+        Thread(target=self._ping_sender, daemon=True).start()
 
         # pylint: disable=too-many-nested-blocks
         while not self.socket.halt:
@@ -109,13 +138,19 @@ class FinalLoop:
                         target=self.sock_ops.send_pong, args=[line], daemon=True
                     ).start()
 
+                    # if we receive a PING while waiting to send our own, reset
+                    # the timer counter
+                    self.pong_received = True
+                    self.pong_tstamp = int(time.strftime("%s"))
+                    self.kill_timer = True
+
                     continue
 
                 # PONG handling
                 if self.ping_sent and line_s[1] == "PONG":
                     self.pong_received = True
                     self.pong_tstamp = int(time.strftime("%s"))
-                    self.logger.debug("received keepalive PONG")
+                    self.logger.debug("PONG received")
 
                     continue
 
