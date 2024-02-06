@@ -29,6 +29,7 @@ class Server:
         # CLI
         self.ai = None
         self.quote = None
+        self.doot = None
         self.cli = None
         self.logger = None
 
@@ -80,4 +81,6 @@ class Server:
         self.socket.disconnect()
 
         self.logger.info("removing %s from servers list", self.name)
+        # pylint: disable=no-member
+        # ^ this is a pylint bug
         self.cli.servers.remove(self)
