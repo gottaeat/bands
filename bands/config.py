@@ -30,6 +30,11 @@ class QuoteConfig:
         self.file = None
 
 
+class DootConfig:
+    def __init__(self):
+        self.file = None
+
+
 class ConfigYAML:
     def __init__(self, config_file):
         self.config_file = config_file
@@ -38,9 +43,55 @@ class ConfigYAML:
 
         self.openai = None
         self.quote = None
+        self.doot = None
         self.servers = []
 
         self.yaml_parsed = None
+
+    def _parse_doot(self):
+        self.logger.info("parsing doot")
+
+        try:
+            doot = self.yaml_parsed["doot"]
+        # pylint: disable=bare-except
+        except:
+            self.logger.exception("%s parsing has failed", self.config_file)
+
+        if not doot:
+            self.logger.error("doot section cannot be specified then left blank")
+
+        try:
+            doots_file = doot["doots_file"]
+        except KeyError:
+            self.logger.exception(
+                "doots_file in the doot section of the YAML file is missing"
+            )
+
+        if not doots_file:
+            self.logger.error("doots_file cannot be blank")
+
+        if not os.path.isfile(doots_file):
+            self.logger.warning("%s is not a file, creating", doots_file)
+
+            with open(doots_file, "w", encoding="utf-8") as file:
+                file.write(json.dumps({"doots": [{}]}))
+
+        dootconf = DootConfig()
+
+        self.logger.info("loading doots doots_file")
+
+        try:
+            with open(doots_file, "r", encoding="utf-8") as file:
+                doots = json.loads(file.read())["doots"]
+        # pylint: disable=bare-except
+        except:
+            self.logger.exception("parsing %s failed", doots_file)
+
+        self.logger.info("%s doots found", len(doots))
+
+        dootconf.file = doots_file
+
+        self.doot = dootconf
 
     def _parse_quote(self):
         self.logger.info("parsing quote")
@@ -259,4 +310,5 @@ class ConfigYAML:
 
         self._parse_openai()
         self._parse_quote()
+        self._parse_doot()
         self._parse_servers()
