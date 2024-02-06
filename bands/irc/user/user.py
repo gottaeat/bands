@@ -3,7 +3,7 @@ import time
 from bands.irc.util import wrap_bytes
 
 
-# pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods,too-many-instance-attributes
 class User:
     def __init__(self, server):
         self.server = server
