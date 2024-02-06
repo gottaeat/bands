@@ -55,3 +55,6 @@ class ChannelUser:
         # context
         self.tarot_deck = None
         self.chats = []
+
+        # doots
+        self.doot_tstamp = None
