@@ -1,3 +1,5 @@
+import time
+
 from bands.colors import MIRCColors
 
 # pylint: disable=invalid-name
@@ -45,6 +47,11 @@ class Doot:
 
     # pylint: disable=too-many-branches
     def _alter_doot(self, action):
+        # dirty prevent spam
+        if self.user.doot_tstamp:
+            if int(time.strftime("%s")) - self.user.doot_tstamp <= 10:
+                return
+
         # no nick
         try:
             dooted_user = self.user_args[1]
@@ -145,6 +152,8 @@ class Doot:
         except UnboundLocalError:
             self.channel.send_query(f"{c.ERR} no such nick: {dooted_user}.")
             return
+
+        self.user.doot_tstamp = int(time.strftime("%s"))
 
         # read jayson
         with self.doot.mutex:
