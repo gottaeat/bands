@@ -74,6 +74,8 @@ class Doot:
             self.channel.send_query(f"{c.ERR} no such nick: {dooted_user}.")
             return
 
+        self.user.doot_tstamp = int(time.strftime("%s"))
+
         # update jayson
         with self.doot.mutex:
             doots = self.doot.read_doots()
@@ -152,8 +154,6 @@ class Doot:
         except UnboundLocalError:
             self.channel.send_query(f"{c.ERR} no such nick: {dooted_user}.")
             return
-
-        self.user.doot_tstamp = int(time.strftime("%s"))
 
         # read jayson
         with self.doot.mutex:
