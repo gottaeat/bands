@@ -6,6 +6,7 @@ from threading import Thread
 
 from .ai import AI
 from .quote import Quote
+from .doot import Doot
 from .config import ConfigYAML
 
 from .irc.server import Server
@@ -87,13 +88,13 @@ class CLI:
         if config.openai:
             ai.keys = config.openai.keys
 
-        ai.first_run()
-
         # init quotes
         quote = Quote(self.debug)
         quote.file = config.quote.file
 
-        quote.first_run()
+        # init doots
+        doot = Doot(self.debug)
+        doot.file = config.doot.file
 
         # start servers
         self.logger.info("generating Server() instances")
@@ -136,6 +137,7 @@ class CLI:
             # cli
             s.ai = ai
             s.quote = quote
+            s.doot = doot
             s.cli = self
             s.logger = logger
 
