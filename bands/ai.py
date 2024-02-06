@@ -21,7 +21,9 @@ class AI:
         self.keys = None
         self.key_index = -1
 
-    def first_run(self):
+        self._first_run()
+
+    def _first_run(self):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG if self.debug else logging.INFO)
 
