@@ -24,7 +24,12 @@ class RCon:
         for server in self.user.server.cli.servers:
             msg += f"{c.LRED}{server.name}{c.RES}\n"
             msg += f"{c.WHITE}├ {c.LGREEN}admin:{c.RES} "
-            msg += f"{server.admin.nick} ({server.admin.login})\n"
+
+            if server.admin:
+                msg += f"{server.admin.nick} ({server.admin.login})\n"
+            else:
+                msg += f"no auth\n"
+
             msg += f"{c.WHITE}└ {c.LGREEN}channels:\n"
 
             for chan in server.channel_obj:
