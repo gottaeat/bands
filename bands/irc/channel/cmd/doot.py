@@ -1,6 +1,7 @@
 import time
 
 from bands.colors import MIRCColors
+from bands.irc.util import unilen
 
 # pylint: disable=invalid-name
 c = MIRCColors()
@@ -22,7 +23,8 @@ class Doot:
         msg += f"{c.WHITE}├ {c.LGREEN}up{c.RES}   [target]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}down{c.RES} [target]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}get{c.RES}  [target]\n"
-        msg += f"{c.WHITE}└ {c.LGREEN}help{c.RES}"
+        msg += f"{c.WHITE}├ {c.LGREEN}stats{c.RES}\n"
+        msg += f"{c.WHITE}└ {c.LGREEN}help {c.RES}"
 
         self.channel.send_query(msg)
 
@@ -41,6 +43,10 @@ class Doot:
 
         if self.user_args[0] == "get":
             self._cmd_get()
+            return
+
+        if self.user_args[0] == "stats":
+            self._cmd_stats()
             return
 
         self._cmd_help()
@@ -190,3 +196,42 @@ class Doot:
             msg += f"{c.WHITE}{user_doots}{c.RES} internet points in "
             msg += f"{self.channel.server.name}!!1! fuck !"
             self.channel.send_query(msg)
+
+    def _cmd_stats(self):
+        # read jayson
+        with self.doot.mutex:
+            doots = self.doot.read_doots()
+
+        # entry for server does not exist
+        if self.channel.server.name not in doots["doots"][0].keys():
+            err_msg = f"{c.ERR} {self.channel.server.name} does not have "
+            err_msg += "anyone dooted."
+            self.channel.send_query(err_msg)
+            return
+
+        msg = f"{c.INFO} {self.channel.server.name} hall of fame:\n"
+
+        # top 5
+        top_five = sorted(
+            doots["doots"][0][self.channel.server.name],
+            key=lambda x: x["doots"],
+            reverse=True,
+        )[:5]
+
+        # calculate width
+        max_len = 0
+
+        for doot_entry in top_five:
+            itemlen = unilen(doot_entry["nick"])
+
+            if itemlen > max_len:
+                max_len = itemlen
+
+        # gen prompt
+        index = 1
+        for doot_entry in top_five:
+            msg += f"{c.LRED}#{index} "
+            msg += f"{c.WHITE}{doot_entry['nick'] :<{max_len}} {c.LGREEN}{doot_entry['doots']}\n"
+            index += 1
+
+        self.channel.send_query(msg)
