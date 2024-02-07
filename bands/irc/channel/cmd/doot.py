@@ -214,8 +214,7 @@ class Doot:
         # top 5
         top_five = sorted(
             doots["doots"][0][self.channel.server.name],
-            key=lambda x: x["doots"],
-            reverse=True,
+            key=lambda x: (-x["doots"], x["nick"]),
         )[:5]
 
         # calculate width
