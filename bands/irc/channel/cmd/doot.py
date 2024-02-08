@@ -20,9 +20,9 @@ class Doot:
 
     def _cmd_help(self):
         msg = f"{c.LRED}usage{c.RES}\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}up{c.RES}   [target]\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}down{c.RES} [target]\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}get{c.RES}  [target]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}up{c.RES}   [nick]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}down{c.RES} [nick]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}get{c.RES}  [nick]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}stats{c.RES}\n"
         msg += f"{c.WHITE}└ {c.LGREEN}help {c.RES}"
 
@@ -147,20 +147,6 @@ class Doot:
             self.channel.send_query(f"{c.ERR} must provide a nick.")
             return
 
-        # get ChannelUser
-        for channeluser in self.channel.user_list:
-            if channeluser.nick.lower() == dooted_user.lower():
-                user = channeluser
-                break
-
-        # no ChannelUser obj
-        try:
-            if user:
-                pass
-        except UnboundLocalError:
-            self.channel.send_query(f"{c.ERR} no such nick: {dooted_user}.")
-            return
-
         # read jayson
         with self.doot.mutex:
             doots = self.doot.read_doots()
@@ -177,13 +163,13 @@ class Doot:
         for index, doot_user_entry in enumerate(
             doots["doots"][0][self.channel.server.name]
         ):
-            if doot_user_entry["nick"].lower() == user.nick.lower():
+            if doot_user_entry["nick"].lower() == dooted_user.lower():
                 user_exists = (True, index)
                 break
 
         # user does not exist
         if not user_exists[0]:
-            err_msg = f"{c.ERR} {user.nick} has never been dooted in "
+            err_msg = f"{c.ERR} {dooted_user} has never been dooted in "
             err_msg += f"{self.channel.server.name}."
             self.channel.send_query(err_msg)
         # user exists
@@ -192,7 +178,7 @@ class Doot:
                 "doots"
             ]
 
-            msg = f"{c.INFO} {c.LGREEN}{user.nick}{c.RES} has "
+            msg = f"{c.INFO} {c.LGREEN}{dooted_user}{c.RES} has "
             msg += f"{c.WHITE}{user_doots}{c.RES} internet points in "
             msg += f"{self.channel.server.name}!!1! fuck !"
             self.channel.send_query(msg)
@@ -230,7 +216,8 @@ class Doot:
         index = 1
         for doot_entry in top_five:
             msg += f"{c.LRED}#{index} "
-            msg += f"{c.WHITE}{doot_entry['nick'] :<{max_len}} {c.LGREEN}{doot_entry['doots']}\n"
+            msg += f"{c.WHITE}{doot_entry['nick'] :<{max_len}} "
+            msg += f"{c.LGREEN}{doot_entry['doots']}\n"
             index += 1
 
         self.channel.send_query(msg)
