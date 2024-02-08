@@ -19,79 +19,40 @@ class Quote:
 
         self._run()
 
+    @staticmethod
+    def _get_tstamp(epoch):
+        tstamp_obj = datetime.datetime.fromtimestamp(int(epoch)).astimezone()
+        tzone = tstamp_obj.tzinfo.tzname(tstamp_obj)
+
+        return f"{tstamp_obj.strftime('%Y/%m/%d %T')} {tzone}"
+
     def _cmd_help(self):
         msg = f"{c.LRED}usage{c.RES}\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}add{c.RES}    [target] [quoted message]\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}user{c.RES}   [target]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}add{c.RES}    [nick] [quoted message]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}get{c.RES}    [nick]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}random{c.RES}\n"
         msg += f"{c.WHITE}└ {c.LGREEN}help{c.RES}"
 
         self.channel.send_query(msg)
 
-    def _cmd_random(self):
-        with self.quote.mutex:
-            quotes = self.quote.read_quotes()["quotes"]
-
-        server_quotes = []
-        for item in quotes:
-            if item["server"] == self.channel.server.name:
-                server_quotes.append(item)
-
-        if len(server_quotes) == 0:
-            errmsg = f"{c.ERR} no quotes on record for {self.channel.server.name}."
-            self.channel.send_query(errmsg)
-
+    def _run(self):
+        if len(self.user_args) == 0 or self.user_args[0] == "help":
+            self._cmd_help()
             return
 
-        random.shuffle(server_quotes)
-        quote = server_quotes.pop(random.randrange(len(server_quotes)))
-
-        tstamp = datetime.datetime.fromtimestamp(int(quote["timestamp"])).strftime(
-            "%Y/%m/%d %T"
-        )
-
-        msg = f"{quote['quoted_user_nick']} ({quote['quoted_user_login']}): \""
-        msg += f"{quote['quoted_msg']}\" @ {tstamp} "
-        msg += f"[{quote['added_by_nick']} ({quote['added_by_login']})]"
-
-        self.channel.send_query(f"{c.INFO} {msg}")
-
-    def _cmd_user(self):
-        # no nick
-        try:
-            get_user = self.user_args[1]
-        except IndexError:
-            self.channel.send_query(f"{c.ERR} must provide a nick.")
+        if self.user_args[0] == "add":
+            self._cmd_add()
             return
 
-        with self.quote.mutex:
-            quotes = self.quote.read_quotes()["quotes"]
-
-        users_quotes = []
-        for item in quotes:
-            if (
-                get_user.lower() == item["quoted_user_nick"].lower()
-                and item["server"] == self.channel.server.name
-            ):
-                users_quotes.append(item)
-
-        if len(users_quotes) == 0:
-            errmsg = f"{c.ERR} {get_user} has no recorded quotes in {self.channel.server.name}."
-            self.channel.send_query(errmsg)
-
+        if self.user_args[0] == "get":
+            self._cmd_get()
             return
 
-        random.shuffle(users_quotes)
-        quote = users_quotes.pop(random.randrange(len(users_quotes)))
-        tstamp = datetime.datetime.fromtimestamp(int(quote["timestamp"])).strftime(
-            "%Y/%m/%d %T"
-        )
+        if self.user_args[0] == "random":
+            self._cmd_random()
+            return
 
-        msg = f"{quote['quoted_user_nick']} ({quote['quoted_user_login']}): \""
-        msg += f"{quote['quoted_msg']}\" @ {tstamp} "
-        msg += f"[{quote['added_by_nick']} ({quote['added_by_login']})]"
-
-        self.channel.send_query(f"{c.INFO} {msg}")
+        self._cmd_help()
 
     def _cmd_add(self):
         # no nick
@@ -129,40 +90,91 @@ class Quote:
             self.channel.send_query(f"{c.ERR} {user.nick} never said that.")
             return
 
-        # compose jayson
-        quote = {
-            "timestamp": time.strftime("%s"),
-            "quoted_user_nick": user.nick,
-            "quoted_user_login": user.login,
-            "quoted_msg": quoted_msg,
-            "channel": self.channel.name,
-            "server": self.channel.server.name,
-            "added_by_nick": self.user.nick,
-            "added_by_login": self.user.login,
-        }
-
+        # update jayson
         with self.quote.mutex:
             quotes = self.quote.read_quotes()
-            quotes["quotes"].append(quote)
+
+            # entry for server does not exist
+            if self.channel.server.name not in quotes["quotes"][0].keys():
+                quotes["quotes"][0][self.channel.server.name] = []
+
+                self.channel.server.logger.info(
+                    "created quote entry for: %s", self.channel.server.name
+                )
+
+            # gen quote
+            quote = {
+                "timestamp": time.strftime("%s"),
+                "nick": user.nick,
+                "msg": quoted_msg,
+            }
+
+            quotes["quotes"][0][self.channel.server.name].append(quote)
+
             self.quote.write_quotes(quotes)
 
         self.channel.send_query(f"{c.INFO} quote added.")
 
-    def _run(self):
-        if len(self.user_args) == 0 or self.user_args[0] == "help":
-            self._cmd_help()
+    def _cmd_get(self):
+        # no nick
+        try:
+            quoted_user = self.user_args[1]
+        except IndexError:
+            self.channel.send_query(f"{c.ERR} must provide a nick.")
             return
 
-        if self.user_args[0] == "add":
-            self._cmd_add()
+        # read jayson
+        with self.quote.mutex:
+            quotes = self.quote.read_quotes()
+
+        # entry for server does not exist
+        if self.channel.server.name not in quotes["quotes"][0].keys():
+            err_msg = f"{c.ERR} {self.channel.server.name} does not have "
+            err_msg += "anyone quoted."
+            self.channel.send_query(err_msg)
             return
 
-        if self.user_args[0] == "user":
-            self._cmd_user()
+        # find user entries
+        users_quotes = []
+        for item in quotes["quotes"][0][self.channel.server.name]:
+            if item["nick"].lower() == quoted_user.lower():
+                users_quotes.append(item)
+
+        # user does not exist
+        if len(users_quotes) == 0:
+            err_msg = f"{c.ERR} {quoted_user} has no recorded quotes in "
+            err_msg = "{self.channel.server.name}."
+            self.channel.send_query(err_msg)
+
             return
 
-        if self.user_args[0] == "random":
-            self._cmd_random()
+        # user does exist
+        random.shuffle(users_quotes)
+        quote = users_quotes.pop(random.randrange(len(users_quotes)))
+        tstamp = self._get_tstamp(quote["timestamp"])
+
+        msg = f"{quote['nick']} @ {tstamp}: \"{quote['msg']}\""
+        self.channel.send_query(f"{c.INFO} {msg}")
+
+    def _cmd_random(self):
+        # read jayson
+        with self.quote.mutex:
+            quotes = self.quote.read_quotes()
+
+        # entry for server does not exist
+        if self.channel.server.name not in quotes["quotes"][0].keys():
+            err_msg = f"{c.ERR} {self.channel.server.name} does not have "
+            err_msg += "anyone quoted."
+            self.channel.send_query(err_msg)
+
             return
 
-        self._cmd_help()
+        # get server entries
+        server_quotes = quotes["quotes"][0][self.channel.server.name]
+
+        random.shuffle(server_quotes)
+        quote = server_quotes.pop(random.randrange(len(server_quotes)))
+        tstamp = self._get_tstamp(quote["timestamp"])
+
+        msg = f"{quote['nick']} @ {tstamp}: \"{quote['msg']}\""
+        self.channel.send_query(f"{c.INFO} {msg}")
