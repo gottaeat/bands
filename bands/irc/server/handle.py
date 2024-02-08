@@ -134,7 +134,7 @@ class Handle:
             pass
 
         if ratelimit and tstamp - channel.tstamp < 2:
-            self.logger.warning(
+            self.logger.debug(
                 "ignoring cmd %s in %s (ratelimited)", cmd, channel.name
             )
 
@@ -295,7 +295,7 @@ class Handle:
 
         if user != self.server.admin:
             if tstamp - user.tstamp < 2:
-                self.logger.warning(
+                self.logger.debug(
                     "ignoring cmd %s in %s (ratelimited)", cmd, user.nick
                 )
 
