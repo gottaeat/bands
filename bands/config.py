@@ -82,10 +82,13 @@ class ConfigYAML:
 
         try:
             with open(doots_file, "r", encoding="utf-8") as file:
-                doots = json.loads(file.read())["doots"]
+                doots = json.loads(file.read())
         # pylint: disable=bare-except
         except:
             self.logger.exception("parsing %s failed", doots_file)
+
+        if "doots" not in doots.keys():
+            self.logger.error("%s is formatted wrong", doots_file)
 
         dootconf.file = doots_file
 
@@ -125,10 +128,13 @@ class ConfigYAML:
 
         try:
             with open(quotes_file, "r", encoding="utf-8") as file:
-                quotes = json.loads(file.read())["quotes"]
+                quotes = json.loads(file.read())
         # pylint: disable=bare-except
         except:
             self.logger.exception("parsing %s failed", quotes_file)
+
+        if "quotes" not in quotes.keys():
+            self.logger.error("%s is formatted wrong", quotes_file)
 
         quoteconf.file = quotes_file
 
