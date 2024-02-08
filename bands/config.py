@@ -87,8 +87,6 @@ class ConfigYAML:
         except:
             self.logger.exception("parsing %s failed", doots_file)
 
-        self.logger.info("%s doots found", len(doots))
-
         dootconf.file = doots_file
 
         self.doot = dootconf
@@ -119,7 +117,7 @@ class ConfigYAML:
             self.logger.warning("%s is not a file, creating", quotes_file)
 
             with open(quotes_file, "w", encoding="utf-8") as file:
-                file.write(json.dumps({"quotes": []}))
+                file.write(json.dumps({"quotes": [{}]}))
 
         quoteconf = QuoteConfig()
 
@@ -131,8 +129,6 @@ class ConfigYAML:
         # pylint: disable=bare-except
         except:
             self.logger.exception("parsing %s failed", quotes_file)
-
-        self.logger.info("%s quotes found", len(quotes))
 
         quoteconf.file = quotes_file
 
