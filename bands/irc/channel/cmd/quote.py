@@ -143,7 +143,7 @@ class Quote:
         # user does not exist
         if len(users_quotes) == 0:
             err_msg = f"{c.ERR} {quoted_user} has no recorded quotes in "
-            err_msg = "{self.channel.server.name}."
+            err_msg += f"{self.channel.server.name}."
             self.channel.send_query(err_msg)
 
             return
