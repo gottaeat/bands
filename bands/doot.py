@@ -33,7 +33,7 @@ class Doot:
         self.logger.info("initialized")
 
     def read_doots(self):
-        self.logger.info("reading doots file")
+        self.logger.debug("reading doots file")
 
         with open(self.file, "r", encoding="utf-8") as file:
             doots = json.loads(file.read())
@@ -41,7 +41,7 @@ class Doot:
         return doots
 
     def write_doots(self, doots):
-        self.logger.info("writing doots file")
+        self.logger.debug("writing doots file")
 
         with open(self.file, "w", encoding="utf-8") as file:
             file.write(json.dumps(doots))
