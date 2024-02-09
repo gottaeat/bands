@@ -5,7 +5,6 @@ from threading import Thread
 import bands.irc.user.cmd as UserCMD
 
 from bands.colors import ANSIColors
-from bands.irc.util import chop_userline
 
 from .handle import Handle
 
