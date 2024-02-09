@@ -53,9 +53,9 @@ class Doot:
 
     # pylint: disable=too-many-branches
     def _alter_doot(self, action):
-        # dirty prevent spam
+        # a user can invoke doot every 10 seconds
         if self.user.doot_tstamp:
-            if int(time.strftime("%s")) - self.user.doot_tstamp <= 10:
+            if int(time.strftime("%s")) - self.user.used_doot_tstamp <= 10:
                 return
 
         # no nick
@@ -80,7 +80,10 @@ class Doot:
             self.channel.send_query(f"{c.ERR} no such nick: {dooted_user}.")
             return
 
-        self.user.doot_tstamp = int(time.strftime("%s"))
+        # a user can be dooted every 30 seconds
+        if user.got_dooted_tstamp:
+            if int(time.strftime("%s")) - self.user.got_dooted_tstamp <= 30:
+                return
 
         # update jayson
         with self.doot.mutex:
@@ -131,6 +134,10 @@ class Doot:
             ]
         else:
             user_doots = dooted_user_dict["doots"]
+
+        # update timestamps on succ doot
+        self.user.used_doot_tstamp = int(time.strftime("%s"))
+        user.got_dooted_tstamp = int(time.strftime("%s"))
 
         msg = f"{c.INFO} {c.LGREEN}{self.user.nick} {c.WHITE}{action}dooted "
         msg += f"{c.ORANGE}{user.nick}{c.RES} "
