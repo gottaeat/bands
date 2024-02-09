@@ -28,7 +28,7 @@ class RCon:
             if server.admin:
                 msg += f"{server.admin.nick} ({server.admin.login})\n"
             else:
-                msg += f"no auth\n"
+                msg += "no auth\n"
 
             msg += f"{c.WHITE}└ {c.LGREEN}channels:\n"
 
