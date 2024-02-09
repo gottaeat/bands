@@ -149,7 +149,9 @@ class Handle:
         user_nick = user_line["nick"]
         user_login = user_line["login"]
 
-        self.logger.info("%s has invited us to %s", user, channel_name)
+        self.logger.info(
+            "%s (%s) has invited us to %s", user_nick, user_login, channel_name
+        )
 
         if not self.server.admin:
             self.logger.warning("no admin user for %s, not joining", self.server.name)
