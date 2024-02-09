@@ -279,7 +279,7 @@ class FinalLoop:
                 if line_s[1] == "INVITE":
                     Thread(
                         target=self.handle.bot_invite,
-                        args=[chop_userline(line_s[0])["nick"], line_s[3]],
+                        args=[line_s[0], line_s[3]],
                         daemon=True,
                     ).start()
 
