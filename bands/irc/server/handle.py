@@ -134,9 +134,7 @@ class Handle:
             pass
 
         if ratelimit and tstamp - channel.tstamp < 2:
-            self.logger.debug(
-                "ignoring cmd %s in %s (ratelimited)", cmd, channel.name
-            )
+            self.logger.debug("ignoring cmd %s in %s (ratelimited)", cmd, channel.name)
 
             return
 
@@ -146,8 +144,27 @@ class Handle:
         # exec
         ChanCMD.CMDS[cmd](channel, user, user_args)
 
-    def bot_invite(self, user, channel_name):
+    def bot_invite(self, user_line, channel_name):
         self.logger.info("%s has invited us to %s", user, channel_name)
+
+        if not self.server.admin:
+            self.logger.warning("no admin user for %s, not joining", self.server.name)
+            return
+
+        user_line = chop_userline(user_line)
+        user_nick = user_line["nick"]
+        user_login = user_line["login"]
+
+        if (
+            user_nick != self.server.admin.user
+            and user_login != self.server.admin.login
+        ):
+            self.logger.warning(
+                "%s is not the admin for %s, not joining", user_nick, self.server.name
+            )
+            return
+
+        self.logger.warning("%s is the admin user, joining", user_nick)
         self.sock_ops.send_join(channel_name)
 
     def bot_ban(self, channel_name):
@@ -295,9 +312,7 @@ class Handle:
 
         if user != self.server.admin:
             if tstamp - user.tstamp < 2:
-                self.logger.debug(
-                    "ignoring cmd %s in %s (ratelimited)", cmd, user.nick
-                )
+                self.logger.debug("ignoring cmd %s in %s (ratelimited)", cmd, user.nick)
 
                 return
 
