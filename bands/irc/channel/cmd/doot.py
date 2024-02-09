@@ -54,7 +54,7 @@ class Doot:
     # pylint: disable=too-many-branches
     def _alter_doot(self, action):
         # a user can invoke doot every 10 seconds
-        if self.user.doot_tstamp:
+        if self.user.used_doot_tstamp:
             if int(time.strftime("%s")) - self.user.used_doot_tstamp <= 10:
                 return
 
@@ -82,7 +82,7 @@ class Doot:
 
         # a user can be dooted every 30 seconds
         if user.got_dooted_tstamp:
-            if int(time.strftime("%s")) - self.user.got_dooted_tstamp <= 30:
+            if int(time.strftime("%s")) - user.got_dooted_tstamp <= 30:
                 return
 
         # update jayson
@@ -186,7 +186,7 @@ class Doot:
             ]
 
             msg = f"{c.INFO} {c.LGREEN}{dooted_user}{c.RES} has "
-            msg += f"{c.WHITE}{user_doots}{c.RES} internet points in "
+            msg += f"{c.WHITE}{user_doots}{c.RES} internet relay points in "
             msg += f"{self.channel.server.name}!!1! fuck !"
             self.channel.send_query(msg)
 
