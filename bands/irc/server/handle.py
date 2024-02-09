@@ -145,15 +145,15 @@ class Handle:
         ChanCMD.CMDS[cmd](channel, user, user_args)
 
     def bot_invite(self, user_line, channel_name):
+        user_line = chop_userline(user_line)
+        user_nick = user_line["nick"]
+        user_login = user_line["login"]
+
         self.logger.info("%s has invited us to %s", user, channel_name)
 
         if not self.server.admin:
             self.logger.warning("no admin user for %s, not joining", self.server.name)
             return
-
-        user_line = chop_userline(user_line)
-        user_nick = user_line["nick"]
-        user_login = user_line["login"]
 
         if (
             user_nick != self.server.admin.user
