@@ -57,4 +57,5 @@ class ChannelUser:
         self.chats = []
 
         # doots
-        self.doot_tstamp = None
+        self.used_doot_tstamp = None
+        self.got_dooted_tstamp = None
