@@ -90,3 +90,7 @@ class SocketOps:
     def send_join(self, channel):
         self.logger.info("joining %s", channel)
         self.send_raw(f"JOIN {channel}")
+
+    def send_part(self, channel, reason):
+        self.logger.info("sending PART to %s, reason: %s", channel, reason)
+        self.send_raw(f"PART {channel} :{reason}")
