@@ -498,8 +498,40 @@ class Handle:
     def part(self, user_line, channel_name, msg):
         user_line = chop_userline(user_line)
         user_nick = user_line["nick"]
-        user_login = user_line["login"]
 
+        # bot part
+        if user_nick == self.server.botname:
+            # get corresponding channel object
+            for channel_obj in self.channel_obj:
+                if channel_obj.name == channel_name:
+                    channel = channel_obj
+                    break
+
+            # check whether we recognize channel
+            try:
+                if channel:
+                    pass
+            except NameError:
+                errmsg = "bot PART'ed but corresponding channel object was not "
+                errmsg += "found.\nbot state is questionable."
+                self.logger.warning(errmsg)
+                return
+
+            if channel_name not in self.channels:
+                errmsg = "bot PART'ed but the channel it left does not exist "
+                errmsg += "channels list.\n bot state is questionable."
+                self.logger.warning(errmsg)
+                return
+
+            # nuke
+            self.channels.remove(channel.name)
+            self.channel_obj.remove(channel)
+            self.logger.info("left and nuked %s in %s", channel_name, self.server.name)
+
+            return
+
+        # user part
+        user_login = user_line["login"]
         reason = " ".join(msg).lstrip(":")
 
         # get channel object
