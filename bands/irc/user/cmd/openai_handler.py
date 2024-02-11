@@ -66,8 +66,6 @@ class OpenAIHandler:
 
     def _run(self):
         if self.user != self.user.server.admin:
-            errmsg = f"{c.ERR} not authorized."
-            self.user.send_query(errmsg)
             return
 
         if len(self.user_args) == 0:
