@@ -153,21 +153,21 @@ class Handle:
             "%s (%s) has invited us to %s", user_nick, user_login, channel_name
         )
 
-        if not self.server.admin:
-            self.logger.warning("no admin user for %s, not joining", self.server.name)
-            return
-
-        if (
-            user_nick != self.server.admin.user
-            and user_login != self.server.admin.login
-        ):
-            self.logger.warning(
-                "%s is not the admin for %s, not joining", user_nick, self.server.name
-            )
-            return
-
-        self.logger.warning("%s is the admin user, joining", user_nick)
-        self.sock_ops.send_join(channel_name)
+        #        if not self.server.admin:
+        #            self.logger.warning("no admin user for %s, not joining", self.server.name)
+        #            return
+        #
+        #        if (
+        #            user_nick != self.server.admin.user
+        #            and user_login != self.server.admin.login
+        #        ):
+        #            self.logger.warning(
+        #                "%s is not the admin for %s, not joining", user_nick, self.server.name
+        #            )
+        #            return
+        #
+        #        self.logger.warning("%s is the admin user, joining", user_nick)
+        #        self.sock_ops.send_join(channel_name)
 
     def bot_ban(self, channel_name):
         if channel_name in self.channels:
