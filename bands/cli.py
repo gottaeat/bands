@@ -130,6 +130,7 @@ class CLI:
             s.name = server.name
             s.botname = server.botname
             s.channels = server.channels
+            s.allow_admin = server.allow_admin
             s.secret = server.secret
             s.passwd = server.passwd
             s.scroll_speed = server.scroll_speed
@@ -145,7 +146,7 @@ class CLI:
 
             # u go girl
             msg = f"{ac.BWHI}{server.name}{ac.RES}\n"
-            msg += f"{ac.BWHI}├ {ac.BRED}conn{ac.RES}\n"
+            msg += f"{ac.BWHI}├ {ac.BRED}socket{ac.RES}\n"
             msg += (
                 f"{ac.BWHI}│ ├ {ac.BGRN}address      {ac.RES}{server.address}{ac.RES}\n"
             )
@@ -157,6 +158,7 @@ class CLI:
                 f"{ac.BWHI}  ├ {ac.BGRN}botname      {ac.RES}{server.botname}{ac.RES}\n"
             )
             msg += f"{ac.BWHI}  ├ {ac.BGRN}channels     {ac.RES}{server.channels}{ac.RES}\n"
+            msg += f"{ac.BWHI}  ├ {ac.BGRN}allow_admin  {ac.RES}{server.allow_admin}{ac.RES}\n"
             msg += (
                 f"{ac.BWHI}  ├ {ac.BGRN}secret       {ac.RES}{server.secret}{ac.RES}\n"
             )
