@@ -13,6 +13,16 @@ class Auth:
         self._run()
 
     def _run(self):
+        if not self.user.server.allow_admin:
+            self.user.server.logger.warning(
+                "%s (%s) tried to auth when authentication is disabled",
+                self.user.nick,
+                self.user.login,
+            )
+
+            self.user.send_query(f"{c.ERR} authentication is disabled.")
+            return
+
         # auth is disabled server-wide
         if self.user.server.bad_pw_attempts >= 12:
             self.user.server.logger.warning(
@@ -21,8 +31,7 @@ class Auth:
                 self.user.login,
             )
 
-            errmsg = f"{c.ERR} authentication is disabled."
-            self.user.send_query(errmsg)
+            self.user.send_query(f"{c.ERR} authentication is disabled.")
             return
 
         # auth is disabled for user
@@ -33,8 +42,7 @@ class Auth:
                 self.user.login,
             )
 
-            errmsg = f"{c.ERR} authentication is disabled."
-            self.user.send_query(errmsg)
+            self.user.send_query(f"{c.ERR} authentication is disabled.")
             return
 
         # user provided no password
