@@ -101,9 +101,15 @@ class RCon:
             self.user.send_query(f"{c.ERR} must supply a server as the first arg.")
             return
 
+        # we handle only for #channels
         if len(channel_names) == 0:
             self.user.send_query(f"{c.ERR} must supply at least one channel.")
             return
+
+        for channel_name in channel_names:
+            if channel_name[0] != "#":
+                self.user.send_query(f"{c.ERR} channels must start with a #.")
+                return
 
         # get server object
         server_obj, sv_chans = self._get_objects(server_name)
