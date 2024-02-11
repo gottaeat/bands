@@ -12,6 +12,7 @@ class ServerConfig:
         self.port = None
         self.botname = None
         self.channels = []
+        self.allow_admin = None
         self.secret = None
 
         self.passwd = None
@@ -207,7 +208,7 @@ class ConfigYAML:
         except KeyError:
             self.logger.exception("server section in the YAML file is missing")
 
-        server_must_have = ["name", "address", "port", "botname", "channels", "secret"]
+        server_must_have = ["name", "address", "port", "botname", "channels"]
 
         for server in servers:
             for item in server_must_have:
@@ -249,8 +250,33 @@ class ConfigYAML:
                 except ValueError:
                     self.logger.exception("invalid channel name: %s", channel)
 
+            # server.allow_admin
+            try:
+                if type(server["allow_admin"]).__name__ != "bool":
+                    self.logger.error("allow_admin should be a bool")
+            except KeyError:
+                pass
+
+            try:
+                svconf.allow_admin = server["allow_admin"]
+            except KeyError:
+                svconf.allow_admin = False
+
             # server.secret
-            svconf.secret = str(server["secret"])
+            try:
+                svconf.secret = str(server["secret"])
+            except KeyError:
+                pass
+
+            if svconf.secret == "None":
+                self.logger.error("server secret cannot be specified then left blank")
+
+            # wanted auth bot no secret provided
+            if svconf.allow_admin and not svconf.secret:
+                self.logger.error("allow_admin enabled but no secret provided")
+
+            if svconf.secret and not svconf.allow_admin:
+                self.logger.error("secret provided without enabling allow_admin")
 
             # server.passwd
             try:
