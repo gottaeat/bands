@@ -23,6 +23,7 @@ class Server:
         self.botname = None
         self.channels = None
         self.passwd = None
+        self.allow_admin = None
         self.secret = None
         self.scroll_speed = None
 
