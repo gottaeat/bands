@@ -18,13 +18,6 @@ class Quote:
 
         self._run()
 
-    @staticmethod
-    def _get_tstamp(epoch):
-        tstamp_obj = datetime.datetime.fromtimestamp(int(epoch)).astimezone()
-        tzone = tstamp_obj.tzinfo.tzname(tstamp_obj)
-
-        return f"{tstamp_obj.strftime('%Y/%m/%d %T')} {tzone}"
-
     def _cmd_help(self):
         msg = f"{c.LRED}usage{c.RES}\n"
         msg += f"{c.WHITE}├ {c.LGREEN}add{c.RES}    [nick] [quoted message]\n"
@@ -184,9 +177,9 @@ class Quote:
         # user does exist
         random.shuffle(users_quotes)
         quote = users_quotes.pop(random.randrange(len(users_quotes)))
-        tstamp = self._get_tstamp(quote["timestamp"])
+        tstamp = datetime.datetime.utcfromtimestamp(int(quote["timestamp"]))
 
-        msg = f"{quote['nick']} @ {tstamp}: \"{quote['msg']}\""
+        msg = f"{quote['nick']} @ {tstamp} UTC: \"{quote['msg']}\""
         self.channel.send_query(f"{c.INFO} {msg}")
 
     def _cmd_random(self):
@@ -219,7 +212,7 @@ class Quote:
 
         random.shuffle(channel_quotes)
         quote = channel_quotes.pop(random.randrange(len(channel_quotes)))
-        tstamp = self._get_tstamp(quote["timestamp"])
+        tstamp = datetime.datetime.utcfromtimestamp(int(quote["timestamp"]))
 
-        msg = f"{quote['nick']} @ {tstamp}: \"{quote['msg']}\""
+        msg = f"{quote['nick']} @ {tstamp} UTC: \"{quote['msg']}\""
         self.channel.send_query(f"{c.INFO} {msg}")
