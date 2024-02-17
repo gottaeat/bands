@@ -89,7 +89,12 @@ class Handle:
         if len(user.chats) >= 10:
             user.chats = user.chats[1:]
 
-        user.chats.append(re.sub("^:", "", " ".join(msg)))
+        user.chats.append(
+            {
+                "tstamp": int(time.strftime("%s")),
+                "chat": re.sub("^:", "", " ".join(msg)),
+            }
+        )
 
         # cmd handling
         if msg[0] not in ChanCMD.CMDS:
