@@ -1,6 +1,5 @@
 import datetime
 import random
-import time
 
 from bands.colors import MIRCColors
 
@@ -86,15 +85,23 @@ class Quote:
             return
 
         # check if said
-        if quoted_msg not in user.chats:
+        for user_chat in user.chats:
+            if user_chat["chat"] == quoted_msg:
+                chat_line = user_chat
+                break
+
+        try:
+            if chat_line:
+                pass
+        except UnboundLocalError:
             self.channel.send_query(f"{c.ERR} {user.nick} never said that.")
             return
 
         # gen quote
         quote = {
-            "timestamp": time.strftime("%s"),
+            "timestamp": chat_line["tstamp"],
             "nick": user.nick,
-            "msg": quoted_msg,
+            "msg": chat_line["chat"],
         }
 
         # update jayson
