@@ -166,6 +166,7 @@ class BlackJack:
             hand_str = f"{hand_str.rstrip(' ')} ({self.game.dealer_val})"
 
         return hand_str
+
     # -- card handling end -- #
 
     # -- game handling -- #
@@ -270,6 +271,7 @@ class BlackJack:
 
         # player costs more
         self._handle_player_win()
+
     # -- game handling end -- #
 
     # -- gameend states -- #
@@ -285,6 +287,7 @@ class BlackJack:
     def _handle_player_loss(self):
         self.channel.send_query(f"{c.INFO} {self.user.nick} loses.")
         self.user.bjack = None
+
     # -- gameend states end -- #
 
     # -- cmd handling -- #
@@ -312,8 +315,7 @@ class BlackJack:
         self._cmd_help()
 
     def _cmd_help(self):
-        msg = f"{c.LRED}usage{c.RES}\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}bet  {c.RES}[amount]\n"
+        msg = f"{c.WHITE}├ {c.LGREEN}bet  {c.RES} [amount]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}hit  {c.RES}\n"
         msg += f"{c.WHITE}├ {c.LGREEN}stay {c.RES}\n"
         msg += f"{c.WHITE}└ {c.LGREEN}state{c.RES}"
@@ -393,4 +395,5 @@ class BlackJack:
         msg = f"{self._player_hand_op()}, bet: {c.WHITE}{self.game.bet}{c.RES}\n"
         msg += self._dealer_hand_op(initial=True)
         self.channel.send_query(msg)
+
     # -- cmd handling end -- #

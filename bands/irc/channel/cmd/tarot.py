@@ -174,9 +174,7 @@ class Tarot:
 
     # pylint: disable=line-too-long
     def _cmd_help(self):
-        msg = f"{c.LRED}usage{c.RES}\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}help{c.RES}    print this prompt\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}read{c.RES}\n"
+        msg = f"{c.WHITE}├ {c.LGREEN}read{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.YELLOW}q{c.RES}     take in a question, generate a deck, and feed them\n"
         msg += f"{c.WHITE}│ │{c.RES}       both to the openai api for a reading\n"
         msg += f"{c.WHITE}│ ├ {c.YELLOW}last{c.RES}  provide a reading for the last stored tarot deck\n"
@@ -239,7 +237,7 @@ class Tarot:
 
     # pylint: disable=too-many-return-statements,too-many-branches
     def _run(self):
-        if len(self.user_args) == 0 or self.user_args[0] == "help":
+        if len(self.user_args) == 0:
             self._cmd_help()
             return
 

@@ -14,12 +14,10 @@ class Help:
         self._run()
 
     def _run(self):
-        msg = f"{c.WHITE}├ {c.LRED}usage\n"
-        msg += f"{c.WHITE}│ ├ {c.LGREEN}?advice{c.RES} {{nick}}\n"
+        msg = f"{c.WHITE}│ ├ {c.LGREEN}?advice{c.RES} {{nick}}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?bands{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?bj{c.RES}     ?bj help\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?doot{c.RES}   ?doot help\n"
-        msg += f"{c.WHITE}│ ├ {c.LGREEN}?help{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?piss{c.RES}   [nick]\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?quake{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?quote{c.RES}  ?quote help\n"

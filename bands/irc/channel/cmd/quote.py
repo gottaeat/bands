@@ -19,16 +19,14 @@ class Quote:
         self._run()
 
     def _cmd_help(self):
-        msg = f"{c.LRED}usage{c.RES}\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}add{c.RES}    [nick] [quoted message]\n"
+        msg = f"{c.WHITE}├ {c.LGREEN}add{c.RES}    [nick] [quoted message]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}get{c.RES}    [nick]\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}random{c.RES}\n"
-        msg += f"{c.WHITE}└ {c.LGREEN}help{c.RES}"
+        msg += f"{c.WHITE}└ {c.LGREEN}random{c.RES}"
 
         self.channel.send_query(msg)
 
     def _run(self):
-        if len(self.user_args) == 0 or self.user_args[0] == "help":
+        if len(self.user_args) == 0:
             self._cmd_help()
             return
 
