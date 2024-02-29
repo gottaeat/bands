@@ -17,6 +17,7 @@ class Help:
         msg = f"{c.WHITE}├ {c.LRED}usage\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?advice{c.RES} {{nick}}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?bands{c.RES}\n"
+        msg += f"{c.WHITE}│ ├ {c.LGREEN}?bj{c.RES}     ?bj help\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?doot{c.RES}   ?doot help\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?help{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?piss{c.RES}   [nick]\n"
