@@ -32,11 +32,11 @@ class Doot:
             return
 
         if self.user_args[0] == "up":
-            self._alter_doot("up")
+            self._cmd_doot("up")
             return
 
         if self.user_args[0] == "down":
-            self._alter_doot("down")
+            self._cmd_doot("down")
             return
 
         if self.user_args[0] == "get":
@@ -49,8 +49,7 @@ class Doot:
 
         self._cmd_help()
 
-    # pylint: disable=too-many-branches
-    def _alter_doot(self, action):
+    def _cmd_doot(self, action):
         # a user can invoke doot every 10 seconds
         if self.user.used_doot_tstamp:
             if int(time.strftime("%s")) - self.user.used_doot_tstamp <= 10:
@@ -83,55 +82,9 @@ class Doot:
             if int(time.strftime("%s")) - user.got_dooted_tstamp <= 30:
                 return
 
-        # update jayson
-        with self.doot.mutex:
-            doots = self.doot.read_doots()
-
-            # entry for server does not exist
-            if self.channel.server.name not in doots["doots"][0].keys():
-                doots["doots"][0][self.channel.server.name] = []
-
-                self.channel.server.logger.info(
-                    "created doot entry for: %s", self.channel.server.name
-                )
-
-            # find user entry
-            user_exists = (False, None)
-            for index, doot_user_entry in enumerate(
-                doots["doots"][0][self.channel.server.name]
-            ):
-                if doot_user_entry["nick"].lower() == user.nick.lower():
-                    user_exists = (True, index)
-                    break
-
-            # user does not exist, initialize it
-            if not user_exists[0]:
-                if action == "up":
-                    dooted_user_dict = {"nick": user.nick, "doots": 1}
-                if action == "down":
-                    dooted_user_dict = {"nick": user.nick, "doots": -1}
-
-                doots["doots"][0][self.channel.server.name].append(dooted_user_dict)
-            # user exists
-            else:
-                if action == "up":
-                    doots["doots"][0][self.channel.server.name][user_exists[1]][
-                        "doots"
-                    ] += 1
-                if action == "down":
-                    doots["doots"][0][self.channel.server.name][user_exists[1]][
-                        "doots"
-                    ] -= 1
-
-            self.doot.write_doots(doots)
-
-        # prompt
-        if user_exists[0]:
-            user_doots = doots["doots"][0][self.channel.server.name][user_exists[1]][
-                "doots"
-            ]
-        else:
-            user_doots = dooted_user_dict["doots"]
+        # alter doots
+        doot_amount = 1 if action == "up" else -1
+        user_doots = self.doot.alter_doot(self.channel.server, user, doot_amount)
 
         # update timestamps on succ doot
         self.user.used_doot_tstamp = int(time.strftime("%s"))
