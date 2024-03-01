@@ -82,6 +82,8 @@ class BlackJack:
         self.user = user
         self.user_args = user_args
 
+        self.doot = self.channel.server.doot
+
         self.game = None
 
         self._run()
@@ -220,17 +222,17 @@ class BlackJack:
             if dealer_bust:
                 msg = f"{c.INFO} both the dealer and {self.user.nick} busted!"
                 self.channel.send_query(msg)
-                self._handle_draw()
+                self._handle_payout("draw")
                 return
 
             # player bust
-            self._handle_player_loss()
+            self._handle_payout("loss")
             return
 
         # dealer bust
         if dealer_bust:
             self.channel.send_query(f"{c.INFO} dealer busted!")
-            self._handle_player_win()
+            self._handle_payout("win")
             return
 
         # no busts, handle bjack status
@@ -242,53 +244,54 @@ class BlackJack:
             if dealer_bjack:
                 msg = f"{c.INFO} the dealer and {self.user.nick} both hit blackjack!"
                 self.channel.send_query(msg)
-                self._handle_draw()
+                self._handle_payout("draw")
                 return
 
             # player bjack
             self.channel.send_query(f"{c.INFO} {self.user.nick} hit blackjack!")
-            self._handle_player_win()
+            self._handle_payout("win")
             return
 
         # dealer bjack
         if dealer_bjack:
             self.channel.send_query(f"{c.INFO} dealer hit blackjack!")
-            self._handle_player_loss()
+            self._handle_payout("loss")
             return
 
         # no blackjack, no bust
         # dealer costs more
         if self.game.dealer_val > self.game.player_val:
-            self._handle_player_loss()
+            self._handle_payout("loss")
             return
 
         # dealer == player
         if self.game.dealer_val == self.game.player_val:
             msg = f"{c.INFO} the dealer and {self.user.nick}'s hands cost the same!"
             self.channel.send_query(msg)
-            self._handle_draw()
+            self._handle_payout("draw")
             return
 
         # player costs more
-        self._handle_player_win()
+        self._handle_payout("win")
+
+    def _handle_payout(self, action):
+        if action == "draw":
+            doot_amount = self.game.bet
+            msg = f"{c.INFO} it's a draw, returning your doots."
+        elif action == "win":
+            doot_amount = 2 * self.game.bet
+            msg = f"{c.INFO} {self.user.nick} wins."
+        elif action == "loss":
+            doot_amount = 0
+            msg = f"{c.INFO} {self.user.nick} loses."
+
+        user_doots = self.doot.alter_doot(self.channel.server, self.user, doot_amount)
+        msg += f" (balance: {user_doots})"
+
+        self.channel.send_query(msg)
+        self.user.bjack = None
 
     # -- game handling end -- #
-
-    # -- gameend states -- #
-    # TODO: alter doots depending on result
-    def _handle_draw(self):
-        self.channel.send_query(f"{c.INFO} it's a draw.")
-        self.user.bjack = None
-
-    def _handle_player_win(self):
-        self.channel.send_query(f"{c.INFO} {self.user.nick} wins.")
-        self.user.bjack = None
-
-    def _handle_player_loss(self):
-        self.channel.send_query(f"{c.INFO} {self.user.nick} loses.")
-        self.user.bjack = None
-
-    # -- gameend states end -- #
 
     # -- cmd handling -- #
     def _run(self):
@@ -340,8 +343,8 @@ class BlackJack:
             return
 
         # bet out of range
-        if bet_amount < 1 or bet_amount > 1000:
-            err_msg = f"{c.ERR} bet amount should be between 1 - 1000."
+        if bet_amount < 1 or bet_amount > 100:
+            err_msg = f"{c.ERR} bet amount should be between 1 - 100."
             self.channel.send_query(err_msg)
             return
 
@@ -349,6 +352,11 @@ class BlackJack:
         self.user.bjack = Game()
         self.game = self.user.bjack
         self.game.bet = bet_amount
+
+        # deduct bet
+        _ = self.doot.alter_doot(self.channel.server, self.user, -self.game.bet)
+        msg = f"{c.INFO} {self.game.bet} doots have been deducted from your account!"
+        self.channel.send_query(msg)
 
         # gen shoe, cut and deal
         self.game.shoe = Shoe()
