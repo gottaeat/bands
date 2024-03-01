@@ -184,7 +184,6 @@ class BlackJack:
 
         # check if blackjack, reveal dealer
         if self.game.player_val == 21:
-            self.channel.send_query(f"{c.INFO} {self.user.nick} hit blackjack!")
             self._reveal_dealer()
         else:
             msg = f"{c.INFO} hit or stay? ({c.LGREEN}?bj hit {c.RES}| "
