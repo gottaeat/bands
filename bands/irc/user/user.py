@@ -24,14 +24,16 @@ class User:
                 if line != "":
                     if len(line.encode("utf-8")) > self.char_limit:
                         for item in wrap_bytes(line, self.char_limit):
-                            self.sock_ops.send_raw(f"PRIVMSG {self.nick} :{item}")
-                            time.sleep(self.server.scroll_speed)
+                            self.sock_ops.send_privmsg(item, self.nick)
+                            time.sleep(self.server.scroll_speed / 1000)
                     else:
-                        self.sock_ops.send_raw(f"PRIVMSG {self.nick} :{line}")
+                        self.sock_ops.send_privmsg(line, self.nick)
+                        time.sleep(self.server.scroll_speed / 1000)
         else:
             if len(msg.encode("utf-8")) > self.char_limit:
                 for item in wrap_bytes(msg, self.char_limit):
-                    self.sock_ops.send_raw(f"PRIVMSG {self.nick} :{item}")
-                    time.sleep(self.server.scroll_speed)
+                    self.sock_ops.send_privmsg(item, self.nick)
+                    time.sleep(self.server.scroll_speed / 1000)
             else:
-                self.sock_ops.send_raw(f"PRIVMSG {self.nick} :{msg}")
+                self.sock_ops.send_privmsg(msg, self.nick)
+                time.sleep(self.server.scroll_speed / 1000)
