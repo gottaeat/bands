@@ -71,12 +71,9 @@ class SocketOps:
     def send_privmsg(self, msg, target):
         with self.mutex:
             time_past = int(round(time.time() * 1000)) - self.privmsg_tstamp
-            print(f"time past: {time_past}")
 
             if time_past < self.server.scroll_speed:
-                sleep_for = (self.server.scroll_speed - time_past) / 1000
-                print(f"sleeping for {sleep_for}")
-                time.sleep(sleep_for)
+                time.sleep((self.server.scroll_speed - time_past) / 1000)
 
             self.send_raw(f"PRIVMSG {target} :{msg}")
             self.privmsg_tstamp = int(round(time.time() * 1000))
