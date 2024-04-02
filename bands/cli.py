@@ -133,7 +133,7 @@ class CLI:
             s.allow_admin = server.allow_admin
             s.secret = server.secret
             s.passwd = server.passwd
-            s.scroll_speed = server.scroll_speed
+            s.scroll_speed = server.scroll_speed * 1000
 
             # cli
             s.ai = ai

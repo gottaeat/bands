@@ -1,4 +1,7 @@
+import time
 import re
+
+from threading import Lock
 
 from bands.irc.util import strip_color
 from bands.colors import ANSIColors
@@ -11,6 +14,9 @@ class SocketOps:
         self.server = server
         self.logger = server.logger
         self.socket = server.socket
+
+        self.mutex = Lock()
+        self.privmsg_tstamp = int(round(time.time() * 1000))
 
     # -- receiving -- #
     # pylint: disable=inconsistent-return-statements
@@ -61,6 +67,19 @@ class SocketOps:
         except:
             if not self.socket.halt:
                 self.logger.exception("send failed")
+
+    def send_privmsg(self, msg, target):
+        with self.mutex:
+            time_past = int(round(time.time() * 1000)) - self.privmsg_tstamp
+            print(f"time past: {time_past}")
+
+            if time_past < self.server.scroll_speed:
+                sleep_for = (self.server.scroll_speed - time_past) / 1000
+                print(f"sleeping for {sleep_for}")
+                time.sleep(sleep_for)
+
+            self.send_raw(f"PRIVMSG {target} :{msg}")
+            self.privmsg_tstamp = int(round(time.time() * 1000))
 
     def send_ping(self):
         self.send_raw(f"PING {self.socket.address}")

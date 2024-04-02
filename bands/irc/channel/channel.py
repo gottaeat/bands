@@ -27,17 +27,19 @@ class Channel:
                 if line != "":
                     if len(line.encode("utf-8")) > self.char_limit:
                         for item in wrap_bytes(line, self.char_limit):
-                            self.sock_ops.send_raw(f"PRIVMSG {self.name} :{item}")
-                            time.sleep(self.server.scroll_speed)
+                            self.sock_ops.send_privmsg(item, self.name)
+                            time.sleep(self.server.scroll_speed / 1000)
                     else:
-                        self.sock_ops.send_raw(f"PRIVMSG {self.name} :{line}")
+                        self.sock_ops.send_privmsg(line, self.name)
+                        time.sleep(self.server.scroll_speed / 1000)
         else:
             if len(msg.encode("utf-8")) > self.char_limit:
                 for item in wrap_bytes(msg, self.char_limit):
-                    self.sock_ops.send_raw(f"PRIVMSG {self.name} :{item}")
-                    time.sleep(self.server.scroll_speed)
+                    self.sock_ops.send_privmsg(item, self.name)
+                    time.sleep(self.server.scroll_speed / 1000)
             else:
-                self.sock_ops.send_raw(f"PRIVMSG {self.name} :{msg}")
+                self.sock_ops.send_privmsg(msg, self.name)
+                time.sleep(self.server.scroll_speed / 1000)
 
 
 class ChannelUser:
