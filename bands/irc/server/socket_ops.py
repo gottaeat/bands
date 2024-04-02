@@ -37,9 +37,9 @@ class SocketOps:
                 data_split[index] = f"{strip_color(item.decode(encoding='UTF-8'))}\r\n"
             except UnicodeDecodeError:
                 try:
-                    data_split[
-                        index
-                    ] = f"{strip_color(item.decode(encoding='UTF-8'))}\r\n"
+                    data_split[index] = (
+                        f"{strip_color(item.decode(encoding='UTF-8'))}\r\n"
+                    )
                 # pylint: disable=bare-except
                 except:
                     data_split[index] = None

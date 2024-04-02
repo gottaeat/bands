@@ -64,9 +64,9 @@ def drawbox(string, charset):
             width = unilen(string[i])
 
     for i, _ in enumerate(string):
-        string[
-            i
-        ] = f"{string[i]}{(width - unilen(string[i])) * ' '}{c.PINK}{chars['v']}{c.RES}"
+        string[i] = (
+            f"{string[i]}{(width - unilen(string[i])) * ' '}{c.PINK}{chars['v']}{c.RES}"
+        )
 
     string.insert(
         0, f"{c.PINK}{chars['1']}{chars['h'] * (width - 1)}{chars['2']}{c.RES}"
