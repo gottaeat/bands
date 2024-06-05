@@ -1,14 +1,12 @@
 import json
-import logging
 
 from threading import Lock
 
-from .log import BandsFormatter
-from .log import ShutdownHandler
+from .log import set_logger
 
 
 class Doot:
-    def __init__(self, debug=None):
+    def __init__(self, debug=False):
         self.logger = None
         self.debug = debug
 
@@ -19,17 +17,7 @@ class Doot:
         self._first_run()
 
     def _first_run(self):
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG if self.debug else logging.INFO)
-
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG if self.debug else logging.INFO)
-
-        handler.setFormatter(BandsFormatter())
-
-        self.logger.addHandler(handler)
-        self.logger.addHandler(ShutdownHandler())
-
+        self.logger = set_logger(__name__, self.debug)
         self.logger.info("initialized")
 
     def read_doots(self):
