@@ -1,21 +1,11 @@
 import argparse
-import logging
 import signal
 
 from threading import Thread
 
-from .ai import AI
-from .quote import Quote
-from .doot import Doot
-from .config import ConfigYAML
-
-from .irc.server import Server
-from .irc.socket import Socket
-
-from .log import BandsFormatter
-from .log import ShutdownHandler
-
 from .colors import ANSIColors
+from .config import ConfigYAML
+from .log import set_logger
 
 ac = ANSIColors()
 
@@ -25,10 +15,8 @@ class CLI:
     def __init__(self):
         self.debug = None
         self.config_file = None
-
+        self.config = None
         self.logger = None
-
-        self.servers = []
 
     def _gen_args(self):
         parser_desc = "bands the IRC bot."
@@ -50,132 +38,55 @@ class CLI:
         if signame in ("SIGINT", "SIGTERM"):
             self.logger.info("caught %s exiting", signame)
 
-            for server in self.servers:
+            for server in self.config.servers:
                 server.stop()
 
-    def run(self):
-        # gen logger for CMD() and ConfigYAML()
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG if self.debug else logging.INFO)
-
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG if self.debug else logging.INFO)
-
-        handler.setFormatter(BandsFormatter())
-
-        self.logger.addHandler(handler)
-        self.logger.addHandler(ShutdownHandler())
-
-        self.logger.info("started bands")
-
+    def _set_signal_handling(self):
         # signal handling to terminate threads peacefully
         # we don't exit here, the exit is done within Server(), otherwise the
         # recv loops throw I/O errors.
+        self.logger.info("set signal handling")
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
-        # init argparse
+    def _gen_prompt(self, server):
+        # fmt: off
+        msg = f"{ac.BWHI}{server.name}{ac.RES}\n"
+        msg += f"{ac.BWHI}├ {ac.BRED}socket{ac.RES}\n"
+        msg += f"{ac.BWHI}│ ├ {ac.BGRN}address      {ac.RES}{server.socket.address}{ac.RES}\n"
+        msg += f"{ac.BWHI}│ ├ {ac.BGRN}port         {ac.RES}{server.socket.port}{ac.RES}\n"
+        msg += f"{ac.BWHI}│ ├ {ac.BGRN}tls          {ac.RES}{server.socket.tls}{ac.RES}\n"
+        msg += f"{ac.BWHI}│ └ {ac.BGRN}verify_tls   {ac.RES}{server.socket.verify_tls}{ac.RES}\n"
+        msg += f"{ac.BWHI}└ {ac.BRED}server{ac.RES}\n"
+        msg += f"{ac.BWHI}  ├ {ac.BGRN}botname      {ac.RES}{server.botname}{ac.RES}\n"
+        msg += f"{ac.BWHI}  ├ {ac.BGRN}channels     {ac.RES}{server.channels}{ac.RES}\n"
+        msg += f"{ac.BWHI}  ├ {ac.BGRN}allow_admin  {ac.RES}{server.allow_admin}{ac.RES}\n"
+        msg += f"{ac.BWHI}  ├ {ac.BGRN}secret       {ac.RES}{server.secret}{ac.RES}\n"
+        msg += f"{ac.BWHI}  ├ {ac.BGRN}passwd       {ac.RES}{server.passwd}{ac.RES}\n"
+        msg += f"{ac.BWHI}  └ {ac.BGRN}scroll_speed {ac.RES}{server.scroll_speed}{ac.RES}"
+        # fmt: on
+
+        for line in msg.split("\n"):
+            server.logger.info(line)
+
+    def run(self):
+        self.logger = set_logger(__name__, self.debug)
+        self.logger.info("started bands")
+
+        self._set_signal_handling()
         self._gen_args()
 
-        # parse yaml and gen ServerConfig()'s
-        config = ConfigYAML(self.config_file)
-        config.logger = self.logger
-        config.parse_yaml()
-
-        # init ai
-        ai = AI(self.debug)
-
-        if config.openai:
-            ai.keys = config.openai.keys
-
-        # init quotes
-        quote = Quote(self.debug)
-        quote.file = config.quote.file
-
-        # init doots
-        doot = Doot(self.debug)
-        doot.file = config.doot.file
+        # parse yaml
+        self.config = ConfigYAML(self.config_file, self.debug)
+        self.config.parse_yaml()
 
         # start servers
-        self.logger.info("generating Server() instances")
-
-        threads = []
-
-        for server in config.servers:
-            logger = logging.getLogger(server.name)
-
-            logger.setLevel(logging.DEBUG if self.debug else logging.INFO)
-
-            handler = logging.StreamHandler()
-            handler.setLevel(logging.DEBUG if self.debug else logging.INFO)
-
-            handler.setFormatter(BandsFormatter())
-
-            logger.addHandler(handler)
-            logger.addHandler(ShutdownHandler())
-
-            # conn
-            socket = Socket()
-            socket.address = server.address
-            socket.port = server.port
-            socket.tls = server.tls
-            socket.verify_tls = server.verify_tls
-
-            socket.logger = logger
-
-            # server
-            s = Server(socket)
-
-            # yaml
-            s.name = server.name
-            s.botname = server.botname
-            s.channels = server.channels
-            s.allow_admin = server.allow_admin
-            s.secret = server.secret
-            s.passwd = server.passwd
-            s.scroll_speed = server.scroll_speed * 1000
-
-            # cli
-            s.ai = ai
-            s.quote = quote
-            s.doot = doot
-            s.cli = self
-            s.logger = logger
-
-            self.servers.append(s)
-
-            # u go girl
-            msg = f"{ac.BWHI}{server.name}{ac.RES}\n"
-            msg += f"{ac.BWHI}├ {ac.BRED}socket{ac.RES}\n"
-            msg += (
-                f"{ac.BWHI}│ ├ {ac.BGRN}address      {ac.RES}{server.address}{ac.RES}\n"
-            )
-            msg += f"{ac.BWHI}│ ├ {ac.BGRN}port         {ac.RES}{server.port}{ac.RES}\n"
-            msg += f"{ac.BWHI}│ ├ {ac.BGRN}tls          {ac.RES}{server.tls}{ac.RES}\n"
-            msg += f"{ac.BWHI}│ └ {ac.BGRN}verify_tls   {ac.RES}{server.verify_tls}{ac.RES}\n"
-            msg += f"{ac.BWHI}└ {ac.BRED}server{ac.RES}\n"
-            msg += (
-                f"{ac.BWHI}  ├ {ac.BGRN}botname      {ac.RES}{server.botname}{ac.RES}\n"
-            )
-            msg += f"{ac.BWHI}  ├ {ac.BGRN}channels     {ac.RES}{server.channels}{ac.RES}\n"
-            msg += f"{ac.BWHI}  ├ {ac.BGRN}allow_admin  {ac.RES}{server.allow_admin}{ac.RES}\n"
-            msg += (
-                f"{ac.BWHI}  ├ {ac.BGRN}secret       {ac.RES}{server.secret}{ac.RES}\n"
-            )
-            msg += (
-                f"{ac.BWHI}  ├ {ac.BGRN}passwd       {ac.RES}{server.passwd}{ac.RES}\n"
-            )
-            msg += f"{ac.BWHI}  └ {ac.BGRN}scroll_speed {ac.RES}{server.scroll_speed}{ac.RES}"
-
-            for line in msg.split("\n"):
-                logger.info(line)
-
-            p = Thread(target=s.run)
-            threads.append(p)
-
         self.logger.info("starting Server() threads")
-        for thread in threads:
-            thread.start()
+        for server in self.config.servers:
+            self._gen_prompt(server)
+
+            server_thread = Thread(target=server.run)
+            server_thread.start()
 
 
 def run():
