@@ -34,3 +34,16 @@ class BandsFormatter(logging.Formatter):
         return logging.Formatter(
             fmt=finfmt, datefmt=self._FMT_DATE, validate=True
         ).format(record)
+
+
+def set_logger(module_name, debug=False):
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG if debug else logging.INFO)
+    handler.setFormatter(BandsFormatter())
+
+    logger = logging.getLogger(module_name)
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
+    logger.addHandler(handler)
+    logger.addHandler(ShutdownHandler())
+
+    return logger
