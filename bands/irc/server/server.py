@@ -21,7 +21,7 @@ class Server:
         # yaml
         self.name = None
         self.botname = None
-        self.channels = None
+        self.channels = []
         self.passwd = None
         self.allow_admin = None
         self.secret = None
@@ -31,7 +31,7 @@ class Server:
         self.ai = None
         self.quote = None
         self.doot = None
-        self.cli = None
+        self.config = None
         self.logger = None
 
         # socket_ops
@@ -84,4 +84,4 @@ class Server:
         self.logger.info("removing %s from servers list", self.name)
         # pylint: disable=no-member
         # ^ this is a pylint bug
-        self.cli.servers.remove(self)
+        self.config.servers.remove(self)
