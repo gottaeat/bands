@@ -1,10 +1,8 @@
 from bands.colors import MIRCColors
 
-# pylint: disable=invalid-name
 c = MIRCColors()
 
 
-# pylint: disable=too-few-public-methods
 class RCon:
     def __init__(self, user, user_args):
         self.user = user
@@ -20,7 +18,6 @@ class RCon:
         msg += f"{c.WHITE}└ {c.LGREEN}status{c.RES}"
         self.user.send_query(msg)
 
-    # pylint: disable=too-many-return-statements
     def _run(self):
         if self.user != self.user.server.admin:
             return
@@ -121,7 +118,6 @@ class RCon:
 
         # check if channel already exists
         for channel_name in channel_names:
-            # pylint: disable=consider-iterating-dictionary
             if channel_name in sv_chans.keys():
                 self.user.send_query(
                     f"{c.ERR} already in {channel_name} in {server_obj.name}."
@@ -156,7 +152,6 @@ class RCon:
 
         # check if channel already exists
         for channel_name in channel_names:
-            # pylint: disable=consider-iterating-dictionary
             if channel_name not in sv_chans.keys():
                 self.user.send_query(
                     f"{c.ERR} not in {channel_name} in {server_obj.name}."
@@ -177,7 +172,6 @@ class RCon:
 
         self.user.sock_ops.send_raw(msg)
 
-    # pylint: disable=too-many-branches
     def _cmd_status(self):
         msg = f"{c.INFO} active connections are:\n"
 

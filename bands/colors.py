@@ -1,4 +1,3 @@
-# pylint: disable=too-few-public-methods
 class MIRCColors:
     RES = "\x0f"
 
@@ -31,7 +30,6 @@ class MIRCColors:
         pass
 
 
-# pylint: disable=too-few-public-methods
 class ANSIColors:
     RES = "\033[0;39m"
 

@@ -6,7 +6,6 @@ from bands.colors import ANSIColors
 ac = ANSIColors()
 
 
-# pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Socket:
     def __init__(self):
         # yaml

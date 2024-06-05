@@ -4,7 +4,6 @@ import unicodedata
 
 from bands.colors import MIRCColors
 
-
 # pylint: disable=anomalous-backslash-in-string
 def strip_color(string):
     ansi_strip = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
@@ -36,7 +35,6 @@ def unilen(string):
 
 
 def drawbox(string, charset):
-    # pylint: disable=invalid-name
     c = MIRCColors()
 
     if charset == "double":
@@ -82,6 +80,7 @@ def drawbox(string, charset):
 
 def wrap_bytes(text, size):
     # pylint: disable=protected-access
+    # not my shit i dont care
     words = textwrap.TextWrapper()._split_chunks(text)
     words.reverse()
     words = [w.encode() for w in words]

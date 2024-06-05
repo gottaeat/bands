@@ -1,11 +1,9 @@
 from bands.irc.util import unilen, drawbox
 from bands.colors import MIRCColors
 
-# pylint: disable=invalid-name
 c = MIRCColors()
 
 
-# pylint: disable=too-few-public-methods
 class Piss:
     def __init__(self, channel, user, user_args):
         self.channel = channel

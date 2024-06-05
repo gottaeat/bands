@@ -3,11 +3,9 @@ import random
 
 from bands.colors import MIRCColors
 
-# pylint: disable=invalid-name
 c = MIRCColors()
 
 
-# pylint: disable=too-few-public-methods
 class Quote:
     def __init__(self, channel, user, user_args):
         self.channel = channel

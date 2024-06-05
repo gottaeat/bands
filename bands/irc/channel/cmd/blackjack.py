@@ -6,7 +6,6 @@ from bands.colors import MIRCColors
 c = MIRCColors()
 
 
-# pylint: disable=too-few-public-methods
 class Card:
     def __init__(self):
         self.face = None
@@ -14,7 +13,6 @@ class Card:
         self.suit = None
 
 
-# pylint: disable=too-few-public-methods
 class Shoe:
     _CARDS = [
         {"face": "A", "val": None},
@@ -61,7 +59,6 @@ class Shoe:
         random.shuffle(self.cards)
 
 
-# pylint: disable=too-few-public-methods
 class Game:
     def __init__(self):
         self.shoe = None
@@ -75,7 +72,6 @@ class Game:
         self.player_val = 0
 
 
-# pylint: disable=too-few-public-methods
 class BlackJack:
     def __init__(self, channel, user, user_args):
         self.channel = channel
@@ -94,7 +90,6 @@ class BlackJack:
         hand.append(pulled_card)
         self._handle_aces(hand)
 
-    # pylint: disable=too-many-branches
     def _handle_aces(self, hand):
         aces = []
         for card in hand:
@@ -210,7 +205,6 @@ class BlackJack:
         # game end
         self._handle_gameend()
 
-    # pylint: disable=too-many-return-statements
     def _handle_gameend(self):
         # bust status
         dealer_bust = self.game.dealer_val > 21

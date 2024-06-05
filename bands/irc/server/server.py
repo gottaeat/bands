@@ -7,7 +7,6 @@ from .socket_ops import SocketOps
 ac = ANSIColors()
 
 
-# pylint: disable=too-many-instance-attributes,too-many-branches
 class Server:
     USER_NICKLIMIT = 30
 
@@ -75,7 +74,6 @@ class Server:
         if self.socket.connected:
             try:
                 self.sock_ops.send_quit("quitting.")
-            # pylint: disable=bare-except
             except:
                 self.logger.warning("sending quit failed")
 

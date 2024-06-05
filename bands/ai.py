@@ -5,7 +5,6 @@ import openai
 from .log import set_logger
 
 
-# pylint: disable=too-few-public-methods
 class AI:
     def __init__(self, debug=False):
         self.openai = openai

@@ -1,10 +1,8 @@
 from bands.colors import MIRCColors
 
-# pylint: disable=invalid-name
 c = MIRCColors()
 
 
-# pylint: disable=too-few-public-methods
 class OpenAIHandler:
     def __init__(self, user, user_args):
         self.user = user

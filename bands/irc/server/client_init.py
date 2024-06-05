@@ -8,9 +8,7 @@ from bands.colors import ANSIColors
 ac = ANSIColors()
 
 
-# pylint: disable=too-many-instance-attributes
 class ClientInit:
-    # pylint: disable=too-few-public-methods
     def __init__(self, server):
         # server
         self.server = server
@@ -46,7 +44,6 @@ class ClientInit:
         self.logger.debug("stopped PONG timer")
 
     # stage 1: send NICK and USER, update address, send PING, hand over to channel handling
-    # pylint: disable=too-many-statements,too-many-branches
     def run(self):
         self.logger.info("%s initing client %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
 
@@ -77,7 +74,6 @@ class ClientInit:
 
             try:
                 recv_data = self.socket.conn.recv(512)
-            # pylint: disable=bare-except
             except:
                 self.logger.exception("recv error during client_init()")
 

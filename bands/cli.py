@@ -10,7 +10,6 @@ from .log import set_logger
 ac = ANSIColors()
 
 
-# pylint: disable=too-few-public-methods,too-many-statements
 class CLI:
     def __init__(self):
         self.debug = None
@@ -90,6 +89,5 @@ class CLI:
 
 
 def run():
-    # pylint: disable=invalid-name
     c = CLI()
     c.run()

@@ -197,7 +197,6 @@ class Handle:
 
         try:
             topic_msg = " ".join(msg).lstrip(":")
-        # pylint: disable=bare-except
         except:
             self.logger.warning("setting the topic for %s failed", channel_name)
             return
@@ -216,7 +215,6 @@ class Handle:
             topic_tstamp = datetime.datetime.fromtimestamp(int(tstamp)).strftime(
                 "%Y/%m/%d %T"
             )
-        # pylint: disable=bare-except
         except:
             self.logger.warning(
                 "setting the topic timestamp for %s failed", channel_name
@@ -245,7 +243,6 @@ class Handle:
 
         try:
             topic_msg = " ".join(msg).lstrip(":")
-        # pylint: disable=bare-except
         except:
             self.logger.warning("updating the topic for %s failed", channel_name)
             return
@@ -265,7 +262,6 @@ class Handle:
             channel.topic_msg,
         )
 
-    # pylint: disable=too-many-arguments
     def who(self, channel_name, user_nick, user_ircname, user_hostname, user_props):
         self.logger.debug("parsing WHO for %s", channel_name)
 

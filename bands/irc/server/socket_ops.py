@@ -19,7 +19,6 @@ class SocketOps:
         self.privmsg_tstamp = int(round(time.time() * 1000))
 
     # -- receiving -- #
-    # pylint: disable=inconsistent-return-statements
     def decode_data(self, data):
         if len(data) == 0:
             if not self.socket.halt:
@@ -46,10 +45,8 @@ class SocketOps:
                     data_split[index] = (
                         f"{strip_color(item.decode(encoding='UTF-8'))}\r\n"
                     )
-                # pylint: disable=bare-except
                 except:
                     data_split[index] = None
-            # pylint: disable=bare-except
             except:
                 data_split[index] = None
 
@@ -63,7 +60,6 @@ class SocketOps:
 
         try:
             self.socket.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
-        # pylint: disable=bare-except
         except:
             if not self.socket.halt:
                 self.logger.exception("send failed")

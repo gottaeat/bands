@@ -3,11 +3,9 @@ import time
 from bands.colors import MIRCColors
 from bands.irc.util import unilen
 
-# pylint: disable=invalid-name
 c = MIRCColors()
 
 
-# pylint: disable=too-few-public-methods
 class Doot:
     def __init__(self, channel, user, user_args):
         self.channel = channel

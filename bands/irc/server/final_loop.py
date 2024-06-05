@@ -11,7 +11,6 @@ from .handle import Handle
 ac = ANSIColors()
 
 
-# pylint: disable=too-many-instance-attributes,too-few-public-methods
 class FinalLoop:
     def __init__(self, server):
         # server
@@ -103,17 +102,14 @@ class FinalLoop:
                 time.sleep(1)
                 time_slept += 1
 
-    # pylint: disable=too-many-branches,too-many-statements
     def run(self):
         self.logger.info("%s entered the loop %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
 
         Thread(target=self._ping_sender, daemon=True).start()
 
-        # pylint: disable=too-many-nested-blocks
         while not self.socket.halt:
             try:
                 recv_data = self.socket.conn.recv(512)
-            # pylint: disable=bare-except
             except:
                 self.logger.exception("recv failed")
 

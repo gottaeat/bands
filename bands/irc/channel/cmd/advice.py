@@ -5,11 +5,9 @@ import random
 from bands.irc.util import unilen
 from bands.colors import MIRCColors
 
-# pylint: disable=invalid-name
 c = MIRCColors()
 
 
-# pylint: disable=too-few-public-methods
 class Advice:
     ADV_FILE = (
         f"{os.path.dirname(os.path.realpath(__file__))}/../../../static/advices.json"

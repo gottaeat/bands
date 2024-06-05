@@ -6,11 +6,9 @@ import re
 from bands.colors import MIRCColors
 from bands.irc.util import unilen
 
-# pylint: disable=invalid-name
 c = MIRCColors()
 
 
-# pylint: disable=too-few-public-methods
 class TarotCard:
     def __init__(self, title, desc1, desc2):
         self.title = title
@@ -24,7 +22,6 @@ class TarotDeck:
         self.question = None
 
 
-# pylint: disable=inconsistent-return-statements
 class Tarot:
     DESC_FILE = (
         f"{os.path.dirname(os.path.realpath(__file__))}/../../../static/tarot_desc.json"
@@ -128,7 +125,6 @@ class Tarot:
                 frequency_penalty=0.0,
                 n=1,
             )
-        # pylint: disable=broad-exception-caught
         except Exception as exc:
             err_log = f"create() failed:\n{exc}"
 
@@ -145,7 +141,6 @@ class Tarot:
             msg = f"{c.INFO} reading for {c.WHITE}{self.user.nick}{c.RES}:\n"
             msg += response.choices[0]["message"]["content"]
             self.channel.send_query(msg)
-        # pylint: disable=broad-exception-caught
         except Exception as exc:
             err_log = f"parsing response failed:\n{exc}"
 
@@ -172,7 +167,6 @@ class Tarot:
         msg += f"{c.WHITE}{self.user.tarot_deck.question}{c.RES}"
         self.channel.send_query(msg)
 
-    # pylint: disable=line-too-long
     def _cmd_help(self):
         msg = f"{c.WHITE}├ {c.LGREEN}read{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.YELLOW}q{c.RES}     take in a question, generate a deck, and feed them\n"
@@ -235,7 +229,6 @@ class Tarot:
         self._pretty_cards()
         self._interpret(self.user.tarot_deck)
 
-    # pylint: disable=too-many-return-statements,too-many-branches
     def _run(self):
         if len(self.user_args) == 0:
             self._cmd_help()

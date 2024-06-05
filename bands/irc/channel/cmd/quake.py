@@ -5,11 +5,9 @@ import re
 
 from bands.colors import MIRCColors
 
-# pylint: disable=invalid-name
 c = MIRCColors()
 
 
-# pylint: disable=too-few-public-methods
 class Quake:
     QUAKE_FILE = (
         f"{os.path.dirname(os.path.realpath(__file__))}/../../../static/quake3.json"

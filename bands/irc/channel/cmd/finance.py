@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,bare-except
 import json
 import re
 import ssl
@@ -14,11 +13,9 @@ from bands.irc.util import drawbox
 from bands.colors import MIRCColors
 
 
-# pylint: disable=invalid-name
 c = MIRCColors()
 
 
-# pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Finance:
     def __init__(self, channel, user, user_args):
         self.channel = channel
@@ -28,7 +25,6 @@ class Finance:
         self.tcmb = None
         self.yahoo = None
         self.forbes = None
-        # pylint: disable=invalid-name
         self.xe = None
         self.binance = None
         self.wgb_cds = None
@@ -209,7 +205,6 @@ class Finance:
         tcmb = Thread(target=self._get_tcmb, daemon=False)
         yahoo = Thread(target=self._get_yahoo, daemon=False)
         forbes = Thread(target=self._get_forbes, daemon=False)
-        # pylint: disable=invalid-name
         xe = Thread(target=self._get_xe, daemon=False)
         binance = Thread(target=self._get_binance, daemon=False)
         wgb = Thread(target=self._get_wgb, daemon=False)

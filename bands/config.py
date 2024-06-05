@@ -11,7 +11,6 @@ from .log import set_logger
 from .quote import Quote
 
 
-# pylint: disable=too-many-instance-attributes,too-few-public-methods
 class ConfigYAML:
     def __init__(self, config_file, debug=False):
         self.config_file = config_file
@@ -43,7 +42,6 @@ class ConfigYAML:
                 self.logger.warning(line)
 
             return
-        # pylint: disable=bare-except
         except:
             self.logger.exception("%s parsing has failed", self.config_file)
 
@@ -58,7 +56,6 @@ class ConfigYAML:
         try:
             with open(openai_key_file, "r", encoding="utf-8") as file:
                 openai_keys = json.loads(file.read())["openai_keys"]
-        # pylint: disable=bare-except
         except:
             self.logger.exception("parsing %s failed", openai_key_file)
 
@@ -83,7 +80,6 @@ class ConfigYAML:
         self.logger.info("processing quote file")
         try:
             quote_file = self.yaml_parsed["quote_file"]
-        # pylint: disable=bare-except
         except:
             self.logger.exception("%s parsing has failed", self.config_file)
 
@@ -101,7 +97,6 @@ class ConfigYAML:
         try:
             with open(quote_file, "r", encoding="utf-8") as file:
                 quotes = json.loads(file.read())
-        # pylint: disable=bare-except
         except:
             self.logger.exception("parsing %s failed", quote_file)
 
@@ -119,7 +114,6 @@ class ConfigYAML:
         self.logger.info("processing doot file")
         try:
             doot_file = self.yaml_parsed["doot_file"]
-        # pylint: disable=bare-except
         except:
             self.logger.exception("%s parsing has failed", self.config_file)
 
@@ -137,7 +131,6 @@ class ConfigYAML:
         try:
             with open(doot_file, "r", encoding="utf-8") as file:
                 doots = json.loads(file.read())
-        # pylint: disable=bare-except
         except:
             self.logger.exception("parsing %s failed", doot_file)
 
@@ -147,7 +140,6 @@ class ConfigYAML:
         # - - set doot file - - #
         self.doot.file = doot_file
 
-    # pylint: disable=too-many-branches,too-many-statements
     def _parse_servers(self):
         self.logger.info("processing servers")
 
@@ -299,7 +291,6 @@ class ConfigYAML:
             try:
                 with open(self.config_file, "r", encoding="utf-8") as yaml_file:
                     self.yaml_parsed = yaml.load(yaml_file.read(), Loader=yaml.Loader)
-            # pylint: disable=bare-except
             except:
                 self.logger.exception("%s parsing has failed", self.config_file)
         else:
