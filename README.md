@@ -26,16 +26,14 @@ pip install .
 git clone --depth=1 https://github.com/gottaeat/bands
 cd bands/
 
-sudo docker build -t bands-pyenv .
-
-sudo docker run --rm \
-    -v ./files:/home/bands/files \
-    -v .:/home/bands/repo \
-    bands-pyenv \
-    bash -c "\
+docker compose run \
+    --rm \
+    --build=true \
+    bands \
+\
+    /bin/bash -c "\
         cd repo/ && pip install . && \
         bands -c ./files/config.yml"
-
 ```
 
 ## usage
