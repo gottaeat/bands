@@ -3,6 +3,7 @@ import re
 import time
 
 import bands.irc.channel.cmd as ChanCMD
+import bands.irc.channel.hook as ChanHOOK
 import bands.irc.user.cmd as UserCMD
 
 from bands.colors import ANSIColors
@@ -70,6 +71,12 @@ class Handle:
     # -- object generators end -- #
 
     # -- channel events begin -- #
+    @staticmethod
+    def _extract_url(msg):
+        urls = re.findall(r"https?://[^\s]+", msg)
+
+        return urls if urls else False
+
     def channel_msg(self, channel_name, user_line, msg):
         user_nick = chop_userline(user_line)["nick"]
 
@@ -85,69 +92,98 @@ class Handle:
                 user = channeluser
                 break
 
+        # get timestamp
+        tstamp = int(time.strftime("%s"))
+
+        # full msg as str
+        full_msg = re.sub("^:", "", " ".join(msg))
+
         # add msg to chats of user
         if len(user.chats) >= 10:
             user.chats = user.chats[1:]
 
         user.chats.append(
             {
-                "tstamp": int(time.strftime("%s")),
-                "chat": re.sub("^:", "", " ".join(msg)),
+                "tstamp": tstamp,
+                "chat": full_msg,
             }
         )
 
-        # cmd handling
-        if msg[0] not in ChanCMD.CMDS:
+        # check if we use CMD or HOOKs
+        has_cmd = msg[0] in ChanCMD.CMDS
+        msg_url = self._extract_url(full_msg)
+
+        # bail if not handled
+        if not has_cmd and not msg_url:
             return
 
-        cmd = msg[0]
-        user_args = msg[1:]
+        # - - ChanCMD - - #
+        if has_cmd:
+            cmd = msg[0]
+            user_args = msg[1:]
 
-        # print cmd invocation
-        self.logger.info(
-            "%s%s%s %s %s",
-            f"{ac.BMGN}[{ac.BWHI}{user.nick} ({user.login})",
-            f"{ac.BRED}¦",
-            f"{ac.BGRN}{channel.name}{ac.BMGN}]",
-            f"{ac.BCYN}{cmd}",
-            f"{' '.join(user_args)}{ac.RES}",
-        )
+            self.logger.info(
+                "%s %s%s%s%s %s %s",
+                f"{ac.BMGN}[{ac.BYEL}CMD",
+                f"{ac.BRED}¦",
+                f"{ac.BWHI}{user.nick} ({user.login})",
+                f"{ac.BRED}¦",
+                f"{ac.BGRN}{channel.name}{ac.BMGN}]",
+                f"{ac.BCYN}{cmd}",
+                f"{' '.join(user_args)}{ac.RES}",
+            )
 
-        # set tstamp
-        tstamp = int(time.strftime("%s"))
+            if channel.cmd_tstamp:
+                # see if a User exists for the ChannelUser
+                for serveruser in self.users:
+                    if serveruser.nick == user.nick and serveruser.login == user.login:
+                        corresp_user = serveruser
 
-        # if this is channel init
-        if not channel.tstamp:
-            channel.tstamp = tstamp
+                # ratelimit if not authed user
+                ratelimit = True
 
-            ChanCMD.CMDS[cmd](channel, user, user_args)
+                try:
+                    if corresp_user == self.server.admin:
+                        ratelimit = False
+                except UnboundLocalError:
+                    pass
 
-            return
+                if ratelimit and tstamp - channel.cmd_tstamp < 2:
+                    self.logger.debug(
+                        "ignoring cmd %s in %s (ratelimited)", cmd, channel.name
+                    )
+                else:
+                    # update tstamp
+                    channel.cmd_tstamp = tstamp
 
-        # see if a User exists for the ChannelUser
-        for serveruser in self.users:
-            if serveruser.nick == user.nick and serveruser.login == user.login:
-                corresp_user = serveruser
+                    # exec
+                    ChanCMD.CMDS[cmd](channel, user, user_args)
+            else:
+                channel.cmd_tstamp = tstamp
+                ChanCMD.CMDS[cmd](channel, user, user_args)
 
-        # ratelimit if not authed user
-        ratelimit = True
+        # - - ChanHOOK - - #
+        if msg_url:
+            for url in msg_url:
+                self.logger.info(
+                    "%s%s%s%s%s %s",
+                    f"{ac.BMGN}[{ac.BYEL}HOOK",
+                    f"{ac.BRED}¦",
+                    f"{ac.BWHI}{user.nick} ({user.login})",
+                    f"{ac.BRED}¦",
+                    f"{ac.BGRN}{channel.name}{ac.BMGN}]",
+                    f"{ac.BCYN}{url}",
+                )
 
-        try:
-            if corresp_user == self.server.admin:
-                ratelimit = False
-        except UnboundLocalError:
-            pass
-
-        if ratelimit and tstamp - channel.tstamp < 2:
-            self.logger.debug("ignoring cmd %s in %s (ratelimited)", cmd, channel.name)
-
-            return
-
-        # update tstamp
-        channel.tstamp = tstamp
-
-        # exec
-        ChanCMD.CMDS[cmd](channel, user, user_args)
+            if channel.hook_tstamp:
+                if tstamp - channel.hook_tstamp < 2:
+                    self.logger.debug("ignoring url in %s (ratelimited)", channel.name)
+                else:
+                    channel.hook_tstamp = tstamp
+                    ChanHOOK.HOOKS["title"](channel, msg_url)
+            else:
+                channel.hook_tstamp = tstamp
+                ChanHOOK.HOOKS["title"](channel, msg_url)
 
     def bot_invite(self, user_line, channel_name):
         user_line = chop_userline(user_line)
