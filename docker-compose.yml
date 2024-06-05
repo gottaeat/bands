@@ -1,0 +1,15 @@
+networks:
+    bands:
+        external: false
+
+services:
+    bands:
+        container_name: bands
+        build:
+            context: .
+        restart: always
+        networks:
+            - bands
+        volumes:
+            - ./files:/home/bands/files
+            - .:/home/bands/repo
