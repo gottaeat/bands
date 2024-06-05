@@ -54,14 +54,9 @@ options:
 
 ## config YAML example
 ```yml
-openai:
-    keys_file: ./files/openai_keys.json
-
-quote:
-    quotes_file: ./files/quotes.json
-
-doot:
-    doots_file: ./files/doots.json
+openai_key_file: ./files/openai_keys.json
+quote_file: ./files/quotes.json
+doot_file: ./files/doots.json
 
 servers:
     - name: example
