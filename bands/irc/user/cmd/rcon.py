@@ -54,7 +54,7 @@ class RCon:
     # -- for _cmd_join() + _cmd_part() -- #
     def _get_objects(self, server_name):
         # server object
-        for server in self.user.server.cli.servers:
+        for server in self.user.server.config.servers:
             if server.name == server_name:
                 server_obj = server
                 break
@@ -80,7 +80,7 @@ class RCon:
 
         sv_list = []
         sv_objs = {}
-        for server in self.user.server.cli.servers:
+        for server in self.user.server.config.servers:
             sv_list.append(server.name)
             sv_objs[server.name] = server
 
@@ -181,7 +181,7 @@ class RCon:
     def _cmd_status(self):
         msg = f"{c.INFO} active connections are:\n"
 
-        for server in self.user.server.cli.servers:
+        for server in self.user.server.config.servers:
             msg += f"{c.LRED}{server.name}{c.RES}\n"
             msg += f"{c.WHITE}├ {c.LGREEN}admin:{c.RES} "
 
