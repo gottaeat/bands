@@ -18,7 +18,8 @@ class Channel:
         self.user_list = []
 
         self.char_limit = None
-        self.tstamp = None
+        self.cmd_tstamp = None
+        self.hook_tstamp = None
 
     def send_query(self, msg):
         if "\n" in msg:
