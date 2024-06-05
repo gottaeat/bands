@@ -50,163 +50,126 @@ class ConfigYAML:
         self.yaml_parsed = None
 
     def _parse_doot(self):
-        self.logger.info("parsing doot")
+        self.logger.info("processing doot file")
 
         try:
-            doot = self.yaml_parsed["doot"]
+            doot_file = self.yaml_parsed["doot_file"]
         # pylint: disable=bare-except
         except:
             self.logger.exception("%s parsing has failed", self.config_file)
 
-        if not doot:
-            self.logger.error("doot section cannot be specified then left blank")
+        if not doot_file:
+            self.logger.error("doot_file cannot be left blank")
 
-        try:
-            doots_file = doot["doots_file"]
-        except KeyError:
-            self.logger.exception(
-                "doots_file in the doot section of the YAML file is missing"
-            )
+        if not os.path.isfile(doot_file):
+            self.logger.warning("%s is not a file, creating", doot_file)
 
-        if not doots_file:
-            self.logger.error("doots_file cannot be blank")
-
-        if not os.path.isfile(doots_file):
-            self.logger.warning("%s is not a file, creating", doots_file)
-
-            with open(doots_file, "w", encoding="utf-8") as file:
+            with open(doot_file, "w", encoding="utf-8") as file:
                 file.write(json.dumps({"doots": [{}]}))
 
-        dootconf = DootConfig()
-
-        self.logger.info("loading doots doots_file")
+        self.logger.info("sanity checking the doot file formatting")
 
         try:
-            with open(doots_file, "r", encoding="utf-8") as file:
+            with open(doot_file, "r", encoding="utf-8") as file:
                 doots = json.loads(file.read())
         # pylint: disable=bare-except
         except:
-            self.logger.exception("parsing %s failed", doots_file)
+            self.logger.exception("parsing %s failed", doot_file)
 
         if "doots" not in doots.keys():
-            self.logger.error("%s is formatted wrong", doots_file)
+            self.logger.error("%s is formatted wrong", doot_file)
 
-        dootconf.file = doots_file
-
-        self.doot = dootconf
+        self.doot = DootConfig()
+        self.doot.file = doot_file
 
     def _parse_quote(self):
-        self.logger.info("parsing quote")
+        self.logger.info("processing quote file")
 
         try:
-            quote = self.yaml_parsed["quote"]
+            quote_file = self.yaml_parsed["quote_file"]
         # pylint: disable=bare-except
         except:
             self.logger.exception("%s parsing has failed", self.config_file)
 
-        if not quote:
-            self.logger.error("quote section cannot be specified then left blank")
+        if not quote_file:
+            self.logger.error("quote_file key cannot blank")
 
-        try:
-            quotes_file = quote["quotes_file"]
-        except KeyError:
-            self.logger.exception(
-                "quotes_file in the quote section of the YAML file is missing"
-            )
+        if not os.path.isfile(quote_file):
+            self.logger.warning("%s is not a file, creating", quote_file)
 
-        if not quotes_file:
-            self.logger.error("quotes_file cannot be blank")
-
-        if not os.path.isfile(quotes_file):
-            self.logger.warning("%s is not a file, creating", quotes_file)
-
-            with open(quotes_file, "w", encoding="utf-8") as file:
+            with open(quote_file, "w", encoding="utf-8") as file:
                 file.write(json.dumps({"quotes": [{}]}))
 
-        quoteconf = QuoteConfig()
-
-        self.logger.info("loading quotes quotes_file")
+        self.logger.info("sanity checking the quote file formatting")
 
         try:
-            with open(quotes_file, "r", encoding="utf-8") as file:
+            with open(quote_file, "r", encoding="utf-8") as file:
                 quotes = json.loads(file.read())
         # pylint: disable=bare-except
         except:
-            self.logger.exception("parsing %s failed", quotes_file)
+            self.logger.exception("parsing %s failed", quote_file)
 
         if "quotes" not in quotes.keys():
-            self.logger.error("%s is formatted wrong", quotes_file)
+            self.logger.error("%s is formatted wrong", quote_file)
 
-        quoteconf.file = quotes_file
-
-        self.quote = quoteconf
+        self.quote = QuoteConfig()
+        self.quote.file = quote_file
 
     def _parse_openai(self):
-        self.logger.info("parsing openai")
+        self.logger.info("processing openai_key_file")
 
         try:
-            openai = self.yaml_parsed["openai"]
+            openai_key_file = self.yaml_parsed["openai_key_file"]
         except KeyError:
-            warnmsg = "openai section in the YAML file is missing.\n"
-            warnmsg += "functionality requiring AI() will not work unless\n"
-            warnmsg += "reloaded later on by an authorized user."
+            warn_msg = "openai_key_file key is missing in the YAML file. "
+            warn_msg += "functionality\nrequiring AI() will not work unless "
+            warn_msg += "reloaded later on by an\nauthorized user."
 
-            for line in warnmsg.split("\n"):
+            for line in warn_msg.split("\n"):
                 self.logger.warning(line)
 
-            return  # config.openai == None
+            return
         # pylint: disable=bare-except
         except:
             self.logger.exception("%s parsing has failed", self.config_file)
 
-        if not openai:
-            self.logger.error("openai section cannot be specified then left blank")
+        if not openai_key_file:
+            self.logger.error("openai_key_file cannot be specified then left blank")
+
+        if not os.path.isfile(openai_key_file):
+            self.logger.error("%s is not a file", openai_key_file)
+
+        self.logger.info("sanity checking the openai key file formatting")
 
         try:
-            keys_file = openai["keys_file"]
-        except KeyError:
-            self.logger.exception(
-                "keys_file in the openai section of the YAML file is missing"
-            )
-
-        if not keys_file:
-            self.logger.error("keys_file cannot be blank")
-
-        if not os.path.isfile(keys_file):
-            self.logger.error("%s is not a file", keys_file)
-
-        oaiconf = OpenAIConfig()
-
-        self.logger.info("loading openai keys_file")
-
-        try:
-            with open(keys_file, "r", encoding="utf-8") as file:
-                oaiconf.keys = json.loads(file.read())["openai_keys"]
+            with open(openai_key_file, "r", encoding="utf-8") as file:
+                openai_keys = json.loads(file.read())["openai_keys"]
         # pylint: disable=bare-except
         except:
-            self.logger.exception("parsing %s failed", keys_file)
+            self.logger.exception("parsing %s failed", openai_key_file)
 
-        if len(oaiconf.keys) == 0:
-            self.logger.error("%s has no keys", keys_file)
+        if len(openai_keys) == 0:
+            self.logger.error("%s has no keys", openai_key_file)
 
-        for key in oaiconf.keys:
+        for key in openai_keys:
             try:
                 if key["key"][0:3] != "sk-":
                     self.logger.error("%s is not a valid OpenAI key", key["key"])
             except KeyError:
-                self.logger.exception("%s formatting is incorrect", keys_file)
+                self.logger.exception("%s formatting is incorrect", openai_key_file)
 
-        self.openai = oaiconf
+        self.openai = OpenAIConfig()
+        self.openai.keys = openai_keys
 
     # pylint: disable=too-many-branches,too-many-statements
     def _parse_servers(self):
         # servers
-        self.logger.info("parsing servers")
+        self.logger.info("processing servers")
 
         try:
             servers = self.yaml_parsed["servers"]
         except KeyError:
-            self.logger.exception("server section in the YAML file is missing")
+            self.logger.exception("servers section in the YAML file is missing")
 
         server_must_have = ["name", "address", "port", "botname", "channels"]
 
