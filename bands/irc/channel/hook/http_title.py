@@ -33,6 +33,9 @@ class HTTPTitle:
 
                 if soup.title:
                     title = soup.title.string
+
+                    if len(title) > 55:
+                        title = f"{title[0:52]}..."
                 else:
                     err_code = "No title"
             except:
@@ -50,6 +53,6 @@ class HTTPTitle:
             title = self._get_title(url)
 
             if title is not None:
-                msg += f"{c.INFO} {title}\n"
+                msg += f"{c.GREEN}[{c.LBLUE}LINK{c.GREEN}]{c.RES} {title}{c.RES}\n"
 
         self.channel.send_query(msg)
