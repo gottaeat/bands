@@ -172,7 +172,7 @@ class Handle:
                     f"{ac.BWHI}{user.nick} ({user.login})",
                     f"{ac.BRED}¦",
                     f"{ac.BGRN}{channel.name}{ac.BMGN}]",
-                    f"{ac.BCYN}{url}",
+                    f"{ac.BCYN}{url}{ac.RES}",
                 )
 
             if channel.hook_tstamp:
