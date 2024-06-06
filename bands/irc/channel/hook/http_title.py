@@ -39,7 +39,7 @@ class HTTPTitle:
                 err_code = "Parse Error"
 
         if err_code:
-            self.channel.logger.warning("%s failed with: %s", __name__, err_code)
+            self.channel.server.logger.warning("%s failed with: %s", __name__, err_code)
             return None
 
         return title
