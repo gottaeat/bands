@@ -1,3 +1,5 @@
+from threading import Thread
+
 from bands.colors import MIRCColors
 
 c = MIRCColors()
@@ -8,14 +10,20 @@ class RCon:
         self.user = user
         self.user_args = user_args
 
+        self.config = self.user.server.config
+
         self._run()
 
     def _usage(self):
-        msg = f"{c.WHITE}├ {c.LGREEN}dc{c.RES}    [list of servers]\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}join{c.RES}  [server] [list of channels]\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}part{c.RES}  [server] [list of channels]\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}raw{c.RES}   [raw irc line]\n"
+        # fmt: off
+        msg  = f"{c.WHITE}├ {c.LGREEN}connect{c.RES} [server]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}dc{c.RES}      [list of servers]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}join{c.RES}    [server] [list of channels]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}part{c.RES}    [server] [list of channels]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}raw{c.RES}     [raw irc line]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}rehash{c.RES}\n"
         msg += f"{c.WHITE}└ {c.LGREEN}status{c.RES}"
+        # fmt: on
         self.user.send_query(msg)
 
     def _run(self):
@@ -24,6 +32,10 @@ class RCon:
 
         if len(self.user_args) == 0:
             self._usage()
+            return
+
+        if self.user_args[0] == "connect":
+            self._cmd_connect()
             return
 
         if self.user_args[0] == "dc":
@@ -42,6 +54,10 @@ class RCon:
             self._cmd_raw()
             return
 
+        if self.user_args[0] == "rehash":
+            self._cmd_rehash()
+            return
+
         if self.user_args[0] == "status":
             self._cmd_status()
             return
@@ -51,7 +67,7 @@ class RCon:
     # -- for _cmd_join() + _cmd_part() -- #
     def _get_objects(self, server_name):
         # server object
-        for server in self.user.server.config.servers:
+        for server in self.config.servers:
             if server.name == server_name:
                 server_obj = server
                 break
@@ -68,6 +84,49 @@ class RCon:
         return server_obj, sv_chans
 
     # -- cmds -- #
+    def _cmd_rehash(self):
+        self.user.send_query(f"{c.INFO} reloading configuration YAML.")
+        try:
+            self.config.load_yaml()
+        except Exception as exc:
+            self.user.send_query(f"{c.ERR} failed: {exc}")
+            return
+
+        self.user.send_query(f"{c.INFO} parsing servers.")
+        try:
+            self.config.parse_servers()
+        except Exception as exc:
+            self.user.send_query(f"{c.ERR} failed: {exc}")
+            return
+
+        self.user.send_query(f"{c.INFO} rehashed the configuration.")
+
+    def _cmd_connect(self):
+        server_names = self.user_args[1:]
+
+        if len(server_names) == 0:
+            self.user.send_query(f"{c.ERR} must supply at least one server.")
+            return
+
+        sv_list = []
+        sv_objs = {}
+        for server in self.config.servers:
+            sv_list.append(server.name)
+            sv_objs[server.name] = server
+
+        for server in server_names:
+            if server not in sv_list:
+                self.user.send_query(f"{c.ERR} {server} does not exist.")
+                return
+
+            if sv_objs[server].socket.conn is not None:
+                self.user.send_query(f"{c.ERR} already connected to {server}.")
+                return
+
+            self.user.send_query(f"{c.INFO} connecting to {server}")
+            server_thread = Thread(target=sv_objs[server].run)
+            server_thread.start()
+
     def _cmd_dc(self):
         server_names = self.user_args[1:]
 
@@ -77,7 +136,7 @@ class RCon:
 
         sv_list = []
         sv_objs = {}
-        for server in self.user.server.config.servers:
+        for server in self.config.servers:
             sv_list.append(server.name)
             sv_objs[server.name] = server
 
@@ -86,8 +145,21 @@ class RCon:
                 self.user.send_query(f"{c.ERR} not connected to {server}.")
                 return
 
-            self.user.send_query(f"{c.INFO} disconnecting from {server}")
-            sv_objs[server].stop()
+            if self.user.server == sv_objs[server]:
+                err_msg = f"{c.ERR} cannot disconnect from {server} "
+                err_msg += "because it is the c2 server."
+                self.user.send_query(err_msg)
+                return
+
+            if sv_objs[server].socket.conn is None:
+                warn_msg = f"{c.WARN} {server} has no socket, just removing it "
+                warn_msg += "from the server list."
+                self.user.send_query(warn_msg)
+
+                self.config.servers.remove(sv_objs[server])
+            else:
+                self.user.send_query(f"{c.INFO} disconnecting from {server}")
+                sv_objs[server].stop()
 
     def _cmd_join(self):
         # take args
@@ -175,7 +247,7 @@ class RCon:
     def _cmd_status(self):
         msg = f"{c.INFO} active connections are:\n"
 
-        for server in self.user.server.config.servers:
+        for server in self.config.servers:
             msg += f"{c.LRED}{server.name}{c.RES}\n"
             msg += f"{c.WHITE}├ {c.LGREEN}admin:{c.RES} "
 
