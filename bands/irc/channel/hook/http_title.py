@@ -6,14 +6,17 @@ import urllib.request
 from bs4 import BeautifulSoup
 
 from bands.colors import MIRCColors
+from bands.colors import ANSIColors
 
 c = MIRCColors()
+ac = ANSIColors()
 
 
 class HTTPTitle:
-    def __init__(self, channel, msg_url):
+    def __init__(self, channel, user, urls):
         self.channel = channel
-        self.urls = msg_url
+        self.user = user
+        self.urls = urls
         self._run()
 
     def _get_title(self, url):
@@ -67,12 +70,27 @@ class HTTPTitle:
 
         return title
 
+    def _print_url_to_log(self, url):
+        self.channel.server.logger.info(
+            "%s%s%s%s%s %s",
+            f"{ac.BMGN}[{ac.BYEL}HOOK",
+            f"{ac.BRED}¦",
+            f"{ac.BWHI}{self.user.nick} ({self.user.login})",
+            f"{ac.BRED}¦",
+            f"{ac.BGRN}{self.channel.name}{ac.BMGN}]",
+            f"{ac.BCYN}{url}{ac.RES}",
+        )
+
     def _run(self):
-        msg = ""
+        # dedup
+        self.urls = list(dict.fromkeys(self.urls))
+
         for url in self.urls:
+            self._print_url_to_log(url)
+
             title = self._get_title(url)
 
             if title is not None:
-                msg += f"{c.GREEN}[{c.LBLUE}LINK{c.GREEN}]{c.RES} {title}{c.RES}\n"
-
-        self.channel.send_query(msg)
+                self.channel.send_query(
+                    f"{c.GREEN}[{c.LBLUE}LINK{c.GREEN}]{c.RES} {title}{c.RES}\n"
+                )
