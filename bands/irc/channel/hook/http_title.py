@@ -1,3 +1,5 @@
+import ipaddress
+import socket
 import urllib.parse
 import urllib.request
 
@@ -17,6 +19,24 @@ class HTTPTitle:
     def _get_title(self, url):
         err_code, data = None, None
 
+        # check if url host is a bogon
+        url_hostname = urllib.parse.urlparse(url).hostname
+
+        try:
+            url_ip = socket.gethostbyname(url_hostname)
+        except socket.gaierror as exc:
+            self.channel.server.logger.warning(
+                '"%s" while trying to resolve url %s', exc.strerror, url
+            )
+            return
+
+        if ipaddress.ip_address(url_ip).is_private:
+            self.channel.server.logger.warning(
+                "%s resolves to a bogon (%s)", url, url_ip
+            )
+            return
+
+        # scrape
         try:
             with urllib.request.urlopen(url) as f:
                 data = f.read().decode()
@@ -43,7 +63,7 @@ class HTTPTitle:
 
         if err_code:
             self.channel.server.logger.warning("%s failed with: %s", __name__, err_code)
-            return None
+            return
 
         return title
 
