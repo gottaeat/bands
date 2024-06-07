@@ -25,6 +25,18 @@ class ConfigYAML:
         self.quote = None
         self.doot = None
 
+    def load_yaml(self):
+        self.logger.info("loading configuration")
+
+        if os.path.isfile(self.config_file):
+            try:
+                with open(self.config_file, "r", encoding="utf-8") as yaml_file:
+                    self.yaml_parsed = yaml.load(yaml_file.read(), Loader=yaml.Loader)
+            except:
+                self.logger.exception("%s parsing has failed", self.config_file)
+        else:
+            self.logger.error("%s is not a file", self.config_file)
+
     def _parse_openai(self):
         # - - init AI() - - #
         self.ai = AI(self.debug)
@@ -140,7 +152,7 @@ class ConfigYAML:
         # - - set doot file - - #
         self.doot.file = doot_file
 
-    def _parse_servers(self):
+    def parse_servers(self):
         self.logger.info("processing servers")
 
         # check if servers key exists
@@ -158,6 +170,19 @@ class ConfigYAML:
                     self.logger.error("%s is missing from the YAML", item)
                 if not server_yaml[item]:
                     self.logger.error("%s cannot be blank", item)
+
+            # check if server exists in case we are rehashing
+            if len(self.servers) > 0:
+                server_names = []
+                for server in self.servers:
+                    server_names.append(server.name)
+
+                if server_yaml["name"] in server_names:
+                    self.logger.warning(
+                        "skipping %s, already in servers", server_yaml["name"]
+                    )
+
+                    continue
 
             # - - socket - - #
             self.logger.info("generating Socket() for %s", server_yaml["name"])
@@ -283,18 +308,10 @@ class ConfigYAML:
             # - - append - - #
             self.servers.append(server)
 
-    def parse_yaml(self):
+    def run(self):
         self.logger = set_logger(__name__, self.debug)
-        self.logger.info("loading yaml")
 
-        if os.path.isfile(self.config_file):
-            try:
-                with open(self.config_file, "r", encoding="utf-8") as yaml_file:
-                    self.yaml_parsed = yaml.load(yaml_file.read(), Loader=yaml.Loader)
-            except:
-                self.logger.exception("%s parsing has failed", self.config_file)
-        else:
-            self.logger.error("%s is not a file", self.config_file)
+        self.load_yaml()
 
         self._parse_openai()
         self.ai.rotate_key()
@@ -302,4 +319,4 @@ class ConfigYAML:
         self._parse_quote()
         self._parse_doot()
 
-        self._parse_servers()
+        self.parse_servers()
