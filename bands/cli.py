@@ -77,7 +77,7 @@ class CLI:
 
         # parse yaml
         self.config = ConfigYAML(self.config_file, self.debug)
-        self.config.parse_yaml()
+        self.config.run()
 
         # start servers
         self.logger.info("starting Server() threads")
