@@ -13,26 +13,20 @@ bands is an internet relay chat bot.
 and many more
 
 ## installation
-### main namespace
-```sh
-git clone --depth=1 https://github.com/gottaeat/bands
-cd bands/
-
-pip install .
 ```
-
-### dockerized
-```sh
 git clone --depth=1 https://github.com/gottaeat/bands
 cd bands/
+
+# create a config yaml following the example below and put it in e.g.
+# files/config.yml
 
 docker compose run \
     --rm \
     --build=true \
     bands \
 \
-    /bin/bash -c "\
-        cd repo/ && pip install . && \
+    /bin/sh -c "\
+        pip install --user --break-system-packages . && \
         bands -c ./files/config.yml"
 ```
 
