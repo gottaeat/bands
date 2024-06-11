@@ -13,7 +13,6 @@ class Help:
     def _run(self):
         if self.user == self.user.server.admin:
             msg = f"{c.WHITE}│  ├ {c.LGREEN}?auth{c.RES}   [secret]\n"
-            msg += f"{c.WHITE}│  ├ {c.LGREEN}?openai{c.RES} [load|status]\n"
             msg += f"{c.WHITE}│  └ {c.LGREEN}?rcon{c.RES}   [dc|raw|status]\n"
         else:
             msg = f"{c.WHITE}│  └ {c.LGREEN}?auth{c.RES}   [secret]\n"
