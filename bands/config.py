@@ -26,7 +26,7 @@ class ConfigYAML:
         self.doot = None
 
         self.wa_client = None
-        self.openai = None
+        self.openai_client = None
 
     def load_yaml(self):
         self.logger.info("loading configuration")
@@ -102,8 +102,7 @@ class ConfigYAML:
 
         # - - set key - - #
         self.logger.info("creating openai client")
-        self.openai = openai
-        self.openai.api_key = openai_key
+        self.openai_client = openai.OpenAI(api_key=openai_key)
 
     def _parse_quote(self):
         # - - init Quote() - - #
