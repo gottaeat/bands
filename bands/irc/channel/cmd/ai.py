@@ -68,7 +68,7 @@ class AIQuery:
             self.channel.send_query(f"{c.ERR} query failed.")
             return
 
-        self.channel.send_query(response.choices[0].message.content)
+        self.channel.send_query(msg)
 
     def _run(self):
         if len(self.user_args) == 0:
