@@ -1,16 +1,15 @@
 import json
 import os
 
-import yaml
+import openai
 import wolframalpha
+import yaml
 
-from .ai import AI
+from .log import set_logger
 from .doot import Doot
+from .quote import Quote
 from .irc.server import Server
 from .irc.socket import Socket
-from .log import set_logger
-from .quote import Quote
-
 
 class ConfigYAML:
     def __init__(self, config_file, debug=False):
@@ -26,7 +25,7 @@ class ConfigYAML:
         self.doot = None
 
         self.wa_client = None
-        self.ai = None
+        self.openai = None
 
     def load_yaml(self):
         self.logger.info("loading configuration")
@@ -73,17 +72,13 @@ class ConfigYAML:
                 self.logger.exception("error sanity checking the wolfram alpha api key")
 
     def _parse_openai(self):
-        # - - init AI() - - #
-        self.ai = AI(self.debug)
-
         # - - parse yaml - - #
-        self.logger.info("processing openai_key_file")
+        self.logger.info("processing openai_key")
         try:
-            openai_key_file = self.yaml_parsed["openai_key_file"]
+            openai_key = self.yaml_parsed["openai_key"]
         except KeyError:
-            warn_msg = "openai_key_file key is missing in the YAML file. "
-            warn_msg += "functionality\nrequiring AI() will not work unless "
-            warn_msg += "reloaded later on by an\nauthorized user."
+            warn_msg = "openai_key is not specified in the configuration.\n"
+            warn_msg += "functionality requiring openai will not work."
 
             for line in warn_msg.split("\n"):
                 self.logger.warning(line)
@@ -92,32 +87,22 @@ class ConfigYAML:
         except:
             self.logger.exception("%s parsing has failed", self.config_file)
 
-        if not openai_key_file:
-            self.logger.error("openai_key_file cannot be specified then left blank")
+        if not openai_key:
+            self.logger.error("openai_key cannot be specified then left blank")
 
-        if not os.path.isfile(openai_key_file):
-            self.logger.error("%s is not a file", openai_key_file)
+        # - - sanity check - - #
+        self.logger.info("sanity checking the openai key")
 
-        # - - sanity checks - - #
-        self.logger.info("sanity checking the openai key file formatting")
         try:
-            with open(openai_key_file, "r", encoding="utf-8") as file:
-                openai_keys = json.loads(file.read())["openai_keys"]
-        except:
-            self.logger.exception("parsing %s failed", openai_key_file)
+            if openai_key[0:3] != "sk-":
+                self.logger.error("%s is not a valid OpenAI key", openai_key)
+        except KeyError:
+            self.logger.exception("%s is formatted wrong", openai_key)
 
-        if len(openai_keys) == 0:
-            self.logger.error("%s has no keys", openai_key_file)
-
-        for key in openai_keys:
-            try:
-                if key["key"][0:3] != "sk-":
-                    self.logger.error("%s is not a valid OpenAI key", key["key"])
-            except KeyError:
-                self.logger.exception("%s formatting is incorrect", openai_key_file)
-
-        # - - append keys - - #
-        self.ai.keys = openai_keys
+        # - - set key - - #
+        self.logger.info("creating openai client")
+        self.openai = openai
+        self.openai.api_key = openai_key
 
     def _parse_quote(self):
         # - - init Quote() - - #
@@ -331,7 +316,7 @@ class ConfigYAML:
 
             # - - pass the rest - - #
             server.wa_client = self.wa_client
-            server.ai = self.ai
+            server.openai = self.openai
             server.quote = self.quote
             server.doot = self.doot
             server.config = self
@@ -350,10 +335,7 @@ class ConfigYAML:
         self.load_yaml()
 
         self._parse_wolfram()
-
         self._parse_openai()
-        self.ai.rotate_key()
-
         self._parse_quote()
         self._parse_doot()
 
