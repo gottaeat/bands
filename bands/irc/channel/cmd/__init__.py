@@ -7,6 +7,7 @@ from .piss import Piss
 from .quake import Quake
 from .quote import Quote
 from .tarot import Tarot
+from .wa import WAQuery
 
 CMDS = {
     ":?advice": Advice,
@@ -18,4 +19,5 @@ CMDS = {
     ":?quake": Quake,
     ":?quote": Quote,
     ":?tarot": Tarot,
+    ":?wa": WAQuery,
 }
