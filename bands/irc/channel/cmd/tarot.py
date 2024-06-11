@@ -27,30 +27,33 @@ class Tarot:
         f"{os.path.dirname(os.path.realpath(__file__))}/../../../static/tarot_desc.json"
     )
 
-    MISS_CLEO = "You are a Rastafarian speaking tarot reader mimicking American "
-    MISS_CLEO += "television character Miss Cleo. The decks you read are laid out "
-    MISS_CLEO += "in the context of the Celtic tarot spread. You always perform "
-    MISS_CLEO += "the tarot reading in accordance and in relation to the querent's "
-    MISS_CLEO += 'question. Your responses never include the word "Celtic". '
-    MISS_CLEO += "Your responses are always limited to 400 characters. Your "
-    MISS_CLEO += "responses never include lists. You always respond with a single "
-    MISS_CLEO += 'paragraph. You always end your responses with "Call me now for '
-    MISS_CLEO += "your free tarot readin'\"."
+    # fmt: off
+    MISS_CLEO  = "You are a tarot reader mimicking the American television "
+    MISS_CLEO += "personality Miss Cleo. You always respond in Jamaican Patois "
+    MISS_CLEO += "and never in standard English. The decks you read are laid "
+    MISS_CLEO += "out in the context of the Celtic tarot spread. You always "
+    MISS_CLEO += "perform the tarot reading in accordance and in relation to "
+    MISS_CLEO += "the querent's question. Your responses never include the "
+    MISS_CLEO += 'word "Celtic". Your responses are always limited to 400 '
+    MISS_CLEO += "characters. Your responses never include lists. You always "
+    MISS_CLEO += "respond with a single paragraph. You make references to the "
+    MISS_CLEO += "querent's question in your reading."
+    # fmt: on
 
     def __init__(self, channel, user, user_args):
         self.channel = channel
         self.user = user
         self.user_args = user_args
 
+        self.openai = self.channel.server.openai
+
         self.deck = TarotDeck()
-
         self.tarot_data = None
-
         self.cards = []
 
         self._run()
 
-    # actual tarot bits
+    # - - tarot logic - - #
     def _parse_json(self):
         with open(self.DESC_FILE, "r", encoding="utf-8") as desc_file:
             self.tarot_data = json.loads(desc_file.read())["tarot"]
@@ -79,7 +82,7 @@ class Tarot:
         self._gen_cards()
         self._pull()
 
-    # openai hookup
+    # - - openai call - - #
     def _interpret(self, deck):
         # stringify cards
         cards_str = ""
@@ -87,7 +90,8 @@ class Tarot:
             cards_str += f"{index+1}. {card.title}\n"
 
         # generate prompt
-        prompt = f'The querent\'s question is "{deck.question}". Read the '
+        # fmt: off
+        prompt  = f'The querent\'s question is "{deck.question}". Read the '
         prompt += "following Celtic tarot deck and answer the querent's "
         prompt += f"question, the cards are ordered from 1 to 10:\n{cards_str}"
         prompt += "Respond as the American television character Miss Cleo. "
@@ -98,6 +102,7 @@ class Tarot:
         prompt += "must be a paragraph and must not include lists. The reading "
         prompt += "must be done in accordance and relation to the querent's "
         prompt += "question."
+        # fmt: on
 
         # role defs
         message = [
@@ -109,15 +114,9 @@ class Tarot:
         msg = f"{c.INFO} generating reading for {c.WHITE}{self.user.nick}{c.RES}."
         self.channel.send_query(msg)
 
-        # rotate before call
-        self.channel.server.ai.rotate_key()
-
         # call openai api
-        # the thread safety issue is only within the scope of the pure python
-        # regarding the keys and key rotation logic, so we don't have to acquire
-        # the lock here.
         try:
-            response = self.channel.server.ai.openai.ChatCompletion.create(
+            response = self.openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=message,
                 temperature=0.1,
@@ -131,10 +130,10 @@ class Tarot:
             for line in err_log.split("\n"):
                 self.channel.server.logger.warning("%s", line)
 
-            errmsg = f"{c.ERR} create() failed but deck for "
-            errmsg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
-            errmsg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
-            self.channel.send_query(errmsg)
+            err_msg = f"{c.ERR} create() failed but deck for "
+            err_msg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
+            err_msg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
+            self.channel.send_query(err_msg)
             return
 
         try:
@@ -147,13 +146,13 @@ class Tarot:
             for line in err_log.split("\n"):
                 self.channel.server.logger.warning("%s", line)
 
-            errmsg = f"{c.ERR} failed parsing response but deck for "
-            errmsg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
-            errmsg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
-            self.channel.send_query(errmsg)
+            err_msg = f"{c.ERR} failed parsing response but deck for "
+            err_msg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
+            err_msg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
+            self.channel.send_query(err_msg)
             return
 
-    # cmd handling
+    # - - util - - #
     def _pretty_cards(self):
         msg = f"{c.INFO} cards in the deck of "
         msg += f"{c.WHITE}{self.user.nick}{c.RES} are: "
@@ -167,8 +166,10 @@ class Tarot:
         msg += f"{c.WHITE}{self.user.tarot_deck.question}{c.RES}"
         self.channel.send_query(msg)
 
+    # - - cmd handling - - #
     def _cmd_help(self):
-        msg = f"{c.WHITE}├ {c.LGREEN}read{c.RES}\n"
+        # fmt: off
+        msg  = f"{c.WHITE}├ {c.LGREEN}read{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.YELLOW}q{c.RES}     take in a question, generate a deck, and feed them\n"
         msg += f"{c.WHITE}│ │{c.RES}       both to the openai api for a reading\n"
         msg += f"{c.WHITE}│ ├ {c.YELLOW}last{c.RES}  provide a reading for the last stored tarot deck\n"
@@ -178,6 +179,7 @@ class Tarot:
         msg += f"{c.WHITE}└ {c.LGREEN}pull{c.RES}    simply create a deck for the user, print the cards\n"
         msg += "          in it with their descriptions, and the meaning of\n"
         msg += "          the order which they are pulled in."
+        # fmt: on
 
         self.channel.send_query(msg)
 
@@ -186,7 +188,6 @@ class Tarot:
         self.user.tarot_deck = self.deck
 
         msg = f"{c.INFO} generated deck for {c.WHITE}{self.user.nick}{c.RES}:\n"
-
         for index, card in enumerate(self.user.tarot_deck.cards):
             order_title = self.tarot_data["card_order"][index]["title"]
             order_desc = self.tarot_data["card_order"][index]["desc"]
@@ -204,11 +205,9 @@ class Tarot:
     def _cmd_read_q(self, user_Q):
         self._gen_deck()
         self.user.tarot_deck = self.deck
-
         self.user.tarot_deck.question = user_Q
 
         self._pretty_cards()
-
         self._interpret(self.user.tarot_deck)
 
     def _cmd_read_addq(self, user_Q):
@@ -219,11 +218,12 @@ class Tarot:
 
     def _cmd_read_last(self):
         if not self.user.tarot_deck.question:
-            errmsg = f"{c.ERR} {c.WHITE}{self.user.nick}{c.RES}'s deck does not "
-            errmsg += "have a question attached, run "
-            errmsg += f"{c.LGREEN}?tarot read addq <question>{c.RES} to add a "
-            errmsg += "question"
-            self.channel.send_query(errmsg)
+            err_msg = f"{c.ERR} {c.WHITE}{self.user.nick}{c.RES}'s deck does not "
+            err_msg += "have a question attached, run "
+            err_msg += f"{c.LGREEN}?tarot read addq [question]{c.RES} to add a "
+            err_msg += "question"
+
+            self.channel.send_query(err_msg)
             return
 
         self._pretty_cards()
@@ -240,15 +240,15 @@ class Tarot:
 
         if self.user_args[0] == "read":
             if len(self.user_args) == 1:
-                errmsg = f"{c.ERR} an argument is required."
-                self.channel.send_query(errmsg)
+                err_msg = f"{c.ERR} an argument is required."
+                self.channel.send_query(err_msg)
                 return
 
             if self.user_args[1] == "addq" or self.user_args[1] == "last":
                 if not self.user.tarot_deck:
-                    errmsg = f"{c.ERR} no previous deck found for "
-                    errmsg += f"{c.WHITE}{self.user.nick}{c.RES}."
-                    self.channel.send_query(errmsg)
+                    err_msg = f"{c.ERR} no previous deck found for "
+                    err_msg += f"{c.WHITE}{self.user.nick}{c.RES}."
+                    self.channel.send_query(err_msg)
                     return
 
             # ?tarot read last
@@ -258,15 +258,15 @@ class Tarot:
 
             if self.user_args[1] == "q" or self.user_args[1] == "addq":
                 if len(self.user_args) == 2:
-                    errmsg = f"{c.ERR} question is missing."
-                    self.channel.send_query(errmsg)
+                    err_msg = f"{c.ERR} question is missing."
+                    self.channel.send_query(err_msg)
                     return
 
                 user_Q = " ".join(self.user_args[2:])
 
                 if unilen(user_Q) > 300:
-                    errmsg = f"{c.ERR} question wider than 300 characters."
-                    self.channel.send_query(errmsg)
+                    err_msg = f"{c.ERR} question wider than 300 characters."
+                    self.channel.send_query(err_msg)
                     return
 
             # ?tarot read q <question>
