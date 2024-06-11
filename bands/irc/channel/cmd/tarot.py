@@ -134,6 +134,7 @@ class Tarot:
             err_msg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
             err_msg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
             self.channel.send_query(err_msg)
+
             return
 
         try:
@@ -150,6 +151,7 @@ class Tarot:
             err_msg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
             err_msg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
             self.channel.send_query(err_msg)
+
             return
 
     # - - util - - #
@@ -202,7 +204,64 @@ class Tarot:
 
         self.channel.send_query(msg)
 
-    def _cmd_read_q(self, user_Q):
+    def _cmd_read(self):
+        if self.openai is None:
+            self.channel.send_query(f"{c.ERR} no api key provided.")
+            return
+
+        if len(self.user_args) == 1:
+            self.channel.send_query(f"{c.ERR} an argument is required.")
+            return
+
+        if self.user_args[1] == "addq" or self.user_args[1] == "last":
+            if not self.user.tarot_deck:
+                err_msg = f"{c.ERR} no previous deck found for "
+                err_msg += f"{c.WHITE}{self.user.nick}{c.RES}."
+                self.channel.send_query(err_msg)
+
+                return
+
+        # ?tarot read last
+        if self.user_args[1] == "last":
+            self._subcmd_read_last()
+            return
+
+        if self.user_args[1] == "q" or self.user_args[1] == "addq":
+            if len(self.user_args) == 2:
+                self.channel.send_query(f"{c.ERR} question is missing.")
+                return
+
+            user_Q = " ".join(self.user_args[2:])
+
+            if unilen(user_Q) > 300:
+                err_msg = f"{c.ERR} question wider than 300 characters."
+                self.channel.send_query(err_msg)
+                return
+
+        # ?tarot read q <question>
+        if self.user_args[1] == "q":
+            self._subcmd_read_q(user_Q)
+            return
+
+        # ?tarot read addq <question>
+        if self.user_args[1] == "addq":
+            self._subcmd_read_addq(user_Q)
+            return
+
+    def _subcmd_read_last(self):
+        if not self.user.tarot_deck.question:
+            err_msg = f"{c.ERR} {c.WHITE}{self.user.nick}{c.RES}'s deck does not "
+            err_msg += "have a question attached, run "
+            err_msg += f"{c.LGREEN}?tarot read addq [question]{c.RES} to add a "
+            err_msg += "question"
+            self.channel.send_query(err_msg)
+
+            return
+
+        self._pretty_cards()
+        self._interpret(self.user.tarot_deck)
+
+    def _subcmd_read_q(self, user_Q):
         self._gen_deck()
         self.user.tarot_deck = self.deck
         self.user.tarot_deck.question = user_Q
@@ -210,24 +269,11 @@ class Tarot:
         self._pretty_cards()
         self._interpret(self.user.tarot_deck)
 
-    def _cmd_read_addq(self, user_Q):
+    def _subcmd_read_addq(self, user_Q):
         self.user.tarot_deck.question = user_Q
 
         msg = f"{c.INFO} {c.WHITE}{self.user.nick}{c.RES}'s question has been saved."
         self.channel.send_query(msg)
-
-    def _cmd_read_last(self):
-        if not self.user.tarot_deck.question:
-            err_msg = f"{c.ERR} {c.WHITE}{self.user.nick}{c.RES}'s deck does not "
-            err_msg += "have a question attached, run "
-            err_msg += f"{c.LGREEN}?tarot read addq [question]{c.RES} to add a "
-            err_msg += "question"
-
-            self.channel.send_query(err_msg)
-            return
-
-        self._pretty_cards()
-        self._interpret(self.user.tarot_deck)
 
     def _run(self):
         if len(self.user_args) == 0:
@@ -239,45 +285,7 @@ class Tarot:
             return
 
         if self.user_args[0] == "read":
-            if len(self.user_args) == 1:
-                err_msg = f"{c.ERR} an argument is required."
-                self.channel.send_query(err_msg)
-                return
+            self._cmd_read()
+            return
 
-            if self.user_args[1] == "addq" or self.user_args[1] == "last":
-                if not self.user.tarot_deck:
-                    err_msg = f"{c.ERR} no previous deck found for "
-                    err_msg += f"{c.WHITE}{self.user.nick}{c.RES}."
-                    self.channel.send_query(err_msg)
-                    return
-
-            # ?tarot read last
-            if self.user_args[1] == "last":
-                self._cmd_read_last()
-                return
-
-            if self.user_args[1] == "q" or self.user_args[1] == "addq":
-                if len(self.user_args) == 2:
-                    err_msg = f"{c.ERR} question is missing."
-                    self.channel.send_query(err_msg)
-                    return
-
-                user_Q = " ".join(self.user_args[2:])
-
-                if unilen(user_Q) > 300:
-                    err_msg = f"{c.ERR} question wider than 300 characters."
-                    self.channel.send_query(err_msg)
-                    return
-
-            # ?tarot read q <question>
-            if self.user_args[1] == "q":
-                self._cmd_read_q(user_Q)
-                return
-
-            # ?tarot read addq <question>
-            if self.user_args[1] == "addq":
-                self._cmd_read_addq(user_Q)
-                return
-
-        else:
-            self._cmd_help()
+        self._cmd_help()
