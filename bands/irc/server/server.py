@@ -26,9 +26,9 @@ class Server:
         self.secret = None
         self.scroll_speed = None
 
-        # CLI
+        # Config objects
         self.wa_client = None
-        self.ai = None
+        self.openai = None
         self.quote = None
         self.doot = None
         self.config = None
