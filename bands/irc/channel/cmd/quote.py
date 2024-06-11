@@ -12,7 +12,7 @@ class Quote:
         self.user = user
         self.user_args = user_args
 
-        self.quote = self.channel.server.quote
+        self.quote = self.channel.server.config.quote
 
         self._run()
 

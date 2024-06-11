@@ -9,7 +9,7 @@ class WAQuery:
         self.user = user
         self.user_args = user_args
 
-        self.wa_client = channel.server.wa_client
+        self.wa_client = channel.server.config.wa_client
 
         self._run()
 

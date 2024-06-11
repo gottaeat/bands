@@ -45,7 +45,7 @@ class Tarot:
         self.user = user
         self.user_args = user_args
 
-        self.openai = self.channel.server.openai
+        self.openai = self.channel.server.config.openai
 
         self.deck = TarotDeck()
         self.tarot_data = None

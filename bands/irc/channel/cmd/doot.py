@@ -12,7 +12,7 @@ class Doot:
         self.user = user
         self.user_args = user_args
 
-        self.doot = self.channel.server.doot
+        self.doot = self.channel.server.config.doot
 
         self._run()
 
