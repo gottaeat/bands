@@ -1,8 +1,9 @@
 from bands.colors import ANSIColors
 
+from .socket_ops import SocketOps
 from .client_init import ClientInit
 from .final_loop import FinalLoop
-from .socket_ops import SocketOps
+
 
 ac = ANSIColors()
 
@@ -14,10 +15,10 @@ class Server:
     PING_INTERVAL = 120
 
     def __init__(self, socket):
-        # socket
+        # args
         self.socket = socket
 
-        # yaml
+        # config
         self.name = None
         self.botname = None
         self.channels = []
@@ -25,13 +26,9 @@ class Server:
         self.allow_admin = None
         self.secret = None
         self.scroll_speed = None
-
-        # Config objects
-        self.wa_client = None
-        self.openai = None
-        self.quote = None
-        self.doot = None
         self.config = None
+
+        # logger
         self.logger = None
 
         # socket_ops
@@ -53,7 +50,6 @@ class Server:
     # -- CLI() interactions -- #
     def run(self):
         self.socket.connect()
-
         self.sock_ops = SocketOps(self)
 
         cl_init = ClientInit(self)
