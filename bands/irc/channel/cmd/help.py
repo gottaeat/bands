@@ -13,7 +13,8 @@ class Help:
 
     def _run(self):
         # fmt: off
-        msg =  f"{c.WHITE}│ ├ {c.LGREEN}?advice{c.RES} {{nick}}\n"
+        msg  = f"{c.WHITE}│ ├ {c.LGREEN}?advice{c.RES} {{nick}}\n"
+        msg += f"{c.WHITE}│ ├ {c.LGREEN}?ai{c.RES}     [query]\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?bands{c.RES}\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?bj{c.RES}     ?bj help\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?doot{c.RES}   ?doot help\n"
