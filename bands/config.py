@@ -2,6 +2,7 @@ import json
 import os
 
 import yaml
+import wolframalpha
 
 from .ai import AI
 from .doot import Doot
@@ -21,9 +22,11 @@ class ConfigYAML:
         self.logger = None
         self.servers = []
 
-        self.ai = None
         self.quote = None
         self.doot = None
+
+        self.wa_client = None
+        self.ai = None
 
     def load_yaml(self):
         self.logger.info("loading configuration")
@@ -36,6 +39,38 @@ class ConfigYAML:
                 self.logger.exception("%s parsing has failed", self.config_file)
         else:
             self.logger.error("%s is not a file", self.config_file)
+
+    def _parse_wolfram(self):
+        # - - parse yaml - - #
+        self.logger.info("processing wolfram_api_key")
+        try:
+            wolfram_api_key = self.yaml_parsed["wolfram_api_key"]
+        except KeyError:
+            warn_msg = "wolfram_api_key is not specified in the configuration.\n"
+            warn_msg += "functionality requiring wolfram alpha will not work."
+
+            for line in warn_msg.split("\n"):
+                self.logger.warning(line)
+
+            return
+        except:
+            self.logger.exception("%s parsing has failed", self.config_file)
+
+        if not wolfram_api_key:
+            self.logger.error("wolfram_api_key cannot be specified then left blank")
+
+        # - - set key - - #
+        self.logger.info("creating wolfram alpha client")
+        self.wa_client = wolframalpha.Client(wolfram_api_key)
+
+        # - - sanity check - - #
+        try:
+            self.wa_client.query("temperature in Washington, DC on October 3, 2012")
+        except Exception as exc:
+            if str(exc) == "Error 1: Invalid appid":
+                self.logger.error("wolfram alpha api key is formatted wrong")
+            else:
+                self.logger.exception("error sanity checking the wolfram alpha api key")
 
     def _parse_openai(self):
         # - - init AI() - - #
@@ -295,6 +330,7 @@ class ConfigYAML:
                 server.scroll_speed = 0
 
             # - - pass the rest - - #
+            server.wa_client = self.wa_client
             server.ai = self.ai
             server.quote = self.quote
             server.doot = self.doot
@@ -312,6 +348,8 @@ class ConfigYAML:
         self.logger = set_logger(__name__, self.debug)
 
         self.load_yaml()
+
+        self._parse_wolfram()
 
         self._parse_openai()
         self.ai.rotate_key()
