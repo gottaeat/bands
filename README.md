@@ -8,7 +8,7 @@ bands is an internet relay chat bot.
   once.
 - handles channel and server-wide commands.
 - allows for state manipulation through private messages on trusted servers.
-- has openai support with key rotation for modules to take advantage of.
+- has openai and wolfram alpha support for modules to take advantage of.
 
 and many more
 
@@ -30,23 +30,10 @@ docker compose run \
         bands -c ./files/config.yml"
 ```
 
-## usage
-for the channel, server and state specific commands, call `?help` in either
-a channel or in private messages with the bot. cmdline specific usage is:
-```sh
-usage: bands [-h] -c C [-d]
-
-bands the IRC bot.
-
-options:
-  -h, --help  show this help message and exit
-  -c C        Configuration YAML file.
-  -d          Enable debugging.
-```
-
-## config YAML example
+## configuration example
 ```yml
-openai_key_file: ./files/openai_keys.json
+wolfram_api_key: "XXXXX-XXXXXXXXXX"
+openai_key: "sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 quote_file: ./files/quotes.json
 doot_file: ./files/doots.json
 
@@ -75,16 +62,16 @@ servers:
         - "#publicchannel"
 ```
 
-## expected openai.keys_file formatting
-```json
-{
-  "openai_keys": [
-      {
-        "key": "sk-"
-      },
-      {
-        "key": "sk-"
-      }
-    ]
-}
+## usage
+for the channel, server and state specific commands, call `?help` in either
+a channel or in private messages with the bot. cmdline specific usage is:
+```sh
+usage: bands [-h] -c C [-d]
+
+bands the IRC bot.
+
+options:
+  -h, --help  show this help message and exit
+  -c C        Configuration YAML file.
+  -d          Enable debugging.
 ```
