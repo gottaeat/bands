@@ -27,6 +27,7 @@ class Server:
         self.scroll_speed = None
 
         # CLI
+        self.wa_client = None
         self.ai = None
         self.quote = None
         self.doot = None
