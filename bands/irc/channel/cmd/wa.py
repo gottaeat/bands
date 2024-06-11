@@ -1,4 +1,5 @@
 from bands.colors import MIRCColors
+from bands.irc.util import unilen
 
 c = MIRCColors()
 
@@ -13,15 +14,18 @@ class WAQuery:
 
         self._run()
 
-    def _cmd_help(self):
-        self.channel.send_query(f"{c.WHITE}└ {c.LGREEN}[query]{c.RES}")
-
     def _query(self):
         if self.wa_client is None:
             self.channel.send_query(f"{c.ERR} no api key provided.")
             return
 
         user_Q = " ".join(self.user_args[0:])
+
+        if unilen(user_Q) > 300:
+            err_msg = f"{c.ERR} query wider than 300 characters."
+            self.channel.send_query(err_msg)
+            return
+
         self.channel.send_query(f"{c.INFO} {self.user.nick}, querying: {user_Q}")
 
         try:
@@ -40,7 +44,7 @@ class WAQuery:
 
     def _run(self):
         if len(self.user_args) == 0:
-            self._cmd_help()
+            self.channel.send_query(f"{c.ERR} an argument is required.")
             return
 
         self._query()
