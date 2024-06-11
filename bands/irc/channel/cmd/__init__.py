@@ -1,4 +1,5 @@
 from .advice import Advice
+from .ai import AIQuery
 from .blackjack import BlackJack
 from .doot import Doot
 from .finance import Finance
@@ -11,6 +12,7 @@ from .wa import WAQuery
 
 CMDS = {
     ":?advice": Advice,
+    ":?ai": AIQuery,
     ":?bands": Finance,
     ":?bj": BlackJack,
     ":?doot": Doot,
