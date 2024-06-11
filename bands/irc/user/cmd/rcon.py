@@ -163,18 +163,18 @@ class RCon:
 
     def _cmd_join(self):
         # take args
-        server_name = self.user_args[1]
-        channel_names = self.user_args[2:]
-
-        if len(server_name) == 0:
+        if len(self.user_args) == 0:
             self.user.send_query(f"{c.ERR} must supply a server as the first arg.")
             return
 
-        # we handle only for #channels
-        if len(channel_names) == 0:
+        if len(self.user_args) == 1:
             self.user.send_query(f"{c.ERR} must supply at least one channel.")
             return
 
+        server_name = self.user_args[1]
+        channel_names = self.user_args[2:]
+
+        # we handle only for #channels
         for channel_name in channel_names:
             if channel_name[0] != "#":
                 self.user.send_query(f"{c.ERR} channels must start with a #.")
