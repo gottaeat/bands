@@ -45,7 +45,7 @@ class Tarot:
         self.user = user
         self.user_args = user_args
 
-        self.openai = self.channel.server.config.openai
+        self.openai_client = self.channel.server.config.openai_client
 
         self.deck = TarotDeck()
         self.tarot_data = None
@@ -116,7 +116,7 @@ class Tarot:
 
         # call openai api
         try:
-            response = self.openai.ChatCompletion.create(
+            response = self.openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=message,
                 temperature=0.1,
@@ -139,7 +139,7 @@ class Tarot:
 
         try:
             msg = f"{c.INFO} reading for {c.WHITE}{self.user.nick}{c.RES}:\n"
-            msg += response.choices[0]["message"]["content"]
+            msg += response.choices[0].message.content
             self.channel.send_query(msg)
         except Exception as exc:
             err_log = f"parsing response failed:\n{exc}"
@@ -205,7 +205,7 @@ class Tarot:
         self.channel.send_query(msg)
 
     def _cmd_read(self):
-        if self.openai is None:
+        if self.openai_client is None:
             self.channel.send_query(f"{c.ERR} no api key provided.")
             return
 
