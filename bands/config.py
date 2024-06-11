@@ -11,6 +11,7 @@ from .quote import Quote
 from .irc.server import Server
 from .irc.socket import Socket
 
+
 class ConfigYAML:
     def __init__(self, config_file, debug=False):
         self.config_file = config_file
@@ -314,19 +315,13 @@ class ConfigYAML:
             except KeyError:
                 server.scroll_speed = 0
 
-            # - - pass the rest - - #
-            server.wa_client = self.wa_client
-            server.openai = self.openai
-            server.quote = self.quote
-            server.doot = self.doot
-            server.config = self
-
             # - - logger - - #
             logger = set_logger(server.name, self.debug)
             server.socket.logger = logger
             server.logger = logger
 
             # - - append - - #
+            server.config = self
             self.servers.append(server)
 
     def run(self):
