@@ -84,12 +84,10 @@ class Tarot:
 
     # - - openai call - - #
     def _interpret(self, deck):
-        # stringify cards
         cards_str = ""
         for index, card in enumerate(deck.cards):
             cards_str += f"{index+1}. {card.title}\n"
 
-        # generate prompt
         # fmt: off
         prompt  = f'The querent\'s question is "{deck.question}". Read the '
         prompt += "following Celtic tarot deck and answer the querent's "
@@ -104,55 +102,43 @@ class Tarot:
         prompt += "question."
         # fmt: on
 
-        # role defs
-        message = [
-            {"role": "system", "content": self.MISS_CLEO},
-            {"role": "user", "content": prompt},
-        ]
-
-        # notify that we're generating the reading
         msg = f"{c.INFO} generating reading for {c.WHITE}{self.user.nick}{c.RES}."
         self.channel.send_query(msg)
 
-        # call openai api
         try:
             response = self.openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
-                messages=message,
+                message=[
+                    {"role": "system", "content": self.MISS_CLEO},
+                    {"role": "user", "content": prompt},
+                ],
                 temperature=0.1,
                 max_tokens=400,
                 frequency_penalty=0.0,
                 n=1,
             )
         except Exception as exc:
-            err_log = f"create() failed:\n{exc}"
-
-            for line in err_log.split("\n"):
-                self.channel.server.logger.warning("%s", line)
-
-            err_msg = f"{c.ERR} create() failed but deck for "
+            err_msg = f"{c.ERR} query failed but deck for "
             err_msg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
             err_msg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
-            self.channel.send_query(err_msg)
 
+            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
+            self.channel.send_query(err_msg)
             return
 
         try:
             msg = f"{c.INFO} reading for {c.WHITE}{self.user.nick}{c.RES}:\n"
             msg += response.choices[0].message.content
-            self.channel.send_query(msg)
         except Exception as exc:
-            err_log = f"parsing response failed:\n{exc}"
-
-            for line in err_log.split("\n"):
-                self.channel.server.logger.warning("%s", line)
-
-            err_msg = f"{c.ERR} failed parsing response but deck for "
+            err_msg = f"{c.ERR} query failed but deck for "
             err_msg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
             err_msg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
-            self.channel.send_query(err_msg)
 
+            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
+            self.channel.send_query(err_msg)
             return
+
+        self.channel.send_query(msg)
 
     # - - util - - #
     def _pretty_cards(self):
