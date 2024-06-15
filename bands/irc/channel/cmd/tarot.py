@@ -108,7 +108,7 @@ class Tarot:
         try:
             response = self.openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
-                message=[
+                messages=[
                     {"role": "system", "content": self.MISS_CLEO},
                     {"role": "user", "content": prompt},
                 ],
