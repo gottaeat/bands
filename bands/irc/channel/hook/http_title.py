@@ -55,7 +55,7 @@ class HTTPTitle:
                 soup = BeautifulSoup(data, "html.parser")
 
                 if soup.title:
-                    title = soup.title.string
+                    title = soup.title.string.strip()
 
                     if len(title) > 55:
                         title = f"{title[0:52]}..."
