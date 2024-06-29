@@ -43,7 +43,7 @@ class SocketOps:
             except UnicodeDecodeError:
                 try:
                     data_split[index] = (
-                        f"{strip_color(item.decode(encoding='UTF-8'))}\r\n"
+                        f"{strip_color(item.decode(encoding='latin-1'))}\r\n"
                     )
                 except:
                     data_split[index] = None
