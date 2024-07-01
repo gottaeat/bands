@@ -163,7 +163,12 @@ class Finance:
             self.binance = "Parse Error"
 
     def _get_wgb(self):
-        req = "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/"
+        ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        ua += "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        headers = {"User-Agent": ua}
+
+        url = "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/"
+        req = urllib.request.Request(url, headers=headers)
 
         try:
             with urllib.request.urlopen(req) as f:
@@ -181,21 +186,29 @@ class Finance:
         try:
             soup = BeautifulSoup(data, "html.parser")
 
-            self.wgb_cds = (
-                soup.find_all("div", {"class": "w3-cell font-open-sans"})[0]
-                .get_text()
-                .split()[0]
-            )
+            td_elem = soup.find_all("td")
+            cds_td = None
+            for td in td_elem:
+                td = td.get_text()
+                if "Current CDS" in td:
+                    cds_td = td.split()
+                    break
 
-            perc = (
-                soup.find_all("p", string=re.compile("CDS value changed"))[0]
-                .get_text()
-                .split()
-            )
+            if cds_td:
+                perc = (
+                    soup.find_all("p", string=re.compile("CDS value changed"))[0]
+                    .get_text()
+                    .split()
+                )
 
-            self.wgb_week = perc[3]
-            self.wgb_month = perc[7]
-            self.wgb_year = perc[11]
+                if perc:
+                    self.wgb_week = perc[3]
+                    self.wgb_month = perc[7]
+                    self.wgb_year = perc[11]
+                else:
+                    self.wgb_cds = "Parse Error"
+
+                self.wgb_cds = cds_td[2]
         except:
             self.wgb_cds = "Parse Error"
 
