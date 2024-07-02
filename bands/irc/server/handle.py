@@ -72,19 +72,20 @@ class Handle:
 
     # -- channel events begin -- #
     def _channel_hook(self, channel_obj, user_obj, full_msg, tstamp):
-        # hook checks
+        # hook matches
         urls = re.findall(r"https?://[^\s]+", full_msg)
 
-        # HTTPTitle
+        # url dispatcher
         if len(urls) > 0:
             if channel_obj.hook_tstamp:
                 if tstamp - channel_obj.hook_tstamp < 2:
                     self.logger.debug(
                         "ignoring url in %s (ratelimited)", channel_obj.name
                     )
+                    return
 
             channel_obj.hook_tstamp = tstamp
-            ChanHOOK.HOOKS["title"](channel_obj, user_obj, urls)
+            ChanHOOK.HOOKS["url_dispatcher"](channel_obj, user_obj, urls)
 
     def _channel_cmd(self, channel_obj, user_obj, msg, tstamp):
         if msg[0] in ChanCMD.CMDS:
