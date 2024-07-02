@@ -1,5 +1,3 @@
-from .http_title import HTTPTitle
+from .url_dispatcher import URLDispatcher
 
-HOOKS = {
-    "title": HTTPTitle,
-}
+HOOKS = {"url_dispatcher": URLDispatcher}
