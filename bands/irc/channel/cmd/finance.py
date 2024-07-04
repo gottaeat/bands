@@ -42,11 +42,10 @@ class Finance:
         tls_context = ssl.create_default_context()
         tls_context.options |= 0x4
 
-        data, err_msg = get_url("https://www.tcmb.gov.tr/kurlar/today.xml", tls_context)
-
-        if err_msg:
-            self.logger.warning("tcmb GET failed:\n%s", err_msg)
-            return
+        try:
+            data = get_url("https://www.tcmb.gov.tr/kurlar/today.xml", tls_context)
+        except:
+            self.logger.exception("tcmb GET failed")
 
         try:
             tcmbxml_tree = ET.ElementTree(ET.fromstring(data))
@@ -54,50 +53,42 @@ class Finance:
             tcmb_buying = float(tcmbxml_root.findall("Currency/ForexBuying")[0].text)
             tcmb_selling = float(tcmbxml_root.findall("Currency/ForexSelling")[0].text)
             self.tcmb = f"{(tcmb_buying + tcmb_selling) / 2:.6f}"
-        except Exception as exc:
-            self.logger.warning("tcmb parse failed:\n%s", exc)
-            return
+        except:
+            self.logger.exception("tcmb parse failed")
 
     def _get_yahoo(self):
-        data, err_msg = get_url(
-            "https://query1.finance.yahoo.com/v8/finance/chart/USDTRY=X"
-        )
-
-        if err_msg:
-            self.logger.warning("yahoo GET failed:\n%s", err_msg)
-            return
+        try:
+            data = get_url("https://query1.finance.yahoo.com/v8/finance/chart/USDTRY=X")
+        except:
+            self.logger.exception("yahoo GET failed")
 
         try:
             data = json.loads(data)
             self.yahoo = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
-        except Exception as exc:
-            self.logger.warning("yahoo parse failed:\n%s", exc)
-            return
+        except:
+            self.logger.exception("yahoo parse failed")
 
     def _get_forbes(self):
-        data, err_msg = get_url(
-            "https://www.forbes.com/advisor/money-transfer/currency-converter/usd-try/?amount=1"
-        )
-
-        if err_msg:
-            self.logger.warning("forbes GET failed:\n%s", err_msg)
-            return
+        try:
+            data = get_url(
+                "https://www.forbes.com/advisor/money-transfer/currency-converter/usd-try/?amount=1"
+            )
+        except:
+            self.logger.exception("forbes GET failed")
 
         try:
             soup = BeautifulSoup(data, "html.parser")
             self.forbes = soup.find_all("span", {"class": "amount"})[0].get_text()
-        except Exception as exc:
-            self.logger.warning("forbes parse failed:\n%s", exc)
-            return
+        except:
+            self.logger.exception("forbes parse failed")
 
     def _get_xe(self):
-        data, err_msg = get_url(
-            "https://www.x-rates.com/calculator/?from=USD&to=TRY&amount=1"
-        )
-
-        if err_msg:
-            self.logger.warning("xe GET failed:\n%s", err_msg)
-            return
+        try:
+            data = get_url(
+                "https://www.x-rates.com/calculator/?from=USD&to=TRY&amount=1"
+            )
+        except:
+            self.logger.exception("xe GET failed")
 
         try:
             soup = BeautifulSoup(data, "html.parser")
@@ -106,33 +97,27 @@ class Finance:
                 .get_text()
                 .split(" ")[0]
             )
-        except Exception as exc:
-            self.logger.warning("xe parse failed:\n%s", exc)
-            return
+        except:
+            self.logger.exception("xe parse failed")
 
     def _get_binance(self):
-        data, err_msg = get_url(
-            "https://api.binance.com/api/v3/ticker/price?symbol=USDTTRY"
-        )
-
-        if err_msg:
-            self.logger.warning("binance GET failed:\n%s", err_msg)
-            return
+        try:
+            data = get_url("https://api.binance.com/api/v3/ticker/price?symbol=USDTTRY")
+        except:
+            self.logger.exception("binance GET failed")
 
         try:
             self.binance = float(json.loads(data)["price"].rstrip("0"))
-        except Exception as exc:
-            self.logger.warning("binance parse failed:\n%s", exc)
-            return
+        except:
+            self.logger.exception("binance parse failed")
 
     def _get_wgb(self):
-        data, err_msg = get_url(
-            "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/"
-        )
-
-        if err_msg:
-            self.logger.warning("wgb GET failed:\n%s", err_msg)
-            return
+        try:
+            data = get_url(
+                "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/"
+            )
+        except:
+            self.logger.exception("wgb GET failed")
 
         try:
             soup = BeautifulSoup(data, "html.parser")
@@ -147,9 +132,8 @@ class Finance:
 
             if not cds_td:
                 raise ValueError("element containing current CDS was not found")
-        except Exception as exc:
-            self.logger.warning("wgb parse failed:\n%s", exc)
-            return
+        except:
+            self.logger.exception("wgb parse stage 1 failed")
 
         try:
             perc = (
@@ -160,9 +144,8 @@ class Finance:
 
             if len(perc) == 0:
                 raise ValueError("element containing historical CDS was not found")
-        except Exception as exc:
-            self.logger.warning("wgb parse stage 2 failed:\n%s", exc)
-            return
+        except:
+            self.logger.exception("wgb parse stage 2 failed")
 
         try:
             self.wgb = WGB()
@@ -170,10 +153,9 @@ class Finance:
             self.wgb.week = perc[3]
             self.wgb.month = perc[7]
             self.wgb.year = perc[11]
-        except Exception as exc:
+        except:
             self.wgb = None
-            self.logger.warning("wgb parse stage 3 failed:\n%s", exc)
-            return
+            self.logger.exception("wgb parse stage 3 failed:\n%s")
 
     def _collect(self):
         jobs = [
