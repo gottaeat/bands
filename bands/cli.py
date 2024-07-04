@@ -69,14 +69,14 @@ class CLI:
             server.logger.info(line)
 
     def run(self):
-        self.logger = set_logger(__name__, self.debug)
-        self.logger.info("started bands")
+        self.logger = set_logger("bands", self.debug)
+        self.logger.info("started")
 
         self._set_signal_handling()
         self._gen_args()
 
         # parse yaml
-        self.config = ConfigYAML(self.config_file, self.debug)
+        self.config = ConfigYAML(self.config_file, self.logger)
         self.config.run()
 
         # start servers
