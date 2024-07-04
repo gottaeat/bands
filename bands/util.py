@@ -1,7 +1,7 @@
 import urllib.request
 
 
-def get_url(url):
+def get_url(url, tls_context=None):
     ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     ua += "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
@@ -13,8 +13,12 @@ def get_url(url):
     data, err_msg = None, None
 
     try:
-        with urllib.request.urlopen(request) as f:
-            data = f.read()
+        if tls_context is not None:
+            with urllib.request.urlopen(request, context=tls_context) as f:
+                data = f.read()
+        else:
+            with urllib.request.urlopen(request) as f:
+                data = f.read()
     except Exception as exc:
         err_msg = exc
 
