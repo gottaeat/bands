@@ -10,6 +10,7 @@ class RCon:
         self.user = user
         self.user_args = user_args
 
+        self.logger = self.user.logger.getChild(self.__class__.__name__)
         self.config = self.user.server.config
 
         self._run()
@@ -88,16 +89,16 @@ class RCon:
         self.user.send_query(f"{c.INFO} reloading configuration YAML.")
         try:
             self.config.load_yaml()
-        except Exception as exc:
-            self.user.send_query(f"{c.ERR} failed: {exc}")
-            return
+        except:
+            self.user.send_query(f"{c.ERR} config reload failed.")
+            self.logger.exception("config reload failed")
 
         self.user.send_query(f"{c.INFO} parsing servers.")
         try:
             self.config.parse_servers()
-        except Exception as exc:
-            self.user.send_query(f"{c.ERR} failed: {exc}")
-            return
+        except:
+            self.user.send_query(f"{c.ERR} server parsing failed.")
+            self.logger.exception(f"server parsing failed")
 
         self.user.send_query(f"{c.INFO} rehashed the configuration.")
 
