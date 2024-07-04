@@ -36,6 +36,7 @@ class Handle:
         # if not, gen and return it
         channel = Channel(self.server)
         channel.name = channel_name
+        channel.logger = self.server.logger.getChild(channel.name)
 
         self.channel_obj.append(channel)
         self.channels.append(channel.name)
@@ -55,6 +56,7 @@ class Handle:
         user.nick = user_nick
         user.login = user_login
         user.char_limit = 512 - len(f"PRIVMSG {user.nick} :".encode("utf-8"))
+        user.logger = self.server.logger.getChild(user.nick)
 
         self.users.append(user)
 
