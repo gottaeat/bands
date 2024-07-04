@@ -1,10 +1,14 @@
 import json
 import os
+import re
 
 import openai
 import wolframalpha
 import yaml
 
+from bs4 import BeautifulSoup
+
+from .util import get_url
 from .log import set_logger
 from .doot import Doot
 from .quote import Quote
@@ -24,6 +28,7 @@ class ConfigYAML:
         self.doot = None
         self.wa_client = None
         self.openai_client = None
+        self.sc_client_id = None
 
     def load_yaml(self):
         self.logger.info("loading configuration")
@@ -36,6 +41,48 @@ class ConfigYAML:
                 self.logger.exception("%s parsing has failed", self.config_file)
         else:
             self.logger.error("%s is not a file", self.config_file)
+
+    def _gen_sc_client_id(self):
+        # modified version of the client_id generation functionailty of
+        # https://github.com/3jackdaws/soundcloud-lib which is copyright of
+        # Ian Murphy, licensed under MIT.
+        self.logger.info("generating soundcloud client_id")
+
+        try:
+            data = get_url("https://soundcloud.com/hospitalrecords/polaris-distant")
+        except:
+            self.logger.exception("GET failed")
+
+        try:
+            data = BeautifulSoup(data, "html.parser")
+        except:
+            self.logger.exception("parse failed")
+
+        scripts = data.findAll("script", attrs={"src": True})
+        if len(scripts) == 0:
+            self.logger.error("no scripts fouund with src attrib")
+
+        scripts_list = []
+        for script in scripts:
+            src = script["src"]
+            if "cookielaw.org" not in src:
+                scripts_list.append(src)
+
+        for script in scripts_list:
+            if isinstance(script, str):
+                try:
+                    script_data = get_url(script)
+                except:
+                    self.logger.exception("script GET failed")
+
+                client_id = re.findall(r"client_id=([a-zA-Z0-9]+)", script_data)
+
+                if len(client_id) > 0:
+                    self.sc_client_id = client_id[0]
+                    break
+
+        if self.sc_client_id is None:
+            self.logger.error("no client_id found")
 
     def _parse_wolfram(self):
         # - - parse yaml - - #
