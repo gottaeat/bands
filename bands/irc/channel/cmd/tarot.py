@@ -129,7 +129,7 @@ class Tarot:
         try:
             msg = f"{c.INFO} reading for {c.WHITE}{self.user.nick}{c.RES}:\n"
             msg += response.choices[0].message.content
-        except Exception as exc:
+        except:
             err_msg = f"{c.ERR} query failed but deck for "
             err_msg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
             err_msg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."

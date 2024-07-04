@@ -32,8 +32,8 @@ class URLDispatcher:
             # resolve first
             try:
                 url_ip = socket.gethostbyname(url_hostname)
-            except socket.gaierror as exc:
-                self.logger.warning("cannot resolve %s\n:%s", url, exc)
+            except socket.gaierror:
+                self.logger.warning("cannot resolve %s\n:%s", url)
                 self.urls.remove(url)
 
             # check if url host is a bogon
