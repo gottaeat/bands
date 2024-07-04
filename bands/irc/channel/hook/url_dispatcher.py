@@ -43,22 +43,14 @@ class URLDispatcher:
 
     def _dispatch(self):
         for url in self.urls:
-            self._print_url_to_log(url)
             self._handle_title(url)
-
-    def _print_url_to_log(self, url):
-        msg = f"{ac.BYEL}{self.user.nick} "
-        msg += f"{ac.BMGN}({ac.LCYN}{self.user.login}{ac.BMGN}) "
-        msg += f"{ac.BRED}¦ {ac.BCYN}{url}{ac.RES}"
-        self.logger.info(msg)
 
     # - - handlers - - #
     def _handle_title(self, url):
-        data, err_msg = get_url(url)
-
-        if err_msg:
-            self.logger.warning("%s caused:\n%", url, err_msg)
-            return
+        try:
+            data = get_url(url)
+        except:
+            self.logger.exception("title GET failed")
 
         try:
             soup = BeautifulSoup(data, "html.parser")
@@ -69,11 +61,9 @@ class URLDispatcher:
                 if len(title) > 55:
                     title = f"{title[0:52]}..."
             else:
-                self.logger.warning("%s caused: no title", url)
-                return
-        except Exception as exc:
-            self.logger.warning("%s caused:\n%", url, exc)
-            return
+                self.logger.error("%s has no title", url)
+        except:
+            self.logger.exception("title parse failed")
 
         self.channel.send_query(
             f"{c.GREEN}[{c.LBLUE}LINK{c.GREEN}]{c.RES} {title}{c.RES}\n"
