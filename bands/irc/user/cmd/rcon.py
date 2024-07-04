@@ -98,7 +98,7 @@ class RCon:
             self.config.parse_servers()
         except:
             self.user.send_query(f"{c.ERR} server parsing failed.")
-            self.logger.exception(f"server parsing failed")
+            self.logger.exception("server parsing failed")
 
         self.user.send_query(f"{c.INFO} rehashed the configuration.")
 
