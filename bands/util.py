@@ -10,32 +10,19 @@ def get_url(url, tls_context=None):
         headers={"User-Agent": ua},
     )
 
-    data, err_msg = None, None
-
-    try:
-        if tls_context is not None:
-            with urllib.request.urlopen(request, context=tls_context) as f:
-                data = f.read()
-        else:
-            with urllib.request.urlopen(request) as f:
-                data = f.read()
-    except Exception as exc:
-        err_msg = exc
+    if tls_context:
+        with urllib.request.urlopen(request, context=tls_context) as f:
+            data = f.read()
+    else:
+        with urllib.request.urlopen(request) as f:
+            data = f.read()
 
     try:
         data = data.decode(encoding="UTF-8")
     except UnicodeDecodeError:
-        try:
-            data = data.decode(encoding="latin-1")
-        except:
-            data = None
-            err_msg = ValueError("decode failure")
-    except Exception as exc:
-        data = None
-        err_msg = exc
+        data = data.decode(encoding="latin-1")
 
-    if len(data) == 0 and err_msg is None:
-        data = None
-        err_msg = ValueError("empty data returned")
+    if len(data) == 0:
+        raise ValueError("empty data returned")
 
-    return data, err_msg
+    return data
