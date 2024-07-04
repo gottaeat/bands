@@ -1,8 +1,6 @@
 import json
 import re
 import ssl
-import urllib.parse
-import urllib.request
 import xml.etree.ElementTree as ET
 
 from threading import Thread
@@ -10,9 +8,17 @@ from threading import Thread
 from bs4 import BeautifulSoup
 
 from bands.colors import MIRCColors
-
+from bands.util import get_url
 
 c = MIRCColors()
+
+
+class WGB:
+    def __init__(self):
+        self.cds = None
+        self.week = None
+        self.month = None
+        self.year = None
 
 
 class Finance:
@@ -21,15 +27,14 @@ class Finance:
         self.user = user  # unused
         self.user_args = user_args  # unused
 
+        self.logger = self.channel.logger.getChild(self.__class__.__name__)
+
         self.tcmb = None
         self.yahoo = None
         self.forbes = None
         self.xe = None
         self.binance = None
-        self.wgb_cds = None
-        self.wgb_week = None
-        self.wgb_month = None
-        self.wgb_year = None
+        self.wgb = None
 
         self._run()
 
@@ -37,227 +42,147 @@ class Finance:
         tls_context = ssl.create_default_context()
         tls_context.options |= 0x4
 
+        data, err_msg = get_url("https://www.tcmb.gov.tr/kurlar/today.xml", tls_context)
+
+        if err_msg:
+            self.logger.warning("tcmb GET failed:\n%s", err_msg)
+            return
+
         try:
-            with urllib.request.urlopen(
-                "https://www.tcmb.gov.tr/kurlar/today.xml", context=tls_context
-            ) as f:
-                data = f.read().decode()
-        except urllib.request.HTTPError as e:
-            err_msg = f"HTTP {e.code}"
-        except urllib.error.URLError as e:
-            err_msg = f"URL {e.reason.errno}"
+            tcmbxml_tree = ET.ElementTree(ET.fromstring(data))
+            tcmbxml_root = tcmbxml_tree.getroot()
+            tcmb_buying = float(tcmbxml_root.findall("Currency/ForexBuying")[0].text)
+            tcmb_selling = float(tcmbxml_root.findall("Currency/ForexSelling")[0].text)
+            self.tcmb = f"{(tcmb_buying + tcmb_selling) / 2:.6f}"
         except Exception as exc:
-            err_msg = "GET failed"
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
-
-        try:
-            if err_msg:  # pylint: disable=used-before-assignment
-                self.tcmb = err_msg
-        except NameError:
-            try:
-                tcmbxml_tree = ET.ElementTree(ET.fromstring(data))
-                tcmbxml_root = tcmbxml_tree.getroot()
-                tcmb_buying = float(
-                    tcmbxml_root.findall("Currency/ForexBuying")[0].text
-                )
-                tcmb_selling = float(
-                    tcmbxml_root.findall("Currency/ForexSelling")[0].text
-                )
-
-                self.tcmb = (tcmb_buying + tcmb_selling) / 2
-            except Exception as exc:
-                self.tcmb = "Parse failed"
-                self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
+            self.logger.warning("tcmb parse failed:\n%s", exc)
+            return
 
     def _get_yahoo(self):
-        try:
-            with urllib.request.urlopen(
-                "https://query1.finance.yahoo.com/v8/finance/chart/USDTRY=X"
-            ) as f:
-                data = json.loads(f.read().decode())
-        except urllib.request.HTTPError as e:
-            err_msg = f"HTTP {e.code}"
-        except urllib.error.URLError as e:
-            err_msg = f"URL {e.reason.errno}"
-        except Exception as exc:
-            err_msg = "GET failed"
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
-
-        try:
-            if err_msg:  # pylint: disable=used-before-assignment
-                self.yahoo = err_msg
-        except NameError:
-            try:
-                self.yahoo = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
-            except Exception as exc:
-                self.yahoo = "Parse failed"
-                self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
-
-    def _get_forbes(self):
-        try:
-            with urllib.request.urlopen(
-                "https://www.forbes.com/advisor/money-transfer/currency-converter/usd-try/?amount=1"
-            ) as f:
-                data = f.read().decode()
-        except urllib.request.HTTPError as e:
-            err_msg = f"HTTP {e.code}"
-        except urllib.error.URLError as e:
-            err_msg = f"URL {e.reason.errno}"
-        except Exception as exc:
-            err_msg = "GET failed"
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
-
-        try:
-            if err_msg:  # pylint: disable=used-before-assignment
-                self.forbes = err_msg
-        except NameError:
-            try:
-                soup = BeautifulSoup(data, "html.parser")
-                self.forbes = soup.find_all("span", {"class": "amount"})[0].get_text()
-            except Exception as exc:
-                self.forbes = "Parse failed"
-                self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
-
-    def _get_xe(self):
-        try:
-            with urllib.request.urlopen(
-                "https://www.x-rates.com/calculator/?from=USD&to=TRY&amount=1"
-            ) as f:
-                data = f.read().decode()
-        except urllib.request.HTTPError as e:
-            err_msg = f"HTTP {e.code}"
-        except urllib.error.URLError as e:
-            err_msg = f"URL {e.reason.errno}"
-        except Exception as exc:
-            err_msg = "GET failed"
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
-
-        try:
-            if err_msg:  # pylint: disable=used-before-assignment
-                self.xe = err_msg
-        except NameError:
-            try:
-                soup = BeautifulSoup(data, "html.parser")
-                self.xe = (
-                    soup.find_all("span", {"class": "ccOutputRslt"})[0]
-                    .get_text()
-                    .split(" ")[0]
-                )
-            except:
-                self.xe = "Parse failed"
-                self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
-
-    def _get_binance(self):
-        try:
-            with urllib.request.urlopen(
-                "https://api.binance.com/api/v3/ticker/price?symbol=USDTTRY"
-            ) as f:
-                data = f.read().decode()
-        except urllib.request.HTTPError as e:
-            err_msg = f"HTTP {e.code}"
-        except urllib.error.URLError as e:
-            err_msg = f"URL {e.reason.errno}"
-        except Exception as exc:
-            err_msg = "GET failed"
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
-
-        try:
-            if err_msg:  # pylint: disable=used-before-assignment
-                self.binance = err_msg
-        except NameError:
-            try:
-                self.binance = float(json.loads(data)["price"].rstrip("0"))
-            except Exception as exc:
-                self.binance = "Parse failed"
-                self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
-
-    def _get_wgb(self):
-        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        user_agent += "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-        headers = {"User-Agent": user_agent}
-
-        request = urllib.request.Request(
-            "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/",
-            headers=headers,
+        data, err_msg = get_url(
+            "https://query1.finance.yahoo.com/v8/finance/chart/USDTRY=X"
         )
 
+        if err_msg:
+            self.logger.warning("yahoo GET failed:\n%s", err_msg)
+            return
+
         try:
-            with urllib.request.urlopen(request) as f:
-                data = f.read().decode()
-        except urllib.request.HTTPError as e:
-            err_msg = f"HTTP {e.code}"
-        except urllib.error.URLError as e:
-            err_msg = f"URL {e.reason.errno}"
+            data = json.loads(data)
+            self.yahoo = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
         except Exception as exc:
-            err_msg = "GET failed"
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
+            self.logger.warning("yahoo parse failed:\n%s", exc)
+            return
+
+    def _get_forbes(self):
+        data, err_msg = get_url(
+            "https://www.forbes.com/advisor/money-transfer/currency-converter/usd-try/?amount=1"
+        )
+
+        if err_msg:
+            self.logger.warning("forbes GET failed:\n%s", err_msg)
+            return
 
         try:
-            if err_msg:  # pylint: disable=used-before-assignment
-                self.wgb_cds = err_msg
-        except NameError:
-            try:
-                soup = BeautifulSoup(data, "html.parser")
+            soup = BeautifulSoup(data, "html.parser")
+            self.forbes = soup.find_all("span", {"class": "amount"})[0].get_text()
+        except Exception as exc:
+            self.logger.warning("forbes parse failed:\n%s", exc)
+            return
 
-                cds_td = None
-                td_elem = soup.find_all("td")
-                for td in td_elem:
-                    td = td.get_text()
-                    if "Current CDS" in td:
-                        cds_td = td.split()
-                        break
+    def _get_xe(self):
+        data, err_msg = get_url(
+            "https://www.x-rates.com/calculator/?from=USD&to=TRY&amount=1"
+        )
 
-                if not cds_td:
-                    self.wgb_cds = "Parse failed"
-                    self.channel.server.logger.warning(
-                        "%s failed with:\n%s",
-                        __name__,
-                        "element containing current CDS was not found",
-                    )
+        if err_msg:
+            self.logger.warning("xe GET failed:\n%s", err_msg)
+            return
 
-                    return
+        try:
+            soup = BeautifulSoup(data, "html.parser")
+            self.xe = (
+                soup.find_all("span", {"class": "ccOutputRslt"})[0]
+                .get_text()
+                .split(" ")[0]
+            )
+        except Exception as exc:
+            self.logger.warning("xe parse failed:\n%s", exc)
+            return
 
-                self.wgb_cds = cds_td[2]
-            except Exception as exc:
-                self.wgb_cds = "Parse failed"
-                self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
+    def _get_binance(self):
+        data, err_msg = get_url(
+            "https://api.binance.com/api/v3/ticker/price?symbol=USDTTRY"
+        )
 
-            if cds_td:
-                try:
-                    perc = (
-                        soup.find_all("p", string=re.compile("CDS value changed"))[0]
-                        .get_text()
-                        .split()
-                    )
+        if err_msg:
+            self.logger.warning("binance GET failed:\n%s", err_msg)
+            return
 
-                    if len(perc) == 0:
-                        self.wgb_cds = "Parse failed"
-                        self.channel.server.logger.warning(
-                            "%s failed with:\n%s",
-                            __name__,
-                            "element containing historical CDS was not found",
-                        )
+        try:
+            self.binance = float(json.loads(data)["price"].rstrip("0"))
+        except Exception as exc:
+            self.logger.warning("binance parse failed:\n%s", exc)
+            return
 
-                        return
+    def _get_wgb(self):
+        data, err_msg = get_url(
+            "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/"
+        )
 
-                    self.wgb_week = perc[3]
-                    self.wgb_month = perc[7]
-                    self.wgb_year = perc[11]
-                except Exception as exc:
-                    self.wgb_cds = "Parse failed"
-                    self.wgb_week = None
-                    self.channel.server.logger.warning(
-                        "%s failed with:\n%s", __name__, exc
-                    )
+        if err_msg:
+            self.logger.warning("wgb GET failed:\n%s", err_msg)
+            return
+
+        try:
+            soup = BeautifulSoup(data, "html.parser")
+
+            cds_td = None
+            td_elem = soup.find_all("td")
+            for td in td_elem:
+                td = td.get_text()
+                if "Current CDS" in td:
+                    cds_td = td.split()
+                    break
+
+            if not cds_td:
+                raise ValueError("element containing current CDS was not found")
+        except Exception as exc:
+            self.logger.warning("wgb parse failed:\n%s", exc)
+            return
+
+        try:
+            perc = (
+                soup.find_all("p", string=re.compile("CDS value changed"))[0]
+                .get_text()
+                .split()
+            )
+
+            if len(perc) == 0:
+                raise ValueError("element containing historical CDS was not found")
+        except Exception as exc:
+            self.logger.warning("wgb parse stage 2 failed:\n%s", exc)
+            return
+
+        try:
+            self.wgb = WGB()
+            self.wgb.cds = cds_td[2]
+            self.wgb.week = perc[3]
+            self.wgb.month = perc[7]
+            self.wgb.year = perc[11]
+        except Exception as exc:
+            self.wgb = None
+            self.logger.warning("wgb parse stage 3 failed:\n%s", exc)
+            return
 
     def _collect(self):
         jobs = [
-            Thread(target=self._get_tcmb),
-            Thread(target=self._get_yahoo),
-            Thread(target=self._get_forbes),
-            Thread(target=self._get_xe),
-            Thread(target=self._get_binance),
-            Thread(target=self._get_wgb),
+            Thread(target=self._get_tcmb, daemon=False),
+            Thread(target=self._get_yahoo, daemon=False),
+            Thread(target=self._get_forbes, daemon=False),
+            Thread(target=self._get_xe, daemon=False),
+            Thread(target=self._get_binance, daemon=False),
+            Thread(target=self._get_wgb, daemon=False),
         ]
 
         self.channel.send_query(f"{c.INFO} scraping...")
@@ -268,23 +193,41 @@ class Finance:
         for job in jobs:
             job.join()
 
-    def _run(self):
-        self._collect()
+    def _prompt(self):
+        msg = ""
 
-        msg = f"{c.WHITE}USDTRY{c.RES}\n"
-        msg += f"{c.WHITE}├ {c.LRED}central {c.LBLUE}→{c.RES} {self.tcmb}\n"
-        msg += f"{c.WHITE}├ {c.LRED}xe      {c.LBLUE}→{c.RES} {self.xe}\n"
-        msg += f"{c.WHITE}├ {c.LRED}yahoo   {c.LBLUE}→{c.RES} {self.yahoo}\n"
-        msg += f"{c.WHITE}└ {c.LRED}forbes  {c.LBLUE}→{c.RES} {self.forbes}\n"
-        msg += f"{c.WHITE}USDTTRY{c.RES}\n"
-        msg += f"{c.WHITE}└ {c.LRED}binance {c.LBLUE}→{c.RES} {self.binance}\n"
-        msg += f"{c.WHITE}CDS{c.RES}\n"
-        msg += f"{c.WHITE}└ {c.LRED}wgb     {c.LBLUE}→{c.RES} {self.wgb_cds}\n"
+        if self.tcmb is not None:
+            msg += f"{c.WHITE}→ {c.LRED}central{c.RES} {self.tcmb}\n"
 
-        if self.wgb_week:
-            msg += f"  {c.WHITE}├ {c.LRED}1w    {c.LBLUE}→{c.RES} {self.wgb_week}\n"
-            msg += f"  {c.WHITE}├ {c.LRED}1m    {c.LBLUE}→{c.RES} {self.wgb_month}\n"
-            msg += f"  {c.WHITE}└ {c.LRED}1y    {c.LBLUE}→{c.RES} {self.wgb_year}"
+        if self.xe is not None:
+            msg += f"{c.WHITE}→ {c.LRED}xe{c.RES}      {self.xe}\n"
+
+        if self.yahoo is not None:
+            msg += f"{c.WHITE}→ {c.LRED}yahoo{c.RES}   {self.yahoo}\n"
+
+        if self.forbes is not None:
+            msg += f"{c.WHITE}→ {c.LRED}forbes{c.RES}  {self.forbes}\n"
+
+        if len(msg) != 0:
+            msg = f"{c.WHITE}USDTRY{c.RES}\n{msg}"
+
+        if self.binance is not None:
+            msg += f"{c.WHITE}USDTTRY{c.RES}\n"
+            msg += f"{c.WHITE}→ {c.LRED}binance{c.RES} {self.binance}\n"
+
+        if self.wgb is not None:
+            msg += f"{c.WHITE}Credit Default Swaps{c.RES}\n"
+            msg += f"{c.WHITE}→ {c.LRED}current{c.RES} {self.wgb.cds}\n"
+            msg += f"{c.WHITE}→ {c.LRED}weekly{c.RES}  {self.wgb.week}\n"
+            msg += f"{c.WHITE}→ {c.LRED}monthly{c.RES} {self.wgb.month}\n"
+            msg += f"{c.WHITE}→ {c.LRED}yearly{c.RES}  {self.wgb.year}"
+
+        if len(msg) == 0:
+            msg = "f{c.ERR} none of the APIs answered."
 
         # self.channel.send_query(drawbox(msg, "thic"))
         self.channel.send_query(msg)
+
+    def _run(self):
+        self._collect()
+        self._prompt()
