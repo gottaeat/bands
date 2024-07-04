@@ -13,18 +13,15 @@ from .irc.socket import Socket
 
 
 class ConfigYAML:
-    def __init__(self, config_file, debug=False):
+    def __init__(self, config_file, parent_logger):
         self.config_file = config_file
-        self.debug = debug
+        self.logger = parent_logger.getChild(self.__class__.__name__)
 
         self.yaml_parsed = None
 
-        self.logger = None
         self.servers = []
-
         self.quote = None
         self.doot = None
-
         self.wa_client = None
         self.openai_client = None
 
@@ -106,7 +103,7 @@ class ConfigYAML:
 
     def _parse_quote(self):
         # - - init Quote() - - #
-        self.quote = Quote(self.debug)
+        self.quote = Quote(self.logger)
 
         # - - parse yaml - - #
         self.logger.info("processing quote file")
@@ -140,7 +137,7 @@ class ConfigYAML:
 
     def _parse_doot(self):
         # - - init Doot() - - #
-        self.doot = Doot(self.debug)
+        self.doot = Doot(self.logger)
 
         # - - parse yaml - - #
         self.logger.info("processing doot file")
@@ -315,8 +312,8 @@ class ConfigYAML:
                 server.scroll_speed = 0
 
             # - - logger - - #
-            logger = set_logger(server.name, self.debug)
-            server.socket.logger = logger
+            logger = set_logger(server.name, self.logger.level)
+            server.socket.logger = logger.getChild(socket.__class__.__name__)
             server.logger = logger
 
             # - - append - - #
@@ -324,8 +321,6 @@ class ConfigYAML:
             self.servers.append(server)
 
     def run(self):
-        self.logger = set_logger(__name__, self.debug)
-
         self.load_yaml()
 
         self._parse_wolfram()
