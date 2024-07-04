@@ -73,12 +73,20 @@ class Handle:
     # -- object generators end -- #
 
     # -- channel events begin -- #
+    def _channel_hook_prompt(self, channel_obj, user_obj, full_msg):
+        prompt_msg = f"{ac.BMGN}[{ac.BYEL}HOOK{ac.BRED}¦"
+        prompt_msg += f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
+        prompt_msg += f"{ac.BCYN} :{full_msg}{ac.RES}"
+        channel_obj.logger.info("%s", prompt_msg)
+
     def _channel_hook(self, channel_obj, user_obj, full_msg, tstamp):
         # hook matches
         urls = re.findall(r"https?://[^\s]+", full_msg)
 
         # url dispatcher
         if len(urls) > 0:
+            self._channel_hook_prompt(channel_obj, user_obj, full_msg)
+
             if channel_obj.hook_tstamp:
                 if tstamp - channel_obj.hook_tstamp < 2:
                     self.logger.debug(
@@ -94,16 +102,10 @@ class Handle:
             cmd = msg[0]
             user_args = msg[1:]
 
-            self.logger.info(
-                "%s %s%s%s%s %s %s",
-                f"{ac.BMGN}[{ac.BYEL}CMD",
-                f"{ac.BRED}¦",
-                f"{ac.BWHI}{user_obj.nick} ({user_obj.login})",
-                f"{ac.BRED}¦",
-                f"{ac.BGRN}{channel_obj.name}{ac.BMGN}]",
-                f"{ac.BCYN}{cmd}",
-                f"{' '.join(user_args)}{ac.RES}",
-            )
+            prompt_msg = f"{ac.BMGN}[{ac.BYEL}CMD {ac.BRED}¦"
+            prompt_msg += f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
+            prompt_msg += f"{ac.BCYN} {cmd} {' '.join(user_args)}{ac.RES}"
+            channel_obj.logger.info("%s", prompt_msg)
 
             if channel_obj.cmd_tstamp:
                 # see if a User exists for the ChannelUser
@@ -316,14 +318,10 @@ class Handle:
 
         user = self._gen_user(user_nick, user_login)
 
-        self.logger.info(
-            "%s%s%s %s %s",
-            f"{ac.BMGN}[{ac.BWHI}{user.nick} ({user.login})",
-            f"{ac.BRED}¦",
-            f"{ac.BGRN}PM{ac.BMGN}]",
-            f"{ac.BCYN}{cmd}",
-            f"{' '.join(user_args)}{ac.RES}",
-        )
+        prompt_msg = f"{ac.BMGN}[{ac.BWHI}{user.nick} ({user.login}){ac.BMGN}]"
+        prompt_msg += f"{ac.BCYN} {cmd} {' '.join(user_args)}{ac.RES}"
+
+        user.logger.info(prompt_msg)
 
         tstamp = int(time.strftime("%s"))
 
