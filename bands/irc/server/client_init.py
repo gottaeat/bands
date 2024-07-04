@@ -12,7 +12,7 @@ class ClientInit:
     def __init__(self, server):
         # server
         self.server = server
-        self.logger = server.logger
+        self.logger = self.server.logger.getChild(self.__class__.__name__)
         self.socket = server.socket
         self.sock_ops = server.sock_ops
 
