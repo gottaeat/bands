@@ -33,7 +33,7 @@ class URLDispatcher:
             try:
                 url_ip = socket.gethostbyname(url_hostname)
             except socket.gaierror as exc:
-                self.logger.warning("cannot resolve %s\n: %s", url, exc)
+                self.logger.warning("cannot resolve %s\n:%s", url, exc)
                 self.urls.remove(url)
 
             # check if url host is a bogon
@@ -57,7 +57,7 @@ class URLDispatcher:
         data, err_msg = get_url(url)
 
         if err_msg:
-            self.logger.warning("%s caused:\n %", url, err_msg)
+            self.logger.warning("%s caused:\n%", url, err_msg)
             return
 
         try:
@@ -72,7 +72,7 @@ class URLDispatcher:
                 self.logger.warning("%s caused: no title", url)
                 return
         except Exception as exc:
-            self.logger.warning("%s caused:\n %", url, exc)
+            self.logger.warning("%s caused:\n%", url, exc)
             return
 
         self.channel.send_query(
