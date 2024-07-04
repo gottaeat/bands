@@ -12,6 +12,7 @@ class Quote:
         self.user = user
         self.user_args = user_args
 
+        self.logger = self.channel.logger.getChild(self.__class__.__name__)
         self.quote = self.channel.server.config.quote
 
         self._run()
@@ -101,7 +102,7 @@ class Quote:
             if self.channel.server.name not in quotes["quotes"][0].keys():
                 quotes["quotes"][0][self.channel.server.name] = [{}]
 
-                self.channel.server.logger.info(
+                self.logger.info(
                     "created quote entry for: %s", self.channel.server.name
                 )
 
@@ -112,7 +113,7 @@ class Quote:
             ):
                 quotes["quotes"][0][self.channel.server.name][0][self.channel.name] = []
 
-                self.channel.server.logger.info(
+                self.logger.info(
                     "created quote entry for %s in %s",
                     self.channel.name,
                     self.channel.server.name,

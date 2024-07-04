@@ -45,6 +45,7 @@ class Tarot:
         self.user = user
         self.user_args = user_args
 
+        self.logger = self.channel.logger.getChild(self.__class__.__name__)
         self.openai_client = self.channel.server.config.openai_client
 
         self.deck = TarotDeck()
@@ -117,14 +118,13 @@ class Tarot:
                 frequency_penalty=0.0,
                 n=1,
             )
-        except Exception as exc:
+        except:
             err_msg = f"{c.ERR} query failed but deck for "
             err_msg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
             err_msg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
-
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
             self.channel.send_query(err_msg)
-            return
+
+            self.logger.exception("query failed")
 
         try:
             msg = f"{c.INFO} reading for {c.WHITE}{self.user.nick}{c.RES}:\n"
@@ -133,10 +133,9 @@ class Tarot:
             err_msg = f"{c.ERR} query failed but deck for "
             err_msg += f"{c.WHITE}{self.user.nick}{c.RES} has been stored, you "
             err_msg += f"can retry using {c.LGREEN}?tarot read last{c.RES}."
-
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
             self.channel.send_query(err_msg)
-            return
+
+            self.logger.exception("parsing response failed")
 
         self.channel.send_query(msg)
 

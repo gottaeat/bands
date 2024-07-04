@@ -10,6 +10,7 @@ class WAQuery:
         self.user = user
         self.user_args = user_args
 
+        self.logger.exception("query failed")
         self.wa_client = channel.server.config.wa_client
 
         self._run()
@@ -34,10 +35,9 @@ class WAQuery:
         except StopIteration:
             self.channel.send_query(f"{c.ERR} no response.")
             return
-        except Exception as exc:
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
+        except:
             self.channel.send_query(f"{c.ERR} query failed.")
-            return
+            self.logger.exception("query failed")
 
         for line in response.split("\n"):
             self.channel.send_query(f"{c.INFO} {line}")

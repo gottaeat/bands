@@ -26,6 +26,7 @@ class AIQuery:
         self.user = user
         self.user_args = user_args
 
+        self.logger = self.channel.logger.getChild(self.__class__.__name__)
         self.openai_client = self.channel.server.config.openai_client
 
         self._run()
@@ -56,17 +57,15 @@ class AIQuery:
                 frequency_penalty=0.0,
                 n=1,
             )
-        except Exception as exc:
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
+        except:
             self.channel.send_query(f"{c.ERR} query failed.")
-            return
+            self.logger.exception("query failed")
 
         try:
             msg = response.choices[0].message.content
-        except Exception as exc:
-            self.channel.server.logger.warning("%s failed with:\n%s", __name__, exc)
+        except:
             self.channel.send_query(f"{c.ERR} query failed.")
-            return
+            self.logger.exception("query failed")
 
         self.channel.send_query(msg)
 
