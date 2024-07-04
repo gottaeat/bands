@@ -8,11 +8,13 @@ class Auth:
         self.user = user
         self.user_args = user_args
 
+        self.logger = self.user.logger.getChild(self.__class__.__name__)
+
         self._run()
 
     def _run(self):
         if not self.user.server.allow_admin:
-            self.user.server.logger.warning(
+            self.logger.warning(
                 "%s (%s) tried to auth when authentication is disabled",
                 self.user.nick,
                 self.user.login,
@@ -23,7 +25,7 @@ class Auth:
 
         # auth is disabled server-wide
         if self.user.server.bad_pw_attempts >= 12:
-            self.user.server.logger.warning(
+            self.logger.warning(
                 "%s (%s) tried to auth when authentication is disabled",
                 self.user.nick,
                 self.user.login,
@@ -34,7 +36,7 @@ class Auth:
 
         # auth is disabled for user
         if self.user.bad_pw_attempts >= 3:
-            self.user.server.logger.warning(
+            self.logger.warning(
                 "%s (%s) failed 3 times in total when trying to authenticate",
                 self.user.nick,
                 self.user.login,
@@ -48,7 +50,7 @@ class Auth:
             self.user.bad_pw_attempts += 1
             self.user.server.bad_pw_attempts += 1
 
-            self.user.server.logger.warning(
+            self.logger.warning(
                 "%s (%s) ran ?auth without providing a secret (%s/3)",
                 self.user.nick,
                 self.user.login,
@@ -63,15 +65,13 @@ class Auth:
         if self.user_args[0] == self.user.server.secret:
             self.user.server.admin = self.user
 
-            self.user.server.logger.warning(
-                "%s (%s) now has admin perms in %s",
+            self.logger.warning(
+                "%s (%s) now has admin perms",
                 self.user.nick,
                 self.user.login,
-                self.user.server.name,
             )
 
-            msg = f"{c.INFO} you are now authorized as the admin user "
-            msg += f"for {self.user.server.name}."
+            msg = f"{c.INFO} you are now authorized for administrative access."
             self.user.send_query(msg)
             return
 
@@ -79,7 +79,7 @@ class Auth:
         self.user.bad_pw_attempts += 1
         self.user.server.bad_pw_attempts += 1
 
-        self.user.server.logger.warning(
+        self.logger.warning(
             "%s (%s) provided incorrect secret (%s/3)",
             self.user.nick,
             self.user.login,
