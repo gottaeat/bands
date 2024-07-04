@@ -2,13 +2,10 @@ import json
 
 from threading import Lock
 
-from .log import set_logger
-
 
 class Doot:
-    def __init__(self, debug=False):
-        self.logger = None
-        self.debug = debug
+    def __init__(self, parent_logger):
+        self.logger = parent_logger.getChild(self.__class__.__name__)
 
         self.mutex = Lock()
 
@@ -17,7 +14,6 @@ class Doot:
         self._first_run()
 
     def _first_run(self):
-        self.logger = set_logger(__name__, self.debug)
         self.logger.info("initialized")
 
     def read_doots(self):
