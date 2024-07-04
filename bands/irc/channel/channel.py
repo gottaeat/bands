@@ -18,6 +18,7 @@ class Channel:
         self.user_list = []
 
         self.char_limit = None
+        self.logger = None
         self.cmd_tstamp = None
         self.hook_tstamp = None
 

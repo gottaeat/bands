@@ -8,10 +8,13 @@ class User:
         self.server = server
         self.sock_ops = server.sock_ops
 
+        # props
         self.nick = None
         self.login = None
 
         self.char_limit = None
+        self.logger = None
+
         self.tarot_deck = None
 
         self.tstamp = None
