@@ -10,7 +10,7 @@ class WAQuery:
         self.user = user
         self.user_args = user_args
 
-        self.logger = self.user.logger.getChild(self.__class__.__name__)
+        self.logger = self.channel.logger.getChild(self.__class__.__name__)
         self.wa_client = channel.server.config.wa_client
 
         self._run()
