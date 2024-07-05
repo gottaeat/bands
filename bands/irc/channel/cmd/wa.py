@@ -39,6 +39,10 @@ class WAQuery:
             self.channel.send_query(f"{c.ERR} query failed.")
             self.logger.exception("query failed")
 
+        if response is None:
+            self.channel.send_query(f"{c.ERR} no plaintext response.")
+            return
+
         for line in response.split("\n"):
             self.channel.send_query(f"{c.INFO} {line}")
 
