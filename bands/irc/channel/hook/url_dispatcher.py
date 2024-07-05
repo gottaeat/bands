@@ -31,6 +31,9 @@ class URLDispatcher:
     def _numfmt(num):
         num = int(num)
 
+        if num == 0:
+            return str(num)
+
         if num >= 1_000_000_000:
             retnum = (f"{num / 1_000_000_000:.2f}", "B")
         elif num >= 1_000_000:
@@ -85,7 +88,6 @@ class URLDispatcher:
                     self._handle_yt(url)
                 except:
                     self._handle_title(url)
-                    self.logger.exception("fell back, YouTube handler failed")
             elif url_netloc in (
                 "on.soundcloud.com",
                 "soundcloud.com",
@@ -95,7 +97,6 @@ class URLDispatcher:
                     self._handle_sc(url)
                 except:
                     self._handle_title(url)
-                    self.logger.exception("fell back, SoundCloud handler failed")
             else:
                 self._handle_title(url)
 
@@ -247,13 +248,12 @@ class URLDispatcher:
 
     # - - soundcloud handlers - - #
     def _handle_sc(self, url):
-        # resolve if shortened
-        if urllib.parse.urlparse(url).netloc == "on.soundcloud.com":
-            try:
-                with urllib.request.urlopen(url) as f:
-                    url = f.geurl()
-            except:
-                self.logger.exception("could not unshorten the url")
+        # follow all links
+        try:
+            with urllib.request.urlopen(url) as f:
+                url = f.geturl()
+        except:
+            self.logger.exception("failed following the link")
 
         # make resolve url
         resolve_url = "https://api-v2.soundcloud.com/resolve"
@@ -280,10 +280,19 @@ class URLDispatcher:
         if track_kind not in ("playlist", "system-playlist", "track"):
             self.logger.error("%s is not a recognized kind", track_kind)
 
+        # track
         if track_kind == "track":
             self._handle_sc_track(data)
-        else:
+            return
+
+        # playlists/sets/album
+        if track_kind == "playlist":
             self._handle_sc_playlist(data)
+            return
+
+        # system-playlist
+        if track_kind == "system-playlist":
+            self._handle_sc_station(data)
 
     def _handle_sc_track(self, data):
         # parse json
@@ -357,7 +366,93 @@ class URLDispatcher:
         self.channel.send_query(msg)
 
     def _handle_sc_playlist(self, data):
-        pass
+        # parse json
+        data_must_have = [
+            "created_at",
+            "duration",
+            "is_album",
+            "likes_count",
+            "reposts_count",
+            "title",
+            "track_count",
+            "user",
+        ]
+
+        for key in data_must_have:
+            if key not in data.keys():
+                self.logger.error("%s is missing from track json", key)
+
+        user_must_have = [
+            "followers_count",
+            "username",
+            "verified",
+        ]
+
+        for key in user_must_have:
+            if key not in data["user"].keys():
+                self.logger.error("%s is missing from user json", key)
+
+        # uploader metadata
+        uploader_name = data["user"]["username"]
+        uploader_verified = "✓" if data["user"]["verified"] else ""
+        uploader_subs = self._numfmt(data["user"]["followers_count"])
+
+        if len(uploader_name) > 15:
+            uploader_name = f"{uploader_name[0:12]}..."
+
+        # playlist metadata
+        pl_title = data["title"]
+
+        if len(pl_title) > 35:
+            pl_title = f"{pl_title[0:32]}..."
+
+        pl_len = self._mktstamp(data["duration"] / 1000)
+        pl_tstamp = datetime.datetime.fromisoformat(data["created_at"].rstrip("Z"))
+        pl_likes = self._numfmt(data["likes_count"])
+        pl_reposts = self._numfmt(data["reposts_count"])
+        pl_track_len = data["track_count"]
+
+        # prompt
+        msg = f"{c.GREEN}[{c.ORANGE}SoundCloud{c.GREEN}]"
+
+        if data["is_album"]:
+            msg += f"[{c.LBLUE}ALBUM{c.GREEN}]"
+        else:
+            msg += f"[{c.LBLUE}PLAYLIST{c.GREEN}]"
+
+        msg += f"[{c.LBLUE}{pl_track_len} tracks{c.LRED}¦"
+        msg += f"{c.LBLUE}{pl_len}{c.GREEN}] "
+        msg += f"{c.WHITE}{pl_title} "
+        msg += f"{c.LBLUE}by {c.LGREEN}{uploader_name}"
+        msg += f"{c.WHITE}{uploader_verified} "
+        msg += f"{c.LBLUE}({c.LCYAN}{uploader_subs} subs{c.LBLUE}) "
+        msg += f"{c.LRED}@ {c.LCYAN}{pl_tstamp}UTC {c.LBLUE}¦ "
+        msg += f"{c.WHITE}{pl_likes}{c.LRED}♥ "
+        msg += f"{c.WHITE}{pl_reposts}{c.LGREEN}⇌{c.RES}"
+        self.channel.send_query(msg)
+
+    def _handle_sc_station(self, data):
+        # parse json
+        data_must_have = [
+            "description",
+            "likes_count",
+        ]
+
+        for key in data_must_have:
+            if key not in data.keys():
+                self.logger.error("%s is missing from track json", key)
+
+        station_based_on = data["description"]
+        if len(station_based_on) > 50:
+            station_based_on = f"{station_based_on[0:47]}..."
+
+        station_likes = self._numfmt(data["likes_count"])
+
+        msg = f"{c.GREEN}[{c.ORANGE}SoundCloud{c.GREEN}]"
+        msg += f"[{c.LBLUE}STATION{c.GREEN}] "
+        msg += f"{c.WHITE}{station_based_on} {c.LBLUE}¦ "
+        msg += f"{c.WHITE}{station_likes}{c.LRED}♥{c.RES}"
+        self.channel.send_query(msg)
 
     def _run(self):
         self._prechecks()
