@@ -248,12 +248,13 @@ class URLDispatcher:
 
     # - - soundcloud handlers - - #
     def _handle_sc(self, url):
-        # follow all links
-        try:
-            with urllib.request.urlopen(url) as f:
-                url = f.geturl()
-        except:
-            self.logger.exception("failed following the link")
+        # follow all links except for api
+        if urllib.parse.urlparse(url).netloc != "api.soundcloud.com":
+            try:
+                with urllib.request.urlopen(url) as f:
+                    url = f.geturl()
+            except:
+                self.logger.exception("failed following the link")
 
         # make resolve url
         resolve_url = "https://api-v2.soundcloud.com/resolve"
