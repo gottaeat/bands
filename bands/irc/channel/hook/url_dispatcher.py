@@ -86,7 +86,11 @@ class URLDispatcher:
                 except:
                     self._handle_title(url)
                     self.logger.exception("fell back, YouTube handler failed")
-            elif url_netloc in ("on.soundcloud.com", "soundcloud.com"):
+            elif url_netloc in (
+                "on.soundcloud.com",
+                "soundcloud.com",
+                "api.soundcloud.com",
+            ):
                 try:
                     self._handle_sc(url)
                 except:
@@ -319,13 +323,16 @@ class URLDispatcher:
         # track metadata
         track_title = data["title"]
 
-        # if uploader specified an artist, put that as part of track
-        if "artist" in data["publisher_metadata"].keys():
-            track_artist = data["publisher_metadata"]["artist"]
-            if len(track_artist) > 10:
-                track_artist = f"{track_artist[0:8]}..."
+        if data["publisher_metadata"] is not None:
+            # if uploader specified an artist, put that as part of track
+            if "artist" in data["publisher_metadata"].keys():
+                track_artist = data["publisher_metadata"]["artist"]
 
-            track_title = f"{track_artist} - {track_title}"
+                if track_artist.lower().strip() != uploader_name.lower().strip():
+                    if len(track_artist) > 10:
+                        track_artist = f"{track_artist[0:8]}..."
+
+                        track_title = f"{track_artist} - {track_title}"
 
         if len(track_title) > 35:
             track_title = f"{track_title[0:32]}..."
@@ -340,7 +347,7 @@ class URLDispatcher:
         msg = f"{c.GREEN}[{c.ORANGE}SoundCloud{c.GREEN}]"
         msg += f"[{c.LBLUE}{track_len}{c.GREEN}] "
         msg += f"{c.WHITE}{track_title} "
-        msg += f"{c.LBLUE}pub. by {c.LGREEN}{uploader_name}"
+        msg += f"{c.LBLUE}by {c.LGREEN}{uploader_name}"
         msg += f"{c.WHITE}{uploader_verified} "
         msg += f"{c.LBLUE}({c.LCYAN}{uploader_subs} subs{c.LBLUE}) "
         msg += f"{c.LRED}@ {c.LCYAN}{track_tstamp}UTC {c.LBLUE}¦ "
