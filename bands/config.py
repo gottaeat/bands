@@ -370,6 +370,7 @@ class ConfigYAML:
     def run(self):
         self.load_yaml()
 
+        self._gen_sc_client_id()
         self._parse_wolfram()
         self._parse_openai()
         self._parse_quote()
