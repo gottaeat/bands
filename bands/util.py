@@ -27,6 +27,15 @@ def get_url(url, tls_context=None):
 
     content_type = content_type.split(";")
 
+    # get content-length
+    content_length = response.getheader("Content-Length")
+
+    if not content_length:
+        response.close()
+        raise ValueError("Content-Length header was not found")
+
+    content_length = int(content_length)
+
     # check if we take the mimetype
     mimetype = content_type[0]
 
@@ -45,6 +54,12 @@ def get_url(url, tls_context=None):
         charset = content_type[1].split("charset=")[1]
     except IndexError:
         charset = "utf-8"
+
+    # check if file is too big
+    if content_length > (1024 * 1024 * 5):
+        response.close()
+        content_size = content_length / 1024 / 1024
+        raise ValueError(f"file is larger than 5MB ({content_size})")
 
     # read data
     data = response.read()
