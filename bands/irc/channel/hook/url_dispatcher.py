@@ -497,6 +497,7 @@ class URLDispatcher:
             self._handle_gh_repo(data)
 
     def _handle_gh_user(self, data):
+        # parse json
         data_must_have = [
             "login",
             "type",
@@ -569,12 +570,82 @@ class URLDispatcher:
 
         msg += f"{c.WHITE}{user_num_repos} {c.YELLOW}repos {c.LBLUE}¦ "
         msg += f"{c.WHITE}{user_num_gists} {c.YELLOW}gists {c.LBLUE}¦ "
-        msg += f"{c.YELLOW}on GitHub {c.LRED}since {c.WHITE}{user_tstamp} {c.LBLUE}¦ "
-        msg = msg.rstrip(" {c.LBLUE}¦ ")
+        msg += f"{c.YELLOW}on GitHub {c.LRED}since {c.WHITE}{user_tstamp}UTC"
         self.channel.send_query(msg)
 
     def _handle_gh_repo(self, data):
-        pass
+        # parse json
+        data_must_have = [
+            "full_name",
+            "description",
+            "created_at",
+            "pushed_at",
+            "stargazers_count",
+            "language",
+            "forks_count",
+            "license",
+            "forks",
+            "open_issues",
+            "subscribers_count",
+        ]
+
+        for key in data_must_have:
+            if key not in data.keys():
+                self.logger.error("%s is missing from repo json", key)
+
+        # repo metadata | never null
+        full_name = data["full_name"].split("/")
+        repo_owner = full_name[0]
+        repo_name = full_name[1]
+
+        repo_tstamp = datetime.datetime.fromisoformat(data["created_at"].rstrip("Z"))
+        repo_commit_tstamp = datetime.datetime.fromisoformat(
+            data["pushed_at"].rstrip("Z")
+        )
+        repo_stars = self._numfmt(data["stargazers_count"])
+        repo_forks = self._numfmt(data["forks_count"])
+        repo_issues = self._numfmt(data["open_issues"])
+        repo_watchers = self._numfmt(data["subscribers_count"])
+
+        # can be null
+        repo_bio_text = data["description"]
+        repo_most_lang = data["language"]
+        repo_license = data["license"]
+
+        # prompt
+        msg = f"{c.GREEN}[{c.WHITE}GitHub{c.GREEN}]"
+        msg += f"[{c.LBLUE}REPO{c.GREEN}] "
+        msg += f"{c.WHITE}{repo_owner}{c.LRED}"
+        msg += f"/{c.YELLOW}{repo_name} {c.LBLUE}¦ "
+
+        if repo_bio_text:
+            if len(repo_bio_text) > 35:
+                repo_bio_text = f"{repo_bio_text[0:32]}..."
+            msg += f"{c.WHITE}{repo_bio_text} {c.LBLUE}¦ "
+
+        if repo_most_lang:
+            msg += f"{c.YELLOW}language{c.LRED}: {c.WHITE}{repo_most_lang} {c.LBLUE}¦ "
+
+        if repo_license:
+            try:
+                repo_license_name = repo_license["spdx_id"]
+            except KeyError:
+                repo_license_name = repo_license["name"]
+
+            if repo_license_name == "NOASSERTION":
+                repo_license_name = repo_license["name"]
+
+            msg += (
+                f"{c.YELLOW}license{c.LRED}: {c.WHITE}{repo_license_name} {c.LBLUE}¦ "
+            )
+
+        msg += f"{c.WHITE}{repo_stars} {c.YELLOW}stars "
+        msg += f"{c.WHITE}{repo_forks} {c.YELLOW}forks "
+        msg += f"{c.WHITE}{repo_watchers} {c.YELLOW}watchers {c.LBLUE}¦ "
+        msg += f"{c.WHITE}{repo_issues} {c.YELLOW}open issues {c.LBLUE}¦ "
+        msg += f"{c.YELLOW}created {c.LRED}@ {c.WHITE}{repo_tstamp}UTC {c.LBLUE}¦ "
+        msg += f"{c.YELLOW}last commit {c.LRED}@ {c.WHITE}{repo_commit_tstamp}UTC"
+        self.channel.send_query(msg)
 
     def _run(self):
         self._prechecks()
