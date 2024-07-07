@@ -159,16 +159,16 @@ class URLDispatcher:
 
         try:
             soup = BeautifulSoup(data, "html.parser")
-
-            if soup.title:
-                title = soup.title.string.strip()
-
-                if len(title) > 55:
-                    title = f"{title[0:52]}..."
-            else:
-                self.logger.error("%s has no title", url)
         except:
             self.logger.exception("title parse failed")
+
+        if soup.title:
+            title = soup.title.string.strip()
+
+            if len(title) > 55:
+                title = f"{title[0:52]}..."
+        else:
+            self.logger.error("%s has no title", url)
 
         self.channel.send_query(
             f"{c.GREEN}[{c.LBLUE}LINK{c.GREEN}]{c.RES} {title}{c.RES}\n"
