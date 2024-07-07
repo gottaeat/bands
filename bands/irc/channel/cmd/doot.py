@@ -165,7 +165,7 @@ class Doot:
         for doot_entry in top_five:
             itemlen = unilen(doot_entry["nick"])
 
-            if itemlen > max_len:
+            if itemlen > max_len:  # pylint: disable=consider-using-max-builtin
                 max_len = itemlen
 
         # gen prompt

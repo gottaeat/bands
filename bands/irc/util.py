@@ -59,7 +59,7 @@ def drawbox(string, charset):
 
     width = 0
     for i, _ in enumerate(string):
-        if unilen(string[i]) > width:
+        if unilen(string[i]) > width:  # pylint: disable=consider-using-max-builtin
             width = unilen(string[i])
 
     for i, _ in enumerate(string):

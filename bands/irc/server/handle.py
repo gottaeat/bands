@@ -120,7 +120,10 @@ class Handle:
                 ratelimit = True
 
                 try:
-                    if corresp_user == self.server.admin:
+                    if (
+                        corresp_user  # pylint: disable=possibly-used-before-assignment
+                        == self.server.admin
+                    ):
                         ratelimit = False
                 except UnboundLocalError:
                     pass

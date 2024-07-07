@@ -278,8 +278,12 @@ class BlackJack:
             doot_amount = 0
             msg = f"{c.INFO} {self.user.nick} loses."
 
-        user_doots = self.doot.alter_doot(self.channel.server, self.user, doot_amount)
-        msg += f" (balance: {user_doots})"
+        user_doots = self.doot.alter_doot(
+            self.channel.server,
+            self.user,
+            doot_amount,  # pylint: disable=possibly-used-before-assignment
+        )
+        msg += f" (balance: {user_doots})"  # pylint: disable=undefined-variable
 
         self.channel.send_query(msg)
         self.user.bjack = None
