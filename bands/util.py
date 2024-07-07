@@ -61,7 +61,7 @@ def get_url(url, tls_context=None):
     response.close()
 
     if len(data) > max_size:
-        raise ValueError(f"file is larger than 5MB ({content_size})")
+        raise ValueError("file is larger than 5MB")
 
     if len(data) == 0:
         raise ValueError("empty data returned")
