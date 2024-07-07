@@ -97,6 +97,12 @@ class URLDispatcher:
                     self._handle_sc(url)
                 except:
                     self._handle_title(url)
+            elif url_netloc == "github.com":
+                try:
+                    self._handle_gh(url)
+                except:
+                    self._handle_title(url)
+                    self.logger.exception("gh fucked")
             else:
                 self._handle_title(url)
 
@@ -443,17 +449,132 @@ class URLDispatcher:
             if key not in data.keys():
                 self.logger.error("%s is missing from track json", key)
 
+        # station metadata
         station_based_on = data["description"]
         if len(station_based_on) > 50:
             station_based_on = f"{station_based_on[0:47]}..."
 
         station_likes = self._numfmt(data["likes_count"])
 
+        # prompt
         msg = f"{c.GREEN}[{c.ORANGE}SoundCloud{c.GREEN}]"
         msg += f"[{c.LBLUE}STATION{c.GREEN}] "
         msg += f"{c.WHITE}{station_based_on} {c.LBLUE}¦ "
         msg += f"{c.WHITE}{station_likes}{c.LRED}♥{c.RES}"
         self.channel.send_query(msg)
+
+    # - - github handler - - #
+    def _handle_gh(self, url):
+        # figure out if repo or user (can query orgs via user api)
+        is_user = False
+
+        url_parse = urllib.parse.urlparse(url)
+        url_parts = url_parse.path.strip("/").split("/")
+
+        if len(url_parts) == 1:
+            is_user = True
+            api_url = f"https://api.github.com/users/{url_parts[0]}"
+        elif len(url_parts) == 2:
+            api_url = f"https://api.github.com/repos/{url_parts[0]}/{url_parts[1]}"
+        else:
+            self.logger.error("not handled")
+
+        try:
+            data = get_url(api_url)  # pylint: disable=possibly-used-before-assignment
+        except:
+            self.logger.exception("GET failed")
+
+        # check json
+        try:
+            data = json.loads(data)
+        except:
+            self.logger.exception("parse failed")
+
+        # dispatch to handler
+        if is_user:
+            self._handle_gh_user(data)
+        else:
+            self._handle_gh_repo(data)
+
+    def _handle_gh_user(self, data):
+        data_must_have = [
+            "login",
+            "type",
+            "name",
+            "company",
+            "location",
+            "bio",
+            "public_repos",
+            "public_gists",
+            "followers",
+            "following",
+            "created_at",
+        ]
+
+        for key in data_must_have:
+            if key not in data.keys():
+                self.logger.error("%s is missing from user/org json", key)
+
+        # user metadata | never null
+        user_login = data["login"]
+        user_type = data["type"]
+        user_num_repos = self._numfmt(data["public_repos"])
+        user_num_gists = self._numfmt(data["public_gists"])
+        user_num_followers = self._numfmt(data["followers"])
+        user_num_following = self._numfmt(data["following"])
+        user_tstamp = datetime.datetime.fromisoformat(data["created_at"].rstrip("Z"))
+
+        # can be null
+        user_name = data["name"]
+        user_company = data["company"]
+        user_loc = data["location"]
+        user_bio_text = data["bio"]
+
+        # prompt
+        msg = f"{c.GREEN}[{c.WHITE}GitHub{c.GREEN}]"
+
+        if user_type == "User":
+            msg += f"[{c.LBLUE}USER{c.GREEN}] "
+        else:
+            msg += f"[{c.LBLUE}ORG{c.GREEN}] "
+
+        if user_name:
+            if len(user_name) > 25:
+                user_name = f"{user_name[0:22]}..."
+
+            msg += f"{c.WHITE}{user_name} "
+            msg += f"{c.LBLUE}({c.LGREEN}{user_login}{c.LBLUE}) ¦ "
+        else:
+            msg += f"{c.WHITE}{user_login} {c.LBLUE}¦ "
+
+        if user_bio_text:
+            if len(user_bio_text) > 35:
+                user_bio_text = f"{user_bio_text[0:32]}..."
+            msg += f"{c.WHITE}{user_bio_text} {c.LBLUE}¦ "
+
+        msg += f"{c.WHITE}{user_num_followers} {c.YELLOW}followers {c.LBLUE}¦ "
+        msg += f"{c.WHITE}{user_num_following} {c.YELLOW}following {c.LBLUE}¦ "
+
+        if user_type == "User" and user_company:
+            if len(user_company) > 25:
+                user_company = f"{user_company[0:22]}..."
+
+            msg += f"{c.YELLOW}works {c.LRED}@ {c.WHITE}{user_company} {c.LBLUE}¦ "
+
+        if user_loc:
+            if len(user_loc) > 25:
+                user_loc = f"{user_loc[0:22]}..."
+
+            msg += f"{c.YELLOW}located {c.LRED}@ {c.WHITE}{user_loc} {c.LBLUE}¦ "
+
+        msg += f"{c.WHITE}{user_num_repos} {c.YELLOW}repos {c.LBLUE}¦ "
+        msg += f"{c.WHITE}{user_num_gists} {c.YELLOW}gists {c.LBLUE}¦ "
+        msg += f"{c.YELLOW}on GitHub {c.LRED}since {c.WHITE}{user_tstamp} {c.LBLUE}¦ "
+        msg = msg.rstrip(" {c.LBLUE}¦ ")
+        self.channel.send_query(msg)
+
+    def _handle_gh_repo(self, data):
+        pass
 
     def _run(self):
         self._prechecks()
