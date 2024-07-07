@@ -60,6 +60,51 @@ class URLDispatcher:
             return f"{minutes:02}:{ seconds:02}"
         return f"00:{seconds:02}"
 
+    def _get_gh_commit(self, full_name, default_branch):
+        url = f"https://api.github.com/repos/{full_name[0]}/{full_name[1]}/"
+        url += f"commits?sha={default_branch}&per_page=1&page=1"
+
+        try:
+            with urllib.request.urlopen(url) as f:
+                response = f
+        except:
+            self.logger.warning("commit request GET failed")
+            return
+
+        link_header = response.getheader("Link")
+        if link_header is None:
+            self.logger.warning("no Link header")
+            return
+
+        last_link = None
+        for header in link_header.split(", "):
+            if 'rel="last"' in header:
+                last_link = header
+                break
+
+        if last_link is None:
+            self.logger.warning('no rel="last" in Link header')
+            return
+
+        try:
+            last_link_url = last_link.split(";")[0].strip("<").strip(">")
+        except:
+            self.logger.warning("last link parse failed")
+            return
+
+        url_parse = urllib.parse.parse_qs(urllib.parse.urlparse(last_link_url).query)
+
+        try:
+            commits = url_parse["page"][0]
+        except KeyError:
+            self.logger.warning("last link has no page query")
+            return
+        except IndexError:
+            self.logger.warning("last link page query has no value")
+            return
+
+        return int(commits)
+
     def _prechecks(self):
         # dedup
         self.urls = list(dict.fromkeys(self.urls))
@@ -102,7 +147,6 @@ class URLDispatcher:
                     self._handle_gh(url)
                 except:
                     self._handle_title(url)
-                    self.logger.exception("gh fucked")
             else:
                 self._handle_title(url)
 
@@ -576,16 +620,17 @@ class URLDispatcher:
     def _handle_gh_repo(self, data):
         # parse json
         data_must_have = [
-            "full_name",
-            "description",
             "created_at",
+            "default_branch",
+            "description",
+            "forks",
+            "forks_count",
+            "full_name",
+            "language",
+            "license",
+            "open_issues",
             "pushed_at",
             "stargazers_count",
-            "language",
-            "forks_count",
-            "license",
-            "forks",
-            "open_issues",
             "subscribers_count",
         ]
 
@@ -612,6 +657,10 @@ class URLDispatcher:
         repo_most_lang = data["language"]
         repo_license = data["license"]
 
+        # try getting commit count
+        repo_master = data["default_branch"]
+        repo_commits = self._get_gh_commit(full_name, repo_master)
+
         # prompt
         msg = f"{c.GREEN}[{c.WHITE}GitHub{c.GREEN}]"
         msg += f"[{c.LBLUE}REPO{c.GREEN}] "
@@ -622,6 +671,10 @@ class URLDispatcher:
             if len(repo_bio_text) > 35:
                 repo_bio_text = f"{repo_bio_text[0:32]}..."
             msg += f"{c.WHITE}{repo_bio_text} {c.LBLUE}¦ "
+
+        if repo_commits:
+            repo_commits = self._numfmt(repo_commits)
+            msg += f"{c.WHITE}{repo_commits} {c.YELLOW}commits {c.LBLUE}¦ "
 
         if repo_most_lang:
             msg += f"{c.YELLOW}language{c.LRED}: {c.WHITE}{repo_most_lang} {c.LBLUE}¦ "
