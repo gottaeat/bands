@@ -18,7 +18,7 @@ def get_url(url, tls_context=None):
     else:
         response = urllib.request.urlopen(request)
 
-    # get content-type
+    # - - content-type - - #
     content_type = response.getheader("Content-Type")
 
     if not content_type:
@@ -26,15 +26,6 @@ def get_url(url, tls_context=None):
         raise ValueError("Content-Type header was not found")
 
     content_type = content_type.split(";")
-
-    # get content-length
-    content_length = response.getheader("Content-Length")
-
-    if not content_length:
-        response.close()
-        raise ValueError("Content-Length header was not found")
-
-    content_length = int(content_length)
 
     # check if we take the mimetype
     mimetype = content_type[0]
@@ -55,15 +46,25 @@ def get_url(url, tls_context=None):
     except IndexError:
         charset = "utf-8"
 
-    # check if file is too big
-    if content_length > (1024 * 1024 * 5):
-        response.close()
-        content_size = content_length / 1024 / 1024
-        raise ValueError(f"file is larger than 5MB ({content_size})")
+    # - - content-length - - #
+    content_length = response.getheader("Content-Length")
+    max_size = 1024 * 1024 * 5
+
+    if content_length:
+        if int(content_length) > max_size:
+            response.close()
+            content_size = content_length / 1024 / 1024
+            raise ValueError(f"file is larger than 5MB ({content_size})")
 
     # read data
-    data = response.read()
+    data = response.read(max_size + 1)
     response.close()
+
+    if len(data) > max_size:
+        raise ValueError(f"file is larger than 5MB ({content_size})")
+
+    if len(data) == 0:
+        raise ValueError("empty data returned")
 
     # decode data
     try:
@@ -73,9 +74,5 @@ def get_url(url, tls_context=None):
             data = data.decode(encoding="utf-8")
         except UnicodeDecodeError:
             data = data.decode(encoding="latin-1")
-
-    # check data len
-    if len(data) == 0:
-        raise ValueError("empty data returned")
 
     return data
