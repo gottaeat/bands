@@ -298,8 +298,29 @@ class URLDispatcher:
 
     # - - soundcloud handlers - - #
     def _handle_sc(self, url):
-        # follow all links except for api
-        if urllib.parse.urlparse(url).netloc != "api.soundcloud.com":
+        # pre-tasks
+        parsed_url = urllib.parse.urlparse(url)
+
+        if parsed_url.netloc != "api.soundcloud.com":
+            # # clean url if it contains personalized-tracks, causes resolver to
+            # # 404
+            # params = urllib.parse.parse_qs(parsed_url.query)
+            #
+            # filtered_params = {
+            #     k: v
+            #     for k, v in params.items()
+            #     if not any("personalized-tracks" in item for item in v)
+            # }
+            #
+            # new_query_str = urllib.parse.urlencode(filtered_params, doseq=True)
+            # url = urllib.parse.urlunparse(parsed_url._replace(query=new_query_str))
+
+            # clean url from all queries, queries such as
+            # ?in_system_playlist=personalized-tracks::<username> causes a 404
+            # as they are visible only to <username>
+            url = urllib.parse.urlunparse(parsed_url._replace(query=""))
+
+            # follow all links except for api, 404's again
             try:
                 with urllib.request.urlopen(url) as f:
                     url = f.geturl()
