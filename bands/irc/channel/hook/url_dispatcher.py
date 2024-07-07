@@ -597,8 +597,12 @@ class URLDispatcher:
                 user_bio_text = f"{user_bio_text[0:32]}..."
             msg += f"{c.WHITE}{user_bio_text} {c.LBLUE}¦ "
 
-        msg += f"{c.WHITE}{user_num_followers} {c.YELLOW}followers {c.LBLUE}¦ "
-        msg += f"{c.WHITE}{user_num_following} {c.YELLOW}following {c.LBLUE}¦ "
+        msg += f"{c.WHITE}{user_num_followers} {c.YELLOW}followers "
+
+        if user_type == "User":
+            msg += f"{c.WHITE}{user_num_following} {c.YELLOW}following {c.LBLUE}¦ "
+        else:
+            msg += f"{c.LBLUE}¦ "
 
         if user_type == "User" and user_company:
             if len(user_company) > 25:
@@ -613,7 +617,10 @@ class URLDispatcher:
             msg += f"{c.YELLOW}located {c.LRED}@ {c.WHITE}{user_loc} {c.LBLUE}¦ "
 
         msg += f"{c.WHITE}{user_num_repos} {c.YELLOW}repos {c.LBLUE}¦ "
-        msg += f"{c.WHITE}{user_num_gists} {c.YELLOW}gists {c.LBLUE}¦ "
+
+        if user_type == "User":
+            msg += f"{c.WHITE}{user_num_gists} {c.YELLOW}gists {c.LBLUE}¦ "
+
         msg += f"{c.YELLOW}on GitHub {c.LRED}since {c.WHITE}{user_tstamp}UTC"
         self.channel.send_query(msg)
 
@@ -676,6 +683,8 @@ class URLDispatcher:
             repo_commits = self._numfmt(repo_commits)
             msg += f"{c.WHITE}{repo_commits} {c.YELLOW}commits {c.LBLUE}¦ "
 
+        msg += f"{c.WHITE}{repo_issues} {c.YELLOW}open issues {c.LBLUE}¦ "
+
         if repo_most_lang:
             msg += f"{c.YELLOW}language{c.LRED}: {c.WHITE}{repo_most_lang} {c.LBLUE}¦ "
 
@@ -695,7 +704,6 @@ class URLDispatcher:
         msg += f"{c.WHITE}{repo_stars} {c.YELLOW}stars "
         msg += f"{c.WHITE}{repo_forks} {c.YELLOW}forks "
         msg += f"{c.WHITE}{repo_watchers} {c.YELLOW}watchers {c.LBLUE}¦ "
-        msg += f"{c.WHITE}{repo_issues} {c.YELLOW}open issues {c.LBLUE}¦ "
         msg += f"{c.YELLOW}created {c.LRED}@ {c.WHITE}{repo_tstamp}UTC {c.LBLUE}¦ "
         msg += f"{c.YELLOW}last commit {c.LRED}@ {c.WHITE}{repo_commit_tstamp}UTC"
         self.channel.send_query(msg)
