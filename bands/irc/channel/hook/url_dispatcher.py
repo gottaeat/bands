@@ -116,7 +116,7 @@ class URLDispatcher:
             try:
                 url_ip = socket.gethostbyname(url_hostname)
             except socket.gaierror:
-                self.logger.warning("cannot resolve %s\n:%s", url)
+                self.logger.warning("cannot resolve %s", url)
                 self.urls.remove(url)
 
             # check if url host is a bogon
