@@ -27,45 +27,6 @@ class RCon:
         # fmt: on
         self.user.send_query(msg)
 
-    def _run(self):
-        if self.user != self.user.server.admin:
-            return
-
-        if len(self.user_args) == 0:
-            self._usage()
-            return
-
-        if self.user_args[0] == "connect":
-            self._cmd_connect()
-            return
-
-        if self.user_args[0] == "dc":
-            self._cmd_dc()
-            return
-
-        if self.user_args[0] == "join":
-            self._cmd_join()
-            return
-
-        if self.user_args[0] == "part":
-            self._cmd_part()
-            return
-
-        if self.user_args[0] == "raw":
-            self._cmd_raw()
-            return
-
-        if self.user_args[0] == "rehash":
-            self._cmd_rehash()
-            return
-
-        if self.user_args[0] == "status":
-            self._cmd_status()
-            return
-
-        self._usage()
-
-    # -- for _cmd_join() + _cmd_part() -- #
     def _get_objects(self, server_name):
         # server object
         for server in self.config.servers:
@@ -83,24 +44,6 @@ class RCon:
             server_obj, sv_chans = False, False
 
         return server_obj, sv_chans
-
-    # -- cmds -- #
-    def _cmd_rehash(self):
-        self.user.send_query(f"{c.INFO} reloading configuration YAML.")
-        try:
-            self.config.load_yaml()
-        except:
-            self.user.send_query(f"{c.ERR} config reload failed.")
-            self.logger.exception("config reload failed")
-
-        self.user.send_query(f"{c.INFO} parsing servers.")
-        try:
-            self.config.parse_servers()
-        except:
-            self.user.send_query(f"{c.ERR} server parsing failed.")
-            self.logger.exception("server parsing failed")
-
-        self.user.send_query(f"{c.INFO} rehashed the configuration.")
 
     def _cmd_connect(self):
         server_names = self.user_args[1:]
@@ -164,11 +107,11 @@ class RCon:
 
     def _cmd_join(self):
         # take args
-        if len(self.user_args) == 0:
+        if len(self.user_args) == 1:
             self.user.send_query(f"{c.ERR} must supply a server as the first arg.")
             return
 
-        if len(self.user_args) == 1:
+        if len(self.user_args) == 2:
             self.user.send_query(f"{c.ERR} must supply at least one channel.")
             return
 
@@ -204,16 +147,16 @@ class RCon:
 
     def _cmd_part(self):
         # take args
-        server_name = self.user_args[1]
-        channel_names = self.user_args[2:]
-
-        if len(server_name) == 0:
+        if len(self.user_args) == 1:
             self.user.send_query(f"{c.ERR} must supply a server as the first arg.")
             return
 
-        if len(channel_names) == 0:
+        if len(self.user_args) == 2:
             self.user.send_query(f"{c.ERR} must supply at least one channel.")
             return
+
+        server_name = self.user_args[1]
+        channel_names = self.user_args[2:]
 
         # get server object
         server_obj, sv_chans = self._get_objects(server_name)
@@ -244,6 +187,23 @@ class RCon:
             return
 
         self.user.sock_ops.send_raw(msg)
+
+    def _cmd_rehash(self):
+        self.user.send_query(f"{c.INFO} reloading configuration YAML.")
+        try:
+            self.config.load_yaml()
+        except:
+            self.user.send_query(f"{c.ERR} config reload failed.")
+            self.logger.exception("config reload failed")
+
+        self.user.send_query(f"{c.INFO} parsing servers.")
+        try:
+            self.config.parse_servers()
+        except:
+            self.user.send_query(f"{c.ERR} server parsing failed.")
+            self.logger.exception("server parsing failed")
+
+        self.user.send_query(f"{c.INFO} rehashed the configuration.")
 
     def _cmd_status(self):
         msg = f"{c.INFO} active connections are:\n"
@@ -296,3 +256,41 @@ class RCon:
                         msg += f"      {c.LRED}→{c.RES} {userstr} \n"
 
         self.user.send_query(msg)
+
+    def _run(self):
+        if self.user != self.user.server.admin:
+            return
+
+        if len(self.user_args) == 0:
+            self._usage()
+            return
+
+        if self.user_args[0] == "connect":
+            self._cmd_connect()
+            return
+
+        if self.user_args[0] == "dc":
+            self._cmd_dc()
+            return
+
+        if self.user_args[0] == "join":
+            self._cmd_join()
+            return
+
+        if self.user_args[0] == "part":
+            self._cmd_part()
+            return
+
+        if self.user_args[0] == "raw":
+            self._cmd_raw()
+            return
+
+        if self.user_args[0] == "rehash":
+            self._cmd_rehash()
+            return
+
+        if self.user_args[0] == "status":
+            self._cmd_status()
+            return
+
+        self._usage()
