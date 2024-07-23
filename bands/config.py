@@ -156,8 +156,11 @@ class ConfigYAML:
         self.logger.info("processing quote file")
         try:
             quote_file = self.yaml_parsed["quote_file"]
-        except:
-            self.logger.exception("%s parsing has failed", self.config_file)
+        except KeyError:
+            quote_file = "/data/quotes.json"
+
+            warn_msg = "quote_file key was not specified, using /data/quotes.json"
+            self.logger.warning(warn_msg)
 
         if not quote_file:
             self.logger.error("quote_file key cannot blank")
@@ -165,8 +168,11 @@ class ConfigYAML:
         if not os.path.isfile(quote_file):
             self.logger.warning("%s is not a file, creating", quote_file)
 
-            with open(quote_file, "w", encoding="utf-8") as file:
-                file.write(json.dumps({"quotes": [{}]}))
+            try:
+                with open(quote_file, "w", encoding="utf-8") as file:
+                    file.write(json.dumps({"quotes": [{}]}))
+            except FileNotFoundError:
+                self.logger.exception("could not create %s", quote_file)
 
         # - - sanity checks - - #
         self.logger.info("sanity checking the quote file formatting")
@@ -190,8 +196,11 @@ class ConfigYAML:
         self.logger.info("processing doot file")
         try:
             doot_file = self.yaml_parsed["doot_file"]
-        except:
-            self.logger.exception("%s parsing has failed", self.config_file)
+        except KeyError:
+            doot_file = "/data/doots.json"
+
+            warn_msg = "doot_file key was not specified, using /data/doots.json."
+            self.logger.warning(warn_msg)
 
         if not doot_file:
             self.logger.error("doot_file cannot be left blank")
@@ -199,8 +208,11 @@ class ConfigYAML:
         if not os.path.isfile(doot_file):
             self.logger.warning("%s is not a file, creating", doot_file)
 
-            with open(doot_file, "w", encoding="utf-8") as file:
-                file.write(json.dumps({"doots": [{}]}))
+            try:
+                with open(doot_file, "w", encoding="utf-8") as file:
+                    file.write(json.dumps({"doots": [{}]}))
+            except FileNotFoundError:
+                self.logger.exception("could not create %s", doot_file)
 
         # - - sanity checks - - #
         self.logger.info("sanity checking the doot file formatting")
