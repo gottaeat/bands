@@ -1,0 +1,28 @@
+#!/bin/sh
+evalret(){
+    local exitval="${?}"
+
+    if [ "${?}" -eq 0 ]
+        then
+            echo "INFO: success."
+        else
+            echo "ERROR: failed, exiting!"
+            exit 1
+    fi
+}
+
+shutdown() {
+    pinfo "caught SIGTERM/SIGINT, gracefully shutting down."
+
+    bands_pid="$(pidof bands)"
+    for pid in ${bands_pid}; do
+        pinfo "killing ${pid}"
+        kill -TERM "${pid}"
+    done
+
+    exit 0
+}
+
+pinfo(){ echo "INFO: ${@}";}
+pwarn(){ echo "WARN: ${@}";}
+perr(){ echo "ERR : ${@}"; exit 1;}
