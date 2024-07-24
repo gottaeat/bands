@@ -12,32 +12,59 @@ bands is an internet relay chat bot.
 and many more
 
 ## installation
+### 1. stable
 ```sh
-# clone the repo
+# 1. get the compose file
+mkdir bands/; cd bands/
+curl -LO \
+    https://raw.githubusercontent.com/gottaeat/bands/master/docker-compose.yml
+
+# 2. create the volume mount
+mkdir data/; cd data/
+
+# 3. create a config.yml within this directory following the spec and the
+#    example below
+
+# 4. compose up
+cd ../
+docker compose up -d
+```
+
+### 2. dev
+```sh
+# 1. clone the repo
 git clone --depth=1 https://github.com/gottaeat/bands
 cd bands/
 
-# create a configuration yaml following the specification and example below and
-# put it in a path within this repo so that docker can reach it, e.g.
-# $REPO_ROOT/files/config.yml
+# 2. uncomment the `build' key and comment out the `image' key inside
+#    docker-compose.yml to build the image instead of using the one from ghcr
 
-# spin up a container
-docker compose run --rm --build=true bands \
-    /bin/sh -c "\
-        pip install --user --break-system-packages . && \
-        bands -c ./files/config.yml"
+# 3. create the volume mount
+mkdir data/; cd data/
+
+# 4. create a config.yml within this directory following the spec and the
+#    example below
+
+# 5. compose up
+cd ../;
+docker compose up -d
 ```
 
 ## configuration
 ### specification
 #### root
-| key               | necessity     | description                                                                   |
-|-------------------|---------------|-------------------------------------------------------------------------------|
-| `wolfram_api_key` | optional      | (`str`) wolfram alpha api key for module support                              |
-| `openai_key`      | optional      | (`str`) openai key for module support                                         |
-| `quote_file`      | __required__  | (`str`) path to read/write channel quotes to and from, generated if not found |
-| `doot_file`       | __required__  | (`str`) path to read/write server points to and from, generated if not found  |
-| `servers`         | __required__  | list of servers to connect to on startup                                      |
+| key               | necessity     | description                                           |
+|-------------------|---------------|-------------------------------------------------------|
+| `wolfram_api_key` | optional      | (`str`) wolfram alpha api key for module support      |
+| `openai_key`      | optional      | (`str`) openai key for module support                 |
+| `quote_file`      | optional      | (`str`) path to read/write channel quotes to and from |
+| `doot_file`       | optional      | (`str`) path to read/write server points to and from  |
+| `servers`         | __required__  | list of servers to connect to on startup              |
+
+`quote_file` and `doot_file` keys, if not specified, will default to
+`/data/quotes.json` and `/data/doots.json` respectively. regardless of the
+values being specified, if they do not exist, bands will attempt to create and
+initialize the files.
 
 #### servers
 | key            | necessity                   | description                                                                      |
@@ -58,8 +85,6 @@ docker compose run --rm --build=true bands \
 ```yml
 wolfram_api_key: "XXXXX-XXXXXXXXXX"
 openai_key: "sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-quote_file: ./files/quotes.json
-doot_file: ./files/doots.json
 
 servers:
   - name: privnet
