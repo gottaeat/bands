@@ -1,14 +1,16 @@
+---
 networks:
-    bands:
-        external: false
+  bands:
+    external: false
 
 services:
-    bands:
-        container_name: bands
-        build:
-            context: .
-        restart: always
-        networks:
-            - bands
-        volumes:
-            - .:/repo
+  bands:
+    #build:
+    #  context: .
+    image: ghcr.io/gottaeat/bands:latest
+    container_name: bands
+    restart: unless-stopped
+    networks:
+      - bands
+    volumes:
+      - ./data:/data
