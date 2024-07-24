@@ -1,12 +1,18 @@
 FROM alpine:latest AS bands
 
+COPY . /repo
+
 RUN \
-    apk update && \
-    apk upgrade && \
+    apk update && apk upgrade && \
     apk --no-cache add py3-pip && \
-    adduser bands -D -h /home/bands
+    addgroup -g 1337 bands && \
+    adduser -D -h /app -G bands -u 1337 bands
 
 USER bands
-WORKDIR /repo
+RUN \
+    pip install --user --break-system-packages /repo
 
-ENV PATH="/home/bands/.local/bin:$PATH"
+USER root
+WORKDIR /data
+
+CMD /repo/docker/entrypoint.sh
