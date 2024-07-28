@@ -1,3 +1,5 @@
+import logging
+
 from threading import Thread
 
 from bands.colors import MIRCColors
@@ -19,6 +21,7 @@ class RCon:
         # fmt: off
         msg  = f"{c.WHITE}├ {c.LGREEN}connect{c.RES} [server]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}dc{c.RES}      [list of servers]\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}debug{c.RES}   [on|off|state]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}join{c.RES}    [server] [list of channels]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}part{c.RES}    [server] [list of channels]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}raw{c.RES}     [server] [raw irc line]\n"
@@ -58,6 +61,15 @@ class RCon:
 
         if cmd == "status":
             return self._cmd_status()
+
+        # debug
+        if cmd == "debug":
+            if not args or len(args) > 1 or args[0] not in ("on", "off", "state"):
+                print(args)
+                err_msg = f"{c.ERR} must specify just {{on|off|state}}."
+                return self.user.send_query(err_msg)
+
+            return self._cmd_debug(args[0])
 
         # connect + dc
         if cmd in ("connect", "dc"):
@@ -112,6 +124,20 @@ class RCon:
             return
 
         self._usage()
+
+    # - - bot cmd - - #
+    def _cmd_debug(self, arg):
+        root_logger = logging.getLogger()
+
+        if arg == "state":
+            msg = f"{c.INFO} current loglevel is {c.LGREEN}{root_logger.level}{c.RES}."
+            return self.user.send_query(msg)
+
+        level = logging.DEBUG if arg == "on" else logging.INFO
+        root_logger.setLevel(level)
+
+        msg = f"{c.INFO} set the loglevel to {c.LGREEN}{level}{c.RES}."
+        self.user.send_query(msg)
 
     # - - server cmd - - #
     def _cmd_connect(self, server_obj):
