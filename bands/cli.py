@@ -1,11 +1,12 @@
 import argparse
+import logging
 import signal
 
 from threading import Thread
 
 from .colors import ANSIColors
 from .config import ConfigYAML
-from .log import set_logger
+from .log import set_root_logger
 
 ac = ANSIColors()
 
@@ -69,11 +70,16 @@ class CLI:
             server.logger.info(line)
 
     def run(self):
-        self.logger = set_logger("bands", self.debug)
-        self.logger.info("started")
-
-        self._set_signal_handling()
+        # parse first to get self.debug
         self._gen_args()
+
+        # create root logger and init our own
+        set_root_logger(self.debug)
+        self.logger = logging.getLogger("bands")
+
+        # action
+        self.logger.info("started")
+        self._set_signal_handling()
 
         # parse yaml
         self.config = ConfigYAML(self.config_file, self.logger)
