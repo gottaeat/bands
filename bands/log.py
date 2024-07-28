@@ -14,10 +14,8 @@ class ShutdownHandler(logging.StreamHandler):
 
 class BandsFormatter(logging.Formatter):
     _FMT_DATE = "%H:%M:%S"
-
     _FMT_BEGIN = f"{c.BBLK}[{c.LCYN}%(asctime)s{c.BBLK}][{c.BWHI}%(name)s{c.BBLK}]["
     _FMT_END = f"{c.BBLK}]{c.RES}"
-
     _FORMATS = {
         logging.NOTSET: c.LCYN,
         logging.DEBUG: c.BWHI,
@@ -36,14 +34,13 @@ class BandsFormatter(logging.Formatter):
         ).format(record)
 
 
-def set_logger(module_name, debug=False):
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG if debug else logging.INFO)
-    handler.setFormatter(BandsFormatter())
-
-    logger = logging.getLogger(module_name)
+def set_root_logger(debug=False):
+    logger = logging.getLogger()
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
+
+    formatter = BandsFormatter()
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+
     logger.addHandler(handler)
     logger.addHandler(ShutdownHandler())
-
-    return logger
