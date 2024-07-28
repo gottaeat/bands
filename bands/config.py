@@ -30,8 +30,6 @@ class ConfigYAML:
         self.openai_client = None
         self.sc_client_id = None
 
-        self.logger.debug("peepee poopoo")
-
     def load_yaml(self):
         self.logger.info("loading configuration")
 
