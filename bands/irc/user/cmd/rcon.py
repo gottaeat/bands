@@ -35,108 +35,80 @@ class RCon:
                 break
 
         if not server_obj:
-            return
+            return None
 
         server_channels = {}
         for channel in server_obj.channel_obj:
             server_channels[channel.name] = channel
 
-        if len(server_channels) == 0:
+        if not server_channels:
             server_channels = None
 
-        server_dict = {
+        return {
             "name": server_obj.name,
             "obj": server_obj,
             "channels": server_channels,
         }
 
-        return server_dict
-
     def _dispatcher(self):
-        cmd = self.user_args[0]
+        cmd, *args = self.user_args
 
-        # rehash
         if cmd == "rehash":
-            self._cmd_rehash()
-            return
+            return self._cmd_rehash()
 
-        # status
         if cmd == "status":
-            self._cmd_status()
-            return
+            return self._cmd_status()
 
         # connect + dc
         if cmd in ("connect", "dc"):
-            server_names = self.user_args[1:]
+            if not args:
+                err_msg = f"{c.ERR} must supply at least one server."
+                return self.user.send_query(err_msg)
 
-            if len(server_names) == 0:
-                self.user.send_query(f"{c.ERR} must supply at least one server.")
-                return
-
-            for server_name in server_names:
+            for server_name in args:
                 server_dict = self._get_server(server_name)
 
-                if server_dict is None:
-                    self.user.send_query(f"{c.ERR} {server_name} does not exist.")
-                    continue
-
-                # connect
-                if cmd == "connect":
-                    self._cmd_connect(server_dict["obj"])
-                    continue
-
-                # dc
-                if cmd == "dc":
-                    self._cmd_dc(server_dict["obj"])
+                if not server_dict:
+                    err_msg = f"{c.ERR} {server_name} does not exist."
+                else:
+                    getattr(self, f"_cmd_{cmd}")(server_dict["obj"])
 
             return
 
         # join + part + raw
         if cmd in ("join", "part", "raw"):
             # take input
-            if len(self.user_args) == 1:
-                self.user.send_query(f"{c.ERR} must supply a server as the first arg.")
-                return
+            if not args:
+                err_msg = f"{c.ERR} must supply a server as the first arg."
+                return self.user.send_query(err_msg)
 
-            if cmd != "raw" and len(self.user_args) == 2:
-                self.user.send_query(f"{c.ERR} must supply at least one channel.")
-                return
+            if cmd != "raw" and len(args) == 1:
+                err_msg = f"{c.ERR} must supply at least one channel."
+                return self.user.send_query(err_msg)
 
-            server_name = self.user_args[1]
+            server_name, *rest = args
 
-            if cmd == "raw":
-                msg = " ".join(self.user_args[2:])
-
-                if len(msg) == 0:
-                    self.user.send_query(f"{c.ERR} no message provided.")
-                    return
-            else:
-                channel_names = self.user_args[2:]
-
-                for channel_name in channel_names:
-                    if channel_name[0] != "#":
-                        self.user.send_query(f"{c.ERR} channels must start with a #.")
-                        return
-
-            # act on input
             server_dict = self._get_server(server_name)
-            if server_dict is None:
-                self.user.send_query(f"{c.ERR} {server_name} does not exist.")
-                return
+            if not server_dict:
+                return self.user.send_query(f"{c.ERR} {server_name} does not exist.")
 
             # raw
             if cmd == "raw":
-                self._cmd_raw(server_dict["obj"], msg)
-                return
+                raw_msg = " ".join(rest)
+
+                if not raw_msg:
+                    return self.user.send_query(f"{c.ERR} no message provided.")
+
+                return self._cmd_raw(server_dict["obj"], raw_msg)
 
             # join + part
-            for channel_name in channel_names:
-                if cmd == "join":
-                    self._cmd_join(server_dict, channel_name)
-                    continue
+            for channel_name in rest:
+                if channel_name[0] != "#":
+                    err_msg = f"{c.ERR} {channel_name} does not start with a #."
+                    return self.user.send_query(err_msg)
 
-                if cmd == "part":
-                    self._cmd_part(server_dict, channel_name)
+                getattr(self, f"_cmd_{cmd}")(server_dict, channel_name)
+
             return
 
         self._usage()
@@ -145,33 +117,35 @@ class RCon:
     def _cmd_connect(self, server_obj):
         if server_obj.socket.conn is not None:
             err_msg = f"{c.ERR} already connected to {server_obj.name}."
-            self.user.send_query(err_msg)
-            return
+            return self.user.send_query(err_msg)
 
         self.user.send_query(f"{c.INFO} connecting to {server_obj.name}")
         server_thread = Thread(target=server_obj.run)
         server_thread.start()
-        return
 
     def _cmd_dc(self, server_obj):
         if self.user.server == server_obj:
             err_msg = f"{c.ERR} cannot disconnect from {server_obj.name} "
             err_msg += "because it is the c2 server."
-            self.user.send_query(err_msg)
-            return
+            return self.user.send_query(err_msg)
 
-        if server_obj.socket.conn is None:
+        if not server_obj.socket.conn:
             warn_msg = f"{c.WARN} {server_obj.name} has no socket, just "
             warn_msg += "removing it from the server list."
             self.user.send_query(warn_msg)
 
             self.config.servers.remove(server_obj)
-        else:
-            self.user.send_query(f"{c.INFO} disconnecting from {server_obj.name}")
-            server_obj.stop()
+            return
 
-    def _cmd_raw(self, server_obj, msg):
-        server_obj.sock_ops.send_raw(msg)
+        self.user.send_query(f"{c.INFO} disconnecting from {server_obj.name}")
+        server_obj.stop()
+
+    def _cmd_raw(self, server_obj, raw_msg):
+        msg = f"{c.INFO} sending {c.WHITE}{raw_msg}{c.RES} to "
+        msg += f"{c.LGREEN}{server_obj.name}{c.RES}."
+        self.user.send_query(msg)
+
+        server_obj.sock_ops.send_raw(raw_msg)
 
     # - - channel cmd - - #
     def _cmd_join(self, server_dict, channel_name):
@@ -179,8 +153,7 @@ class RCon:
             if channel_name in server_dict["channels"].keys():
                 err_msg = f"{c.ERR} already in {channel_name} in "
                 err_msg += f"{server_dict['obj'].name}."
-                self.user.send_query(err_msg)
-                return
+                return self.user.send_query(err_msg)
         except AttributeError:
             pass
 
@@ -192,12 +165,10 @@ class RCon:
             if channel_name not in server_dict["channels"].keys():
                 err_msg = f"{c.ERR} not in {channel_name} "
                 err_msg += f"{server_dict['obj'].name}."
-                self.user.send_query(err_msg)
-                return
+                return self.user.send_query(err_msg)
         except AttributeError:
             err_msg = f"{c.ERR} not in any channels in {server_dict['obj'].name}."
-            self.user.send_query(err_msg)
-            return
+            return self.user.send_query(err_msg)
 
         server_dict["obj"].sock_ops.send_part(channel_name, "mom said no")
         self.user.send_query(f"{c.INFO} parted from {channel_name}")
@@ -205,6 +176,7 @@ class RCon:
     # - - noarg - - #
     def _cmd_rehash(self):
         self.user.send_query(f"{c.INFO} reloading configuration YAML.")
+
         try:
             self.config.load_yaml()
         except:
@@ -212,6 +184,7 @@ class RCon:
             self.logger.exception("config reload failed")
 
         self.user.send_query(f"{c.INFO} parsing servers.")
+
         try:
             self.config.parse_servers()
         except:
@@ -234,7 +207,7 @@ class RCon:
 
             msg += f"{c.WHITE}└ {c.LGREEN}channels:{c.RES}"
 
-            if len(server.channel_obj) == 0:
+            if not server.channel_obj:
                 msg += " none\n"
 
             else:
@@ -276,8 +249,7 @@ class RCon:
         if self.user != self.user.server.admin:
             return
 
-        if len(self.user_args) == 0:
-            self._usage()
-            return
+        if not self.user_args:
+            return self._usage()
 
         self._dispatcher()
