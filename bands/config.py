@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 
@@ -9,7 +10,6 @@ import yaml
 from bs4 import BeautifulSoup
 
 from .util import get_url
-from .log import set_logger
 from .doot import Doot
 from .quote import Quote
 from .irc.server import Server
@@ -29,6 +29,8 @@ class ConfigYAML:
         self.wa_client = None
         self.openai_client = None
         self.sc_client_id = None
+
+        self.logger.debug("peepee poopoo")
 
     def load_yaml(self):
         self.logger.info("loading configuration")
@@ -371,7 +373,7 @@ class ConfigYAML:
                 server.scroll_speed = 0
 
             # - - logger - - #
-            logger = set_logger(server.name, self.logger.level)
+            logger = logging.getLogger(server.name)
             server.socket.logger = logger.getChild(socket.__class__.__name__)
             server.logger = logger
 
