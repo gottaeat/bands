@@ -14,6 +14,7 @@ class RCon:
 
         self.logger = self.user.logger.getChild(self.__class__.__name__)
         self.config = self.user.server.config
+        self.servers = self.config.servers
 
         self._run()
 
@@ -30,42 +31,15 @@ class RCon:
         # fmt: on
         self.user.send_query(msg)
 
-    def _get_server(self, server_name):
-        server_obj = None
-        for server in self.config.servers:
-            if server.name.lower() == server_name.lower():
-                server_obj = server
-                break
-
-        if not server_obj:
-            return None
-
-        server_channels = {}
-        for channel in server_obj.channel_obj:
-            server_channels[channel.name] = channel
-
-        if not server_channels:
-            server_channels = None
-
-        return {
-            "name": server_obj.name,
-            "obj": server_obj,
-            "channels": server_channels,
-        }
-
     def _dispatcher(self):
         cmd, *args = self.user_args
 
-        if cmd == "rehash":
-            return self._cmd_rehash()
-
-        if cmd == "status":
-            return self._cmd_status()
+        if cmd in ("rehash", "status"):
+            return getattr(self, f"_cmd_{cmd}")()
 
         # debug
         if cmd == "debug":
             if not args or len(args) > 1 or args[0] not in ("on", "off", "state"):
-                print(args)
                 err_msg = f"{c.ERR} must specify just {{on|off|state}}."
                 return self.user.send_query(err_msg)
 
@@ -78,14 +52,13 @@ class RCon:
                 return self.user.send_query(err_msg)
 
             for server_name in args:
-                server_dict = self._get_server(server_name)
-
-                if not server_dict:
+                try:
+                    server_obj = self.servers[server_name]
+                except KeyError:
                     err_msg = f"{c.ERR} {server_name} does not exist."
-                else:
-                    getattr(self, f"_cmd_{cmd}")(server_dict["obj"])
+                    return self.user.send_query(err_msg)
 
-            return
+                return getattr(self, f"_cmd_{cmd}")(server_obj)
 
         # join + part + raw
         if cmd in ("join", "part", "raw"):
@@ -100,9 +73,14 @@ class RCon:
 
             server_name, *rest = args
 
-            server_dict = self._get_server(server_name)
-            if not server_dict:
+            try:
+                server_obj = self.servers[server_name]
+            except KeyError:
                 return self.user.send_query(f"{c.ERR} {server_name} does not exist.")
+
+            # not connected
+            if not server_obj.socket.connected:
+                return self.user.send_query(f"{c.ERR} not connected to {server_name}.")
 
             # raw
             if cmd == "raw":
@@ -111,7 +89,7 @@ class RCon:
                 if not raw_msg:
                     return self.user.send_query(f"{c.ERR} no message provided.")
 
-                return self._cmd_raw(server_dict["obj"], raw_msg)
+                return self._cmd_raw(server_obj, raw_msg)
 
             # join + part
             for channel_name in rest:
@@ -119,7 +97,7 @@ class RCon:
                     err_msg = f"{c.ERR} {channel_name} does not start with a #."
                     return self.user.send_query(err_msg)
 
-                getattr(self, f"_cmd_{cmd}")(server_dict, channel_name)
+                getattr(self, f"_cmd_{cmd}")(server_obj, channel_name)
 
             return
 
@@ -160,8 +138,7 @@ class RCon:
             warn_msg += "removing it from the server list."
             self.user.send_query(warn_msg)
 
-            self.config.servers.remove(server_obj)
-            return
+            return self.config.servers.remove(server_obj)
 
         self.user.send_query(f"{c.INFO} disconnecting from {server_obj.name}")
         server_obj.stop()
@@ -174,29 +151,24 @@ class RCon:
         server_obj.sock_ops.send_raw(raw_msg)
 
     # - - channel cmd - - #
-    def _cmd_join(self, server_dict, channel_name):
-        try:
-            if channel_name in server_dict["channels"].keys():
-                err_msg = f"{c.ERR} already in {channel_name} in "
-                err_msg += f"{server_dict['obj'].name}."
-                return self.user.send_query(err_msg)
-        except AttributeError:
-            pass
-
-        server_dict["obj"].sock_ops.send_join(channel_name)
-        self.user.send_query(f"{c.INFO} sent JOIN for {channel_name}.")
-
-    def _cmd_part(self, server_dict, channel_name):
-        try:
-            if channel_name not in server_dict["channels"].keys():
-                err_msg = f"{c.ERR} not in {channel_name} "
-                err_msg += f"{server_dict['obj'].name}."
-                return self.user.send_query(err_msg)
-        except AttributeError:
-            err_msg = f"{c.ERR} not in any channels in {server_dict['obj'].name}."
+    def _cmd_join(self, server_obj, channel_name):
+        if channel_name in server_obj.channels.keys():
+            err_msg = f"{c.ERR} already in {channel_name} in {server_obj.name}."
             return self.user.send_query(err_msg)
 
-        server_dict["obj"].sock_ops.send_part(channel_name, "mom said no")
+        server_obj.sock_ops.send_join(channel_name)
+        self.user.send_query(f"{c.INFO} sent JOIN for {channel_name}.")
+
+    def _cmd_part(self, server_obj, channel_name):
+        if not server_obj.channels:
+            err_msg = f"{c.ERR} not in any channels {server_obj.name}."
+            return self.user.send_query(err_msg)
+
+        if channel_name not in server_obj.channels.keys():
+            err_msg = f"{c.ERR} not in {channel_name} {server_obj.name}."
+            return self.user.send_query(err_msg)
+
+        server_obj.sock_ops.send_part(channel_name, "mom said no.")
         self.user.send_query(f"{c.INFO} parted from {channel_name}")
 
     # - - noarg - - #
@@ -222,7 +194,7 @@ class RCon:
     def _cmd_status(self):
         msg = f"{c.INFO} active connections are:\n"
 
-        for server in self.config.servers:
+        for server in self.config.servers.values():
             msg += f"{c.LRED}{server.name}{c.RES}\n"
             msg += f"{c.WHITE}├ {c.LGREEN}admin:{c.RES} "
 
@@ -233,12 +205,12 @@ class RCon:
 
             msg += f"{c.WHITE}└ {c.LGREEN}channels:{c.RES}"
 
-            if not server.channel_obj:
+            if not server.channels:
                 msg += " none\n"
 
             else:
                 msg += "\n"
-                for chan in server.channel_obj:
+                for chan in server.channels.values():
                     msg += f"  {c.LRED}→ {c.LGREEN}{chan.name}{c.RES}\n"
                     # fmt: off
                     if chan.topic_msg:
@@ -251,7 +223,7 @@ class RCon:
                     msg += f"    {c.WHITE}└ {c.YELLOW}users: \n"
                     # fmt: on
 
-                    for user in chan.user_list:
+                    for user in chan.users.values():
                         userstr = ""
 
                         if user.owner:
