@@ -1,8 +1,3 @@
-import time
-
-from bands.irc.util import wrap_bytes
-
-
 class Channel:
     def __init__(self, server):
         self.server = server
@@ -15,7 +10,7 @@ class Channel:
         self.topic_login = None
         self.topic_tstamp = None
 
-        self.user_list = []
+        self.users = {}
 
         self.char_limit = None
         self.logger = None
@@ -23,24 +18,7 @@ class Channel:
         self.hook_tstamp = None
 
     def send_query(self, msg):
-        if "\n" in msg:
-            for line in msg.split("\n"):
-                if line != "":
-                    if len(line.encode("utf-8")) > self.char_limit:
-                        for item in wrap_bytes(line, self.char_limit):
-                            self.sock_ops.send_privmsg(item, self.name)
-                            time.sleep(self.server.scroll_speed / 1000)
-                    else:
-                        self.sock_ops.send_privmsg(line, self.name)
-                        time.sleep(self.server.scroll_speed / 1000)
-        else:
-            if len(msg.encode("utf-8")) > self.char_limit:
-                for item in wrap_bytes(msg, self.char_limit):
-                    self.sock_ops.send_privmsg(item, self.name)
-                    time.sleep(self.server.scroll_speed / 1000)
-            else:
-                self.sock_ops.send_privmsg(msg, self.name)
-                time.sleep(self.server.scroll_speed / 1000)
+        self.sock_ops.send_query_hook(self.name, self.char_limit, msg)
 
 
 class ChannelUser:
