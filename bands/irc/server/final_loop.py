@@ -24,7 +24,6 @@ class FinalLoop:
 
         # user and channels
         self.channels = server.channels
-        self.channel_obj = server.channel_obj
         self.users = server.users
 
         # timer
@@ -103,7 +102,7 @@ class FinalLoop:
                 time_slept += 1
 
     def run(self):
-        self.logger.info("%s entered the loop %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+        self.logger.info("%s", f"{ac.BYEL}--> {ac.BWHI}entered final loop{ac.RES}")
 
         Thread(target=self._ping_sender, daemon=True).start()
 
@@ -122,7 +121,7 @@ class FinalLoop:
                 if not line:
                     continue
 
-                self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
+                self.logger.debug("%s%s", f"{ac.BBLU}<-- {ac.RES}", line.rstrip("\r\n"))
 
                 line_s = line.split()
 
@@ -308,5 +307,3 @@ class FinalLoop:
                             args=[line_s[0], line_s[3], line_s[4:]],
                             daemon=True,
                         ).start()
-
-                        continue
