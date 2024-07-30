@@ -1,4 +1,5 @@
 from bands.colors import MIRCColors
+from bands import __version__ as pkg_version
 
 c = MIRCColors()
 
@@ -23,7 +24,8 @@ class Help:
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?quote{c.RES}  ?quote help\n"
         msg += f"{c.WHITE}│ ├ {c.LGREEN}?tarot{c.RES}  ?tarot help\n"
         msg += f"{c.WHITE}│ └ {c.LGREEN}?wa{c.RES}     [query]\n"
-        msg += f"{c.WHITE}└ {c.LRED}src{c.RES}       https://github.com/gottaeat/bands\n"
+        msg += f"{c.WHITE}├ {c.LRED}ver{c.RES}       {pkg_version}\n"
+        msg += f"{c.WHITE}└ {c.LRED}src{c.RES}       https://github.com/gottaeat/bands"
         # fmt: on
 
         self.channel.send_query(msg)
