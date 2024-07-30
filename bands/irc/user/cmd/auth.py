@@ -20,8 +20,7 @@ class Auth:
                 self.user.login,
             )
 
-            self.user.send_query(f"{c.ERR} authentication is disabled.")
-            return
+            return self.user.send_query(f"{c.ERR} authentication is disabled.")
 
         # auth is disabled server-wide
         if self.user.server.bad_pw_attempts >= 12:
@@ -31,8 +30,7 @@ class Auth:
                 self.user.login,
             )
 
-            self.user.send_query(f"{c.ERR} authentication is disabled.")
-            return
+            return self.user.send_query(f"{c.ERR} authentication is disabled.")
 
         # auth is disabled for user
         if self.user.bad_pw_attempts >= 3:
@@ -42,11 +40,10 @@ class Auth:
                 self.user.login,
             )
 
-            self.user.send_query(f"{c.ERR} authentication is disabled.")
-            return
+            return self.user.send_query(f"{c.ERR} authentication is disabled.")
 
         # user provided no password
-        if len(self.user_args) == 0:
+        if not self.user_args:
             self.user.bad_pw_attempts += 1
             self.user.server.bad_pw_attempts += 1
 
@@ -58,8 +55,7 @@ class Auth:
             )
 
             errmsg = f"{c.ERR} a secret is necessary. ({self.user.bad_pw_attempts}/3)"
-            self.user.send_query(errmsg)
-            return
+            return self.user.send_query(errmsg)
 
         # user provided correct pass
         if self.user_args[0] == self.user.server.secret:
@@ -72,8 +68,7 @@ class Auth:
             )
 
             msg = f"{c.INFO} you are now authorized for administrative access."
-            self.user.send_query(msg)
-            return
+            return self.user.send_query(msg)
 
         # user provided wrong pass
         self.user.bad_pw_attempts += 1
