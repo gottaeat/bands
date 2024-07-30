@@ -6,6 +6,7 @@ from threading import Thread
 
 from .config import ConfigYAML
 from .log import set_root_logger
+from . import __version__ as pkg_version
 
 
 class CLI:
@@ -17,7 +18,7 @@ class CLI:
 
     def _gen_args(self):
         # fmt: off
-        parser = argparse.ArgumentParser(description="bands the irc bot")
+        parser = argparse.ArgumentParser(description=f"bands the irc bot ver. {pkg_version}")
         parser.add_argument("-c", type=str, required=True, help="path to config yaml")
         parser.add_argument("-d", dest="debug", action="store_true", help="enable debug")
         # fmt: on
@@ -57,7 +58,7 @@ class CLI:
         self.logger = logging.getLogger("bands")
 
         # action
-        self.logger.info("started")
+        self.logger.info("started bands ver %s", pkg_version)
         self._set_signal_handling()
 
         # parse yaml
