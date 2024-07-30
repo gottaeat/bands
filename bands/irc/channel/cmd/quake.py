@@ -18,18 +18,13 @@ class Quake:
         self.user = user
         self.user_args = user_args
 
-        self.quake_data = None
-        self.quote = None
-
         self._run()
 
-    def _parse_json(self):
+    def _quake(self):
         with open(self.QUAKE_FILE, "r", encoding="utf-8") as quake_file:
-            self.quake_data = json.loads(quake_file.read())["quotes"]
+            quotes = json.loads(quake_file.read())["quotes"]
 
-    def _pull(self):
-        random.shuffle(self.quake_data)
-        self.quote = re.sub(
+        quote = re.sub(
             r"REPLACECHANNELNAME",
             f"{c.ORANGE}{self.channel.name}{c.RES}",
             re.sub(
@@ -38,13 +33,12 @@ class Quake:
                 re.sub(
                     r"REPLACEBOTNAME",
                     f"{c.PINK}{self.channel.server.botname}{c.RES}",
-                    self.quake_data.pop(random.randrange(len(self.quake_data))),
+                    quotes.pop(random.randrange(len(quotes))),
                 ),
             ),
         )
 
-    def _run(self):
-        self._parse_json()
-        self._pull()
+        self.channel.send_query(quote)
 
-        self.channel.send_query(self.quote)
+    def _run(self):
+        self._quake()

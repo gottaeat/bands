@@ -18,39 +18,31 @@ class Advice:
         self.user = user
         self.user_args = user_args
 
-        self.adv_data = None
-        self.advice = None
-
         self._run()
 
-    def _parse_json(self):
-        with open(self.ADV_FILE, "r", encoding="utf-8") as adv_file:
-            self.adv_data = json.loads(adv_file.read())["advices"]
-
-    def _pull(self):
-        random.shuffle(self.adv_data)
-        self.advice = self.adv_data.pop(random.randrange(len(self.adv_data)))
-
-    def _run(self):
-        if len(self.user_args) > 0:
+    def _advice(self):
+        if not self.user_args:
+            target = self.user.nick
+        else:
             if len(self.user_args) > 1:
                 errmsg = f"{c.ERR} multicast advice support is disabled."
-                self.channel.send_query(errmsg)
-                return
+                return self.channel.send_query(errmsg)
 
             target = self.user_args[0]
-        else:
-            target = self.user.nick
 
         if unilen(target) > self.channel.server.USER_NICKLIMIT:
             errmsg = f"{c.ERR} person in need of advice is wider than "
             errmsg += f"{self.channel.server.USER_NICKLIMIT} chars."
-            self.channel.send_query(errmsg)
-            return
+            return self.channel.send_query(errmsg)
 
-        self._parse_json()
-        self._pull()
+        with open(self.ADV_FILE, "r", encoding="utf-8") as adv_file:
+            advices = json.loads(adv_file.read())["advices"]
 
-        msg = f"{c.WHITE}{target}{c.LBLUE},{c.RES} "
-        msg += f"{c.GREEN}{self.advice}{c.RES}\n"
-        self.channel.send_query(msg)
+        advice = advices.pop(random.randrange(len(advices)))
+
+        self.channel.send_query(
+            f"{c.WHITE}{target}{c.LBLUE},{c.RES} {c.GREEN}{advice}{c.RES}\n"
+        )
+
+    def _run(self):
+        self._advice()
