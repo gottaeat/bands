@@ -1,8 +1,6 @@
 #!/bin/sh
 . /repo/docker/common
 
-trap shutdown SIGTERM SIGINT
-
 # - - sanity checks - - #
 if ! mountpoint /data >/dev/null 2>&1; then
     perr "/data is not bind mounted, exiting."
@@ -17,7 +15,5 @@ pinfo "setting permissions"
 chown -Rh bands:bands /data
 evalret
 
-pinfo "handing over to user \"bands\""
-su bands -c '/repo/docker/user.sh' &
-
-wait $!
+pinfo "starting bands"
+exec su bands -c 'bands -c /data/config.yml'
