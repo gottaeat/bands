@@ -21,7 +21,7 @@ class Server:
         # config
         self.name = None
         self.botname = None
-        self.channels = []
+        self.channels_init = []
         self.passwd = None
         self.allow_admin = None
         self.secret = None
@@ -37,17 +37,14 @@ class Server:
         # ircv3
         self.caps = []
 
-        # channels
-        self.channel_obj = []
-
-        # users
-        self.users = []
+        # channels + users
+        self.channels = {}
+        self.users = {}
 
         # admin
         self.admin = None
         self.bad_pw_attempts = 0
 
-    # -- CLI() interactions -- #
     def run(self):
         self.socket.connect()
         self.sock_ops = SocketOps(self)
@@ -56,27 +53,26 @@ class Server:
         cl_init.run()
 
         if not self.socket.halt:
-            self.logger.info("%s joining channels %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+            self.logger.info("%s", f"{ac.BYEL}--> {ac.BWHI}joining channels{ac.RES}")
 
-            for channel in self.channels:
+            for channel in self.channels_init:
                 self.sock_ops.send_join(channel)
 
             fin_loop = FinalLoop(self)
             fin_loop.run()
 
-    def stop(self):
-        self.logger.warning("%s stopping %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+    def stop(self, going_down=False):
+        self.logger.warning("%s", f"{ac.BYEL}--> {ac.BWHI}stopping{ac.RES}")
         self.socket.halt = True
 
         if self.socket.connected:
             try:
-                self.sock_ops.send_quit("quitting.")
+                self.sock_ops.send_quit("mom said no.")
             except:
                 self.logger.warning("sending quit failed")
 
-        self.socket.disconnect()
+            self.socket.disconnect()
 
-        self.logger.info("removing %s from servers list", self.name)
-        # pylint: disable=no-member
-        # ^ this is a pylint bug
-        self.config.servers.remove(self)
+        if not going_down:
+            self.logger.info("nuking self")
+            del self.config.servers[self.name]  # pylint: disable=no-member
