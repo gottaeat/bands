@@ -117,12 +117,12 @@ cmdline specific usage is:
 ```sh
 usage: bands [-h] -c C [-d]
 
-bands the IRC bot.
+bands the irc bot ver. <version>
 
 options:
   -h, --help  show this help message and exit
-  -c C        Configuration YAML file.
-  -d          Enable debugging.
+  -c C        path to config yaml
+  -d          enable debug
 ```
 
 ## management
