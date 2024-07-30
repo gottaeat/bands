@@ -16,16 +16,14 @@ class WAQuery:
         self._run()
 
     def _query(self):
-        if self.wa_client is None:
-            self.channel.send_query(f"{c.ERR} no api key provided.")
-            return
+        if not self.wa_client:
+            return self.channel.send_query(f"{c.ERR} no api key provided.")
 
         user_Q = " ".join(self.user_args[0:])
 
         if unilen(user_Q) > 300:
             err_msg = f"{c.ERR} query wider than 300 characters."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         self.channel.send_query(f"{c.INFO} {self.user.nick}, querying: {user_Q}")
 
@@ -33,22 +31,19 @@ class WAQuery:
             query = self.wa_client.query(user_Q)
             response = next(query.results).text
         except StopIteration:
-            self.channel.send_query(f"{c.ERR} no response.")
-            return
+            return self.channel.send_query(f"{c.ERR} no response.")
         except:
             self.channel.send_query(f"{c.ERR} query failed.")
             self.logger.exception("query failed")
 
-        if response is None:
-            self.channel.send_query(f"{c.ERR} no plaintext response.")
-            return
+        if not response:
+            return self.channel.send_query(f"{c.ERR} no plaintext response.")
 
         for line in response.split("\n"):
             self.channel.send_query(f"{c.INFO} {line}")
 
     def _run(self):
-        if len(self.user_args) == 0:
-            self.channel.send_query(f"{c.ERR} an argument is required.")
-            return
+        if not self.user_args:
+            return self.channel.send_query(f"{c.ERR} an argument is required.")
 
         self._query()

@@ -32,16 +32,14 @@ class AIQuery:
         self._run()
 
     def _query(self):
-        if self.openai_client is None:
-            self.channel.send_query(f"{c.ERR} no api key provided.")
-            return
+        if not self.openai_client:
+            return self.channel.send_query(f"{c.ERR} no api key provided.")
 
         user_Q = " ".join(self.user_args[0:])
 
         if unilen(user_Q) > 300:
             err_msg = f"{c.ERR} query wider than 300 characters."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         self.channel.send_query(f"{c.INFO} {self.user.nick}, querying: {user_Q}")
 
@@ -70,8 +68,7 @@ class AIQuery:
         self.channel.send_query(msg)
 
     def _run(self):
-        if len(self.user_args) == 0:
-            self.channel.send_query(f"{c.ERR} an argument is required.")
-            return
+        if not self.user_args:
+            return self.channel.send_query(f"{c.ERR} an argument is required.")
 
         self._query()

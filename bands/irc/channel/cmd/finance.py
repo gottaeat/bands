@@ -142,7 +142,7 @@ class Finance:
                 .split()
             )
 
-            if len(perc) == 0:
+            if not perc:
                 raise ValueError("element containing historical CDS was not found")
         except:
             self.logger.exception("wgb parse stage 2 failed")
@@ -190,7 +190,7 @@ class Finance:
         if self.forbes is not None:
             msg += f"{c.WHITE}→ {c.LRED}forbes{c.RES}  {self.forbes}\n"
 
-        if len(msg) != 0:
+        if msg:
             msg = f"{c.WHITE}USDTRY{c.RES}\n{msg}"
 
         if self.binance is not None:
@@ -204,7 +204,7 @@ class Finance:
             msg += f"{c.WHITE}→ {c.LRED}monthly{c.RES} {self.wgb.month}\n"
             msg += f"{c.WHITE}→ {c.LRED}yearly{c.RES}  {self.wgb.year}"
 
-        if len(msg) == 0:
+        if not msg:
             msg = "f{c.ERR} none of the APIs answered."
 
         # self.channel.send_query(drawbox(msg, "thic"))
