@@ -68,13 +68,11 @@ class URLDispatcher:
             with urllib.request.urlopen(url) as f:
                 response = f
         except:
-            self.logger.warning("commit request GET failed")
-            return
+            return self.logger.warning("commit request GET failed")
 
         link_header = response.getheader("Link")
-        if link_header is None:
-            self.logger.warning("no Link header")
-            return
+        if not link_header:
+            return self.logger.warning("no Link header")
 
         last_link = None
         for header in link_header.split(", "):
@@ -82,26 +80,22 @@ class URLDispatcher:
                 last_link = header
                 break
 
-        if last_link is None:
-            self.logger.warning('no rel="last" in Link header')
-            return
+        if not last_link:
+            return self.logger.warning('no rel="last" in Link header')
 
         try:
             last_link_url = last_link.split(";")[0].strip("<").strip(">")
         except:
-            self.logger.warning("last link parse failed")
-            return
+            return self.logger.warning("last link parse failed")
 
         url_parse = urllib.parse.parse_qs(urllib.parse.urlparse(last_link_url).query)
 
         try:
             commits = url_parse["page"][0]
         except KeyError:
-            self.logger.warning("last link has no page query")
-            return
+            return self.logger.warning("last link has no page query")
         except IndexError:
-            self.logger.warning("last link page query has no value")
-            return
+            return self.logger.warning("last link page query has no value")
 
         return int(commits)
 
@@ -354,13 +348,11 @@ class URLDispatcher:
 
         # track
         if track_kind == "track":
-            self._handle_sc_track(data)
-            return
+            return self._handle_sc_track(data)
 
         # playlists/sets/album
         if track_kind == "playlist":
-            self._handle_sc_playlist(data)
-            return
+            return self._handle_sc_playlist(data)
 
         # system-playlist
         if track_kind == "system-playlist":
