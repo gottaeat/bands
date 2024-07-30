@@ -14,6 +14,9 @@ from .doot import Doot
 from .quote import Quote
 from .irc.server import Server
 from .irc.socket import Socket
+from .colors import ANSIColors
+
+ac = ANSIColors()
 
 
 class ConfigYAML:
@@ -21,9 +24,11 @@ class ConfigYAML:
         self.config_file = config_file
         self.logger = parent_logger.getChild(self.__class__.__name__)
 
+        self.halt = None
+
         self.yaml_parsed = None
 
-        self.servers = []
+        self.servers = {}
         self.quote = None
         self.doot = None
         self.wa_client = None
@@ -42,6 +47,25 @@ class ConfigYAML:
         else:
             self.logger.error("%s is not a file", self.config_file)
 
+    def _gen_prompt(self, server):
+        # fmt: off
+        msg  = f"{ac.BWHI}{ac.BRED}socket{ac.RES}\n"
+        msg += f"{ac.BWHI}├ {ac.BGRN}address      {ac.RES}{server.socket.address}{ac.RES}\n"
+        msg += f"{ac.BWHI}├ {ac.BGRN}port         {ac.RES}{server.socket.port}{ac.RES}\n"
+        msg += f"{ac.BWHI}├ {ac.BGRN}tls          {ac.RES}{server.socket.tls}{ac.RES}\n"
+        msg += f"{ac.BWHI}└ {ac.BGRN}verify_tls   {ac.RES}{server.socket.verify_tls}{ac.RES}\n"
+        msg += f"{ac.BWHI}{ac.BRED}server{ac.RES}\n"
+        msg += f"{ac.BWHI}├ {ac.BGRN}botname      {ac.RES}{server.botname}{ac.RES}\n"
+        msg += f"{ac.BWHI}├ {ac.BGRN}channels     {ac.RES}{server.channels_init}{ac.RES}\n"
+        msg += f"{ac.BWHI}├ {ac.BGRN}allow_admin  {ac.RES}{server.allow_admin}{ac.RES}\n"
+        msg += f"{ac.BWHI}├ {ac.BGRN}secret       {ac.RES}{server.secret}{ac.RES}\n"
+        msg += f"{ac.BWHI}├ {ac.BGRN}passwd       {ac.RES}{server.passwd}{ac.RES}\n"
+        msg += f"{ac.BWHI}└ {ac.BGRN}scroll_speed {ac.RES}{server.scroll_speed}{ac.RES}"
+        # fmt: on
+
+        for line in msg.split("\n"):
+            server.logger.info(line)
+
     def _gen_sc_client_id(self):
         # modified version of the client_id generation functionailty of
         # https://github.com/3jackdaws/soundcloud-lib which is copyright of
@@ -59,7 +83,7 @@ class ConfigYAML:
             self.logger.exception("parse failed")
 
         scripts = data.findAll("script", attrs={"src": True})
-        if len(scripts) == 0:
+        if not scripts:
             self.logger.error("no scripts fouund with src attrib")
 
         scripts_list = []
@@ -77,11 +101,11 @@ class ConfigYAML:
 
                 client_id = re.findall(r"client_id=([a-zA-Z0-9]+)", script_data)
 
-                if len(client_id) > 0:
+                if client_id:
                     self.sc_client_id = client_id[0]
                     break
 
-        if self.sc_client_id is None:
+        if not self.sc_client_id:
             self.logger.error("no client_id found")
 
     def _parse_wolfram(self):
@@ -248,17 +272,11 @@ class ConfigYAML:
                     self.logger.error("%s cannot be blank", item)
 
             # check if server exists in case we are rehashing
-            if len(self.servers) > 0:
-                server_names = []
-                for server in self.servers:
-                    server_names.append(server.name)
-
-                if server_yaml["name"] in server_names:
-                    self.logger.warning(
-                        "skipping %s, already in servers", server_yaml["name"]
-                    )
-
-                    continue
+            if self.servers and server_yaml["name"].lower() in self.servers.keys():
+                self.logger.warning(
+                    "skipping %s, already in servers", server_yaml["name"]
+                )
+                continue
 
             # - - socket - - #
             self.logger.info("generating Socket() for %s", server_yaml["name"])
@@ -310,8 +328,8 @@ class ConfigYAML:
             # server.botname
             server.botname = str(server_yaml["botname"])
 
-            # server.channels
-            if len(server_yaml["channels"]) == 0:
+            # server.channels_init
+            if not server_yaml["channels"]:
                 self.logger.error("no channels provided for server %s", server.name)
 
             for channel in server_yaml["channels"]:
@@ -319,7 +337,7 @@ class ConfigYAML:
                     self.logger.error("channels should start with a #")
 
                 try:
-                    server.channels.append(str(channel))
+                    server.channels_init.append(str(channel))
                 except ValueError:
                     self.logger.exception("invalid channel name: %s", channel)
 
@@ -377,15 +395,22 @@ class ConfigYAML:
 
             # - - append - - #
             server.config = self
-            self.servers.append(server)
+            self.servers[server.name.lower()] = server
+
+            # - - gen prompt - - #
+            self._gen_prompt(server)
 
     def run(self):
-        self.load_yaml()
+        for config_func in [
+            self.load_yaml,
+            self._gen_sc_client_id,
+            self._parse_wolfram,
+            self._parse_openai,
+            self._parse_quote,
+            self._parse_doot,
+            self.parse_servers,
+        ]:
+            if self.halt:
+                break
 
-        self._gen_sc_client_id()
-        self._parse_wolfram()
-        self._parse_openai()
-        self._parse_quote()
-        self._parse_doot()
-
-        self.parse_servers()
+            config_func()

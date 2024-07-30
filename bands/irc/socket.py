@@ -26,7 +26,7 @@ class Socket:
         self.halt = None
 
     def connect(self):
-        self.logger.info("%s connecting %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+        self.logger.info("%s", f"{ac.BYEL}--> {ac.BWHI}connecting{ac.RES}")
 
         addr = (socket.gethostbyname(self.address), self.port)
 
@@ -65,15 +65,12 @@ class Socket:
 
         self.conn.settimeout(None)
 
-        self.logger.info("%s connected %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+        self.logger.info("%s", f"{ac.BYEL}--> {ac.BWHI}connected{ac.RES}")
         self.connected = True
 
     def disconnect(self):
         self.logger.debug("shutting down socket (RDWR)")
         self.conn.shutdown(socket.SHUT_RDWR)
 
-        self.logger.warning(
-            "%s closing connection %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES
-        )
-
+        self.logger.warning("%s", f"{ac.BYEL}--> {ac.BWHI}closing connection{ac.RES}")
         self.conn.close()

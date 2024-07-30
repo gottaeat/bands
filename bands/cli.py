@@ -4,11 +4,8 @@ import signal
 
 from threading import Thread
 
-from .colors import ANSIColors
 from .config import ConfigYAML
 from .log import set_root_logger
-
-ac = ANSIColors()
 
 
 class CLI:
@@ -19,27 +16,29 @@ class CLI:
         self.logger = None
 
     def _gen_args(self):
-        parser_desc = "bands the IRC bot."
-        parser_c_help = "Configuration YAML file."
-        parser_d_help = "Enable debugging."
+        # fmt: off
+        parser = argparse.ArgumentParser(description="bands the irc bot")
+        parser.add_argument("-c", type=str, required=True, help="path to config yaml")
+        parser.add_argument("-d", dest="debug", action="store_true", help="enable debug")
+        # fmt: on
 
-        parser = argparse.ArgumentParser(description=parser_desc)
-        parser.add_argument("-c", type=str, required=True, help=parser_c_help)
-        parser.add_argument("-d", dest="debug", action="store_true", help=parser_d_help)
         args = parser.parse_args()
 
         self.config_file = args.c
         self.debug = args.debug
 
-    # pylint: disable=unused-argument
-    def _signal_handler(self, signum, frame):
+    def _signal_handler(self, signum, frame):  # pylint: disable=unused-argument
         signame = signal.Signals(signum).name
 
         if signame in ("SIGINT", "SIGTERM"):
-            self.logger.info("caught %s exiting", signame)
+            self.logger.info("caught %s, initiating graceful shutdown", signame)
 
-            for server in self.config.servers:
-                server.stop()
+            if self.config:
+                self.config.halt = True
+
+                for server in self.config.servers.values():
+                    if server.socket:
+                        server.stop(going_down=True)
 
     def _set_signal_handling(self):
         # signal handling to terminate threads peacefully
@@ -48,26 +47,6 @@ class CLI:
         self.logger.info("set signal handling")
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
-
-    def _gen_prompt(self, server):
-        # fmt: off
-        msg = f"{ac.BWHI}{server.name}{ac.RES}\n"
-        msg += f"{ac.BWHI}├ {ac.BRED}socket{ac.RES}\n"
-        msg += f"{ac.BWHI}│ ├ {ac.BGRN}address      {ac.RES}{server.socket.address}{ac.RES}\n"
-        msg += f"{ac.BWHI}│ ├ {ac.BGRN}port         {ac.RES}{server.socket.port}{ac.RES}\n"
-        msg += f"{ac.BWHI}│ ├ {ac.BGRN}tls          {ac.RES}{server.socket.tls}{ac.RES}\n"
-        msg += f"{ac.BWHI}│ └ {ac.BGRN}verify_tls   {ac.RES}{server.socket.verify_tls}{ac.RES}\n"
-        msg += f"{ac.BWHI}└ {ac.BRED}server{ac.RES}\n"
-        msg += f"{ac.BWHI}  ├ {ac.BGRN}botname      {ac.RES}{server.botname}{ac.RES}\n"
-        msg += f"{ac.BWHI}  ├ {ac.BGRN}channels     {ac.RES}{server.channels}{ac.RES}\n"
-        msg += f"{ac.BWHI}  ├ {ac.BGRN}allow_admin  {ac.RES}{server.allow_admin}{ac.RES}\n"
-        msg += f"{ac.BWHI}  ├ {ac.BGRN}secret       {ac.RES}{server.secret}{ac.RES}\n"
-        msg += f"{ac.BWHI}  ├ {ac.BGRN}passwd       {ac.RES}{server.passwd}{ac.RES}\n"
-        msg += f"{ac.BWHI}  └ {ac.BGRN}scroll_speed {ac.RES}{server.scroll_speed}{ac.RES}"
-        # fmt: on
-
-        for line in msg.split("\n"):
-            server.logger.info(line)
 
     def run(self):
         # parse first to get self.debug
@@ -86,12 +65,11 @@ class CLI:
         self.config.run()
 
         # start servers
-        self.logger.info("starting Server() threads")
-        for server in self.config.servers:
-            self._gen_prompt(server)
-
-            server_thread = Thread(target=server.run)
-            server_thread.start()
+        if not self.config.halt:
+            self.logger.info("starting Server() threads")
+            for server in self.config.servers.values():
+                server_thread = Thread(target=server.run)
+                server_thread.start()
 
 
 def run():

@@ -25,60 +25,49 @@ class Doot:
         self.channel.send_query(msg)
 
     def _run(self):
-        if len(self.user_args) == 0:
-            self._cmd_help()
-            return
+        if not self.user_args:
+            return self._cmd_help()
 
-        if self.user_args[0] == "up":
-            self._cmd_doot("up")
-            return
+        cmd = self.user_args[0]
 
-        if self.user_args[0] == "down":
-            self._cmd_doot("down")
-            return
+        if cmd in ("up", "down"):
+            return self._cmd_doot(cmd)
 
-        if self.user_args[0] == "get":
-            self._cmd_get()
-            return
-
-        if self.user_args[0] == "stats":
-            self._cmd_stats()
-            return
+        if cmd in ("get", "stats"):
+            return getattr(self, f"_cmd_{cmd}")()
 
         self._cmd_help()
 
     def _cmd_doot(self, action):
         # a user can invoke doot every 10 seconds
-        if self.user.used_doot_tstamp:
-            if int(time.strftime("%s")) - self.user.used_doot_tstamp <= 10:
-                return
+        if (
+            self.user.used_doot_tstamp
+            and int(time.strftime("%s")) - self.user.used_doot_tstamp <= 10
+        ):
+            return
 
         # no nick
         try:
             dooted_user = self.user_args[1]
         except IndexError:
-            self.channel.send_query(f"{c.ERR} must provide a nick.")
-            return
+            return self.channel.send_query(f"{c.ERR} must provide a nick.")
 
         # get ChannelUser
-        for channeluser in self.channel.user_list:
-            if channeluser.nick.lower() == dooted_user.lower():
-                user = channeluser
-                break
-
-        # self doot || no ChannelUser obj
         try:
-            if user.nick == self.user.nick and user.login == self.user.login:
-                self.channel.send_query(f"{c.ERR} cannot doot yourself.")
-                return
-        except UnboundLocalError:
+            user = self.channel.users[dooted_user.lower()]
+        except IndexError:
             self.channel.send_query(f"{c.ERR} no such nick: {dooted_user}.")
-            return
+
+        # self doot
+        if user == self.user:
+            return self.channel.send_query(f"{c.ERR} cannot doot yourself.")
 
         # a user can be dooted every 30 seconds
-        if user.got_dooted_tstamp:
-            if int(time.strftime("%s")) - user.got_dooted_tstamp <= 30:
-                return
+        if (
+            user.got_dooted_tstamp
+            and int(time.strftime("%s")) - user.got_dooted_tstamp <= 30
+        ):
+            return
 
         # alter doots
         doot_amount = 1 if action == "up" else -1
@@ -100,8 +89,7 @@ class Doot:
         try:
             dooted_user = self.user_args[1]
         except IndexError:
-            self.channel.send_query(f"{c.ERR} must provide a nick.")
-            return
+            return self.channel.send_query(f"{c.ERR} must provide a nick.")
 
         # read jayson
         with self.doot.mutex:
@@ -111,8 +99,7 @@ class Doot:
         if self.channel.server.name not in doots["doots"][0].keys():
             err_msg = f"{c.ERR} {self.channel.server.name} does not have "
             err_msg += "anyone dooted."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         # find user entry
         user_exists = (False, None)
@@ -127,17 +114,17 @@ class Doot:
         if not user_exists[0]:
             err_msg = f"{c.ERR} {dooted_user} has never been dooted in "
             err_msg += f"{self.channel.server.name}."
-            self.channel.send_query(err_msg)
-        # user exists
-        else:
-            user_doots = doots["doots"][0][self.channel.server.name][user_exists[1]][
-                "doots"
-            ]
+            return self.channel.send_query(err_msg)
 
-            msg = f"{c.INFO} {c.LGREEN}{dooted_user}{c.RES} has "
-            msg += f"{c.WHITE}{user_doots}{c.RES} internet relay points in "
-            msg += f"{self.channel.server.name}!!1! fuck !"
-            self.channel.send_query(msg)
+        # user exists
+        user_doots = doots["doots"][0][self.channel.server.name][user_exists[1]][
+            "doots"
+        ]
+
+        msg = f"{c.INFO} {c.LGREEN}{dooted_user}{c.RES} has "
+        msg += f"{c.WHITE}{user_doots}{c.RES} internet relay points in "
+        msg += f"{self.channel.server.name}!!1! fuck !"
+        self.channel.send_query(msg)
 
     def _cmd_stats(self):
         # read jayson
@@ -148,8 +135,7 @@ class Doot:
         if self.channel.server.name not in doots["doots"][0].keys():
             err_msg = f"{c.ERR} {self.channel.server.name} does not have "
             err_msg += "anyone dooted."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         msg = f"{c.INFO} {self.channel.server.name} hall of fame:\n"
 

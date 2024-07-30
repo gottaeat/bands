@@ -45,7 +45,7 @@ class ClientInit:
 
     # stage 1: send NICK and USER, update address, send PING, hand over to channel handling
     def run(self):
-        self.logger.info("%s initing client %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+        self.logger.info("%s", f"{ac.BYEL}--> {ac.BWHI}initializing {ac.RES}")
 
         want_cap = ["multi-prefix"]
 
@@ -86,7 +86,7 @@ class ClientInit:
                 if not line:
                     continue
 
-                self.logger.debug("%s %s", f"{ac.BBLU}<--{ac.RES}", line.rstrip("\r\n"))
+                self.logger.debug("%s%s", f"{ac.BBLU}<-- {ac.RES}", line.rstrip("\r\n"))
 
                 line_s = line.split()
 
@@ -127,9 +127,7 @@ class ClientInit:
                             self.logger.warning(errmsg)
 
                             self.socket.connected = False
-                            self.server.stop()
-
-                            return
+                            return self.server.stop()
 
                         if "chghost" in ackd_caps:
                             self.logger.debug("server gave us chghost CAP")
@@ -152,9 +150,7 @@ class ClientInit:
                         self.logger.warning(errmsg)
 
                         self.socket.connected = False
-                        self.server.stop()
-
-                        return
+                        return self.server.stop()
 
                     if "chghost" in self.server.caps:
                         self.logger.debug("server supports chghost CAP")
@@ -243,5 +239,5 @@ class ClientInit:
             if not self.ping_timer_halt:
                 time.sleep(1)
             else:
-                self.logger.info("%s init done %s", f"{ac.BYEL}-->{ac.BWHI}", ac.RES)
+                self.logger.info("%s", f"{ac.BYEL}--> {ac.BWHI}initialized {ac.RES}")
                 break

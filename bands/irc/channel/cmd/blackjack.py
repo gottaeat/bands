@@ -97,7 +97,7 @@ class BlackJack:
                 aces.append(card)
 
         # no aces
-        if len(aces) == 0:
+        if not aces:
             return
 
         # shallow copy deck, keep card obj refs
@@ -113,10 +113,7 @@ class BlackJack:
 
         # just one ace
         if len(aces) == 1:
-            if 11 + aceless_val > 21:
-                aces[0].val = 1
-            else:
-                aces[0].val = 11
+            aces[0].val = 1 if 11 + aceless_val > 21 else 11
 
         # multiple aces
         if len(aces) > 1:
@@ -139,9 +136,7 @@ class BlackJack:
         for card in self.game.player_hand:
             hand_str += f"{card.face}{card.suit} "
 
-        hand_str = f"{hand_str.rstrip(' ')} ({self.game.player_val})"
-
-        return hand_str
+        return f"{hand_str.rstrip(' ')} ({self.game.player_val})"
 
     def _dealer_hand_op(self, initial=False):
         # calc val
@@ -163,8 +158,6 @@ class BlackJack:
             hand_str = f"{hand_str.rstrip(' ')} ({self.game.dealer_val})"
 
         return hand_str
-
-    # -- card handling end -- #
 
     # -- game handling -- #
     def _initial_deal(self):
@@ -215,18 +208,15 @@ class BlackJack:
             if dealer_bust:
                 msg = f"{c.INFO} both the dealer and {self.user.nick} busted!"
                 self.channel.send_query(msg)
-                self._handle_payout("draw")
-                return
+                return self._handle_payout("draw")
 
             # player bust
-            self._handle_payout("loss")
-            return
+            return self._handle_payout("loss")
 
         # dealer bust
         if dealer_bust:
             self.channel.send_query(f"{c.INFO} dealer busted!")
-            self._handle_payout("win")
-            return
+            return self._handle_payout("win")
 
         # no busts, handle bjack status
         dealer_bjack = self.game.dealer_val == 21
@@ -237,32 +227,27 @@ class BlackJack:
             if dealer_bjack:
                 msg = f"{c.INFO} the dealer and {self.user.nick} both hit blackjack!"
                 self.channel.send_query(msg)
-                self._handle_payout("draw")
-                return
+                return self._handle_payout("draw")
 
             # player bjack
             self.channel.send_query(f"{c.INFO} {self.user.nick} hit blackjack!")
-            self._handle_payout("win")
-            return
+            return self._handle_payout("win")
 
         # dealer bjack
         if dealer_bjack:
             self.channel.send_query(f"{c.INFO} dealer hit blackjack!")
-            self._handle_payout("loss")
-            return
+            return self._handle_payout("loss")
 
         # no blackjack, no bust
         # dealer costs more
         if self.game.dealer_val > self.game.player_val:
-            self._handle_payout("loss")
-            return
+            return self._handle_payout("loss")
 
         # dealer == player
         if self.game.dealer_val == self.game.player_val:
             msg = f"{c.INFO} the dealer and {self.user.nick}'s hands cost the same!"
             self.channel.send_query(msg)
-            self._handle_payout("draw")
-            return
+            return self._handle_payout("draw")
 
         # player costs more
         self._handle_payout("win")
@@ -288,29 +273,15 @@ class BlackJack:
         self.channel.send_query(msg)
         self.user.bjack = None
 
-    # -- game handling end -- #
-
     # -- cmd handling -- #
     def _run(self):
-        if len(self.user_args) == 0:
-            self._cmd_help()
-            return
+        if not self.user_args:
+            return self._cmd_help()
 
-        if self.user_args[0] == "bet":
-            self._cmd_bet()
-            return
+        cmd = self.user_args[0]
 
-        if self.user_args[0] == "hit":
-            self._cmd_hit()
-            return
-
-        if self.user_args[0] == "stay":
-            self._cmd_stay()
-            return
-
-        if self.user_args[0] == "state":
-            self._cmd_state()
-            return
+        if cmd in ("bet", "hit", "stay", "state"):
+            return getattr(self, f"_cmd_{cmd}")()
 
         self._cmd_help()
 
@@ -326,24 +297,20 @@ class BlackJack:
         # already has a game running
         if self.user.bjack:
             err_msg = f"{c.ERR} {self.user.nick} already has a game running."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         # no bet
         try:
             bet_amount = int(self.user_args[1])
         except IndexError:
-            self.channel.send_query(f"{c.ERR} must provide a bet amount.")
-            return
+            return self.channel.send_query(f"{c.ERR} must provide a bet amount.")
         except ValueError:
-            self.channel.send_query(f"{c.ERR} we work only with and for money.")
-            return
+            return self.channel.send_query(f"{c.ERR} we work only with and for money.")
 
         # bet out of range
         if bet_amount < 1 or bet_amount > 100:
             err_msg = f"{c.ERR} bet amount should be between 1 - 100."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         # create game
         self.user.bjack = Game()
@@ -363,8 +330,7 @@ class BlackJack:
         # no game
         if not self.user.bjack:
             err_msg = f"{c.ERR} {self.user.nick} does not have a game running."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         self.game = self.user.bjack
 
@@ -383,8 +349,7 @@ class BlackJack:
         # no game
         if not self.user.bjack:
             err_msg = f"{c.ERR} {self.user.nick} does not have a game running."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         self.game = self.user.bjack
         self._reveal_dealer()
@@ -393,12 +358,9 @@ class BlackJack:
         # no game
         if not self.user.bjack:
             err_msg = f"{c.ERR} {self.user.nick} does not have a game running."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         self.game = self.user.bjack
         msg = f"{self._player_hand_op()}, bet: {c.WHITE}{self.game.bet}{c.RES}\n"
         msg += self._dealer_hand_op(initial=True)
         self.channel.send_query(msg)
-
-    # -- cmd handling end -- #

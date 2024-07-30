@@ -121,9 +121,11 @@ def streamline_modes(modes, user_nicks):
 
     users_n_modes = {}
     for index, val in enumerate(user_nicks):
-        users_n_modes[val] = {
-            "action": modes_split[index][0] == "+",
-            "mode": modes_split[index][1],
-        }
+        mode = modes_split[index][1]
+        if mode in ("v", "h", "o", "a", "q"):
+            users_n_modes[val] = {
+                "action": modes_split[index][0] == "+",
+                "mode": mode,
+            }
 
     return users_n_modes
