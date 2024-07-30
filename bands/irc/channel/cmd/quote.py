@@ -25,21 +25,13 @@ class Quote:
         self.channel.send_query(msg)
 
     def _run(self):
-        if len(self.user_args) == 0:
-            self._cmd_help()
-            return
+        if not self.user_args:
+            return self._cmd_help()
 
-        if self.user_args[0] == "add":
-            self._cmd_add()
-            return
+        cmd = self.user_args[0]
 
-        if self.user_args[0] == "get":
-            self._cmd_get()
-            return
-
-        if self.user_args[0] == "random":
-            self._cmd_random()
-            return
+        if cmd in ("add", "get", "random"):
+            return getattr(self, f"_cmd_{cmd}")()
 
         self._cmd_help()
 
@@ -48,44 +40,34 @@ class Quote:
         try:
             quoted_user = self.user_args[1]
         except IndexError:
-            self.channel.send_query(f"{c.ERR} must provide a nick.")
-            return
+            return self.channel.send_query(f"{c.ERR} must provide a nick.")
+
+        # get ChannelUser
+        try:
+            user = self.channel.users[quoted_user.lower()]
+        except IndexError:
+            return self.channel.send_query(f"{c.ERR} no such nick: {quoted_user}.")
 
         # list to str
         quoted_msg = " ".join(self.user_args[2:])
 
         # no quote
-        if len(quoted_msg) == 0:
-            self.channel.send_query(f"{c.ERR} no quote body.")
-            return
+        if not quoted_msg:
+            return self.channel.send_query(f"{c.ERR} no quote body.")
 
-        # get ChannelUser
-        for channeluser in self.channel.user_list:
-            if channeluser.nick.lower() == quoted_user.lower():
-                user = channeluser
-                break
-
-        # self quote || no ChannelUser obj
-        try:
-            if user.nick == self.user.nick and user.login == self.user.login:
-                self.channel.send_query(f"{c.ERR} cannot quote yourself.")
-                return
-        except UnboundLocalError:
-            self.channel.send_query(f"{c.ERR} no such nick: {quoted_user}.")
-            return
+        # self quote
+        if user == self.user:
+            return self.channel.send_query(f"{c.ERR} cannot quote yourself.")
 
         # check if said
+        chat_line = None
         for user_chat in user.chats:
             if user_chat["chat"] == quoted_msg:
                 chat_line = user_chat
                 break
 
-        try:
-            if chat_line:
-                pass
-        except UnboundLocalError:
-            self.channel.send_query(f"{c.ERR} {user.nick} never said that.")
-            return
+        if not chat_line:
+            return self.channel.send_query(f"{c.ERR} {user.nick} never said that.")
 
         # gen quote
         quote = {
@@ -101,10 +83,7 @@ class Quote:
             # entry for server does not exist
             if self.channel.server.name not in quotes["quotes"][0].keys():
                 quotes["quotes"][0][self.channel.server.name] = [{}]
-
-                self.logger.info(
-                    "created quote entry for: %s", self.channel.server.name
-                )
+                self.channel.server.logger.info("created quotes entry for the server")
 
             # entry for channel does not exist
             if (
@@ -112,12 +91,7 @@ class Quote:
                 not in quotes["quotes"][0][self.channel.server.name][0].keys()
             ):
                 quotes["quotes"][0][self.channel.server.name][0][self.channel.name] = []
-
-                self.logger.info(
-                    "created quote entry for %s in %s",
-                    self.channel.name,
-                    self.channel.server.name,
-                )
+                self.logger.info("created quotes entry for the channel")
 
             # update and write quotes
             quotes["quotes"][0][self.channel.server.name][0][self.channel.name].append(
@@ -133,8 +107,7 @@ class Quote:
         try:
             quoted_user = self.user_args[1]
         except IndexError:
-            self.channel.send_query(f"{c.ERR} must provide a nick.")
-            return
+            return self.channel.send_query(f"{c.ERR} must provide a nick.")
 
         # read jayson
         with self.quote.mutex:
@@ -144,18 +117,15 @@ class Quote:
         if self.channel.server.name not in quotes["quotes"][0].keys():
             err_msg = f"{c.ERR} {self.channel.server.name} does not have "
             err_msg += "anyone quoted."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         # entry for channel does not exist
         if (
             self.channel.name
             not in quotes["quotes"][0][self.channel.server.name][0].keys()
         ):
-            err_msg = f"{c.ERR} {self.channel.name} does not have "
-            err_msg += "anyone quoted."
-            self.channel.send_query(err_msg)
-            return
+            err_msg = f"{c.ERR} {self.channel.name} does not have anyone quoted"
+            return self.channel.send_query(err_msg)
 
         # find user entries
         users_quotes = []
@@ -164,12 +134,10 @@ class Quote:
                 users_quotes.append(item)
 
         # user does not exist
-        if len(users_quotes) == 0:
+        if not users_quotes:
             err_msg = f"{c.ERR} {quoted_user} has no recorded quotes in "
             err_msg += f"{self.channel.name}."
-            self.channel.send_query(err_msg)
-
-            return
+            return self.channel.send_query(err_msg)
 
         # user does exist
         random.shuffle(users_quotes)
@@ -188,9 +156,7 @@ class Quote:
         if self.channel.server.name not in quotes["quotes"][0].keys():
             err_msg = f"{c.ERR} {self.channel.server.name} does not have "
             err_msg += "anyone quoted."
-            self.channel.send_query(err_msg)
-
-            return
+            return self.channel.send_query(err_msg)
 
         # entry for channel does not exist
         if (
@@ -199,8 +165,7 @@ class Quote:
         ):
             err_msg = f"{c.ERR} {self.channel.name} does not have "
             err_msg += "anyone quoted."
-            self.channel.send_query(err_msg)
-            return
+            return self.channel.send_query(err_msg)
 
         # get channel entries
         channel_quotes = quotes["quotes"][0][self.channel.server.name][0][
