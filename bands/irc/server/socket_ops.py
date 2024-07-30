@@ -3,7 +3,7 @@ import re
 
 from threading import Lock
 
-from bands.irc.util import strip_color
+from bands.irc.util import strip_color, wrap_bytes
 from bands.colors import ANSIColors
 
 ac = ANSIColors()
@@ -20,11 +20,9 @@ class SocketOps:
 
     # -- receiving -- #
     def decode_data(self, data):
-        if len(data) == 0:
-            if not self.socket.halt:
-                self.logger.warning("received nothing")
-                self.server.stop()
-                return
+        if not data and not self.socket.halt:
+            self.logger.warning("received nothing")
+            return self.server.stop()
 
         data = self.socket.buffer + data
 
@@ -55,7 +53,7 @@ class SocketOps:
     # -- sending -- #
     def send_raw(self, msg):
         self.logger.debug(
-            "%s %s", f"{ac.BRED}-->{ac.RES}", strip_color(msg.rstrip("\r\n"))
+            "%s%s", f"{ac.BRED}--> {ac.RES}", strip_color(msg.rstrip("\r\n"))
         )
 
         try:
@@ -73,6 +71,26 @@ class SocketOps:
 
             self.send_raw(f"PRIVMSG {target} :{msg}")
             self.privmsg_tstamp = int(round(time.time() * 1000))
+
+    def send_query_hook(self, name, char_limit, msg):
+        if "\n" in msg:
+            for line in msg.split("\n"):
+                if line:
+                    if len(line.encode("utf-8")) > char_limit:
+                        for item in wrap_bytes(line, char_limit):
+                            self.send_privmsg(item, name)
+                            time.sleep(self.server.scroll_speed / 1000)
+                    else:
+                        self.send_privmsg(line, name)
+                        time.sleep(self.server.scroll_speed / 1000)
+        else:
+            if len(msg.encode("utf-8")) > char_limit:
+                for item in wrap_bytes(msg, char_limit):
+                    self.send_privmsg(item, name)
+                    time.sleep(self.server.scroll_speed / 1000)
+            else:
+                self.send_privmsg(msg, name)
+                time.sleep(self.server.scroll_speed / 1000)
 
     def send_ping(self):
         self.send_raw(f"PING {self.socket.address}")
