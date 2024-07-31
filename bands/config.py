@@ -60,7 +60,8 @@ class ConfigYAML:
         msg += f"{ac.BWHI}├ {ac.BGRN}allow_admin  {ac.RES}{server.allow_admin}{ac.RES}\n"
         msg += f"{ac.BWHI}├ {ac.BGRN}secret       {ac.RES}{server.secret}{ac.RES}\n"
         msg += f"{ac.BWHI}├ {ac.BGRN}passwd       {ac.RES}{server.passwd}{ac.RES}\n"
-        msg += f"{ac.BWHI}└ {ac.BGRN}scroll_speed {ac.RES}{server.scroll_speed}{ac.RES}"
+        msg += f"{ac.BWHI}├ {ac.BGRN}scroll_speed {ac.RES}{server.scroll_speed}{ac.RES}\n"
+        msg += f"{ac.BWHI}└ {ac.BGRN}burst_limit  {ac.RES}{server.burst_limit}{ac.RES}"
         # fmt: on
 
         for line in msg.split("\n"):
@@ -387,6 +388,21 @@ class ConfigYAML:
                 self.logger.exception("invalid server scroll_speed")
             except KeyError:
                 server.scroll_speed = 0
+
+            # server.burst_limit
+            try:
+                server.burst_limit = int(server_yaml["burst_limit"])
+            except ValueError:
+                self.logger.exception("invalid server burst_limit")
+            except KeyError:
+                server.burst_limit = 0
+
+            if (server.burst_limit == 0 and server.scroll_speed != 0) or (
+                server.scroll_speed == 0 and server.burst_limit != 0
+            ):
+                err_msg = "burst_limit/scroll_speed both have to be non-0 "
+                err_msg += "values if one of them is defined as a non-0 value"
+                self.logger.error(err_msg)
 
             # - - logger - - #
             logger = logging.getLogger(server.name)
