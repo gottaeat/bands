@@ -16,7 +16,8 @@ class SocketOps:
         self.socket = server.socket
 
         self.mutex = Lock()
-        self.privmsg_tstamp = int(round(time.time() * 1000))
+        self.privmsg_tstamp = round(time.time(), 3)
+        self.burst_count = 0
 
     # -- receiving -- #
     def decode_data(self, data):
@@ -63,34 +64,30 @@ class SocketOps:
                 self.logger.exception("send failed")
 
     def send_privmsg(self, msg, target):
-        with self.mutex:
-            time_past = int(round(time.time() * 1000)) - self.privmsg_tstamp
-
-            if time_past < self.server.scroll_speed:
-                time.sleep((self.server.scroll_speed - time_past) / 1000)
-
+        if self.server.scroll_speed == 0:
             self.send_raw(f"PRIVMSG {target} :{msg}")
-            self.privmsg_tstamp = int(round(time.time() * 1000))
+        else:
+            with self.mutex:
+                time_past = round(time.time(), 3) - self.privmsg_tstamp
+
+                if time_past < self.server.scroll_speed:
+                    if self.burst_count == self.server.burst_limit - 1:
+                        time.sleep(self.server.scroll_speed - time_past)
+                        self.burst_count = 0
+                    else:
+                        self.burst_count += 1
+
+                self.send_raw(f"PRIVMSG {target} :{msg}")
+                self.privmsg_tstamp = round(time.time(), 3)
 
     def send_query_hook(self, name, char_limit, msg):
-        if "\n" in msg:
-            for line in msg.split("\n"):
-                if line:
-                    if len(line.encode("utf-8")) > char_limit:
-                        for item in wrap_bytes(line, char_limit):
-                            self.send_privmsg(item, name)
-                            time.sleep(self.server.scroll_speed / 1000)
-                    else:
-                        self.send_privmsg(line, name)
-                        time.sleep(self.server.scroll_speed / 1000)
-        else:
-            if len(msg.encode("utf-8")) > char_limit:
-                for item in wrap_bytes(msg, char_limit):
+        for line in msg.split("\n"):
+            if line:
+                for item in wrap_bytes(line, char_limit):
                     self.send_privmsg(item, name)
-                    time.sleep(self.server.scroll_speed / 1000)
-            else:
-                self.send_privmsg(msg, name)
-                time.sleep(self.server.scroll_speed / 1000)
+
+                    if self.server.scroll_speed != 0:
+                        time.sleep(0.001)
 
     def send_ping(self):
         self.send_raw(f"PING {self.socket.address}")
