@@ -27,79 +27,100 @@ class RCon:
         msg += f"{c.WHITE}├ {c.LGREEN}part{c.RES}    [server] [list of channels]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}raw{c.RES}     [server] [raw irc line]\n"
         msg += f"{c.WHITE}├ {c.LGREEN}rehash{c.RES}\n"
+        msg += f"{c.WHITE}├ {c.LGREEN}say{c.RES}     [server] [channel] [query]\n"
         msg += f"{c.WHITE}└ {c.LGREEN}status{c.RES}"
         # fmt: on
         self.user.send_query(msg)
 
+    def _get_server(self, server_name):
+        try:
+            return self.servers[server_name.lower()]
+        except KeyError:
+            self.user.send_query(f"{c.ERR} server {server_name} does not exist.")
+            return None
+
+    def _check_channel(self, channel_name):
+        if channel_name[0] != "#":
+            self.user.send_query(f"{c.ERR} {channel_name} does not start with a #.")
+            return False
+
+        return True
+
     def _dispatcher(self):
         cmd, *args = self.user_args
 
+        # rehash + status
         if cmd in ("rehash", "status"):
             return getattr(self, f"_cmd_{cmd}")()
 
         # debug
         if cmd == "debug":
             if not args or len(args) > 1 or args[0] not in ("on", "off", "state"):
-                err_msg = f"{c.ERR} must specify just {{on|off|state}}."
-                return self.user.send_query(err_msg)
-
+                return self.user.send_query(
+                    f"{c.ERR} must specify just {{on|off|state}}."
+                )
             return self._cmd_debug(args[0])
 
-        # connect + dc
-        if cmd in ("connect", "dc"):
+        # connect + dc | join+parg | raw | say
+        if cmd in ("connect", "dc", "join", "part", "raw", "say"):
             if not args:
-                err_msg = f"{c.ERR} must supply at least one server."
-                return self.user.send_query(err_msg)
+                err_msg = "at least one" if cmd in ("connect", "dc") else "a"
+                return self.user.send_query(f"{c.ERR} must supply {err_msg} server.")
 
-            for server_name in args:
-                try:
-                    server_obj = self.servers[server_name]
-                except KeyError:
-                    err_msg = f"{c.ERR} {server_name} does not exist."
-                    return self.user.send_query(err_msg)
-
-                return getattr(self, f"_cmd_{cmd}")(server_obj)
-
-        # join + part + raw
-        if cmd in ("join", "part", "raw"):
-            # take input
-            if not args:
-                err_msg = f"{c.ERR} must supply a server as the first arg."
-                return self.user.send_query(err_msg)
-
-            if cmd != "raw" and len(args) == 1:
-                err_msg = f"{c.ERR} must supply at least one channel."
-                return self.user.send_query(err_msg)
+            # connect + dc
+            if cmd in ("connect", "dc"):
+                for server_name in args:
+                    print(args)
+                    if server_obj := self._get_server(server_name):
+                        getattr(self, f"_cmd_{cmd}")(server_obj)
+                return
 
             server_name, *rest = args
+            if not (server_obj := self._get_server(server_name)):
+                return
 
-            try:
-                server_obj = self.servers[server_name]
-            except KeyError:
-                return self.user.send_query(f"{c.ERR} {server_name} does not exist.")
+            # join + part
+            if cmd in ("join", "part"):
+                if not rest:
+                    return self.user.send_query(
+                        f"{c.ERR} must supply at least one channel."
+                    )
 
-            # not connected
-            if not server_obj.socket.connected:
-                return self.user.send_query(f"{c.ERR} not connected to {server_name}.")
+                for channel_name in rest:
+                    if self._check_channel(channel_name):
+                        getattr(self, f"_cmd_{cmd}")(server_obj, channel_name)
+                return
 
             # raw
             if cmd == "raw":
-                raw_msg = " ".join(rest)
+                query_msg = " ".join(rest)
 
-                if not raw_msg:
+                if not query_msg:
                     return self.user.send_query(f"{c.ERR} no message provided.")
 
-                return self._cmd_raw(server_obj, raw_msg)
+                return self._cmd_raw(server_obj, query_msg)
 
-            # join + part
-            for channel_name in rest:
-                if channel_name[0] != "#":
-                    err_msg = f"{c.ERR} {channel_name} does not start with a #."
-                    return self.user.send_query(err_msg)
+            # say
+            if cmd == "say":
+                if not rest:
+                    return self.user.send_query(f"{c.ERR} must supply a channel.")
 
-                getattr(self, f"_cmd_{cmd}")(server_obj, channel_name)
+                channel_name, *msg_parts = rest
 
-            return
+                if not msg_parts:
+                    return self.user.send_query(f"{c.ERR} no message provided.")
+
+                if not self._check_channel(channel_name):
+                    return
+
+                query_msg = " ".join(msg_parts)
+                try:
+                    channel_obj = server_obj.channels[channel_name.lower()]
+                    return self._cmd_say(server_obj, channel_obj, query_msg)
+                except KeyError:
+                    return self.user.send_query(
+                        f"{c.ERR} not in {channel_name} in {server_obj.name}."
+                    )
 
         self._usage()
 
@@ -108,8 +129,9 @@ class RCon:
         root_logger = logging.getLogger()
 
         if arg == "state":
-            msg = f"{c.INFO} current loglevel is {c.LGREEN}{root_logger.level}{c.RES}."
-            return self.user.send_query(msg)
+            return self.user.send_query(
+                f"{c.INFO} current loglevel is {c.LGREEN}{root_logger.level}{c.RES}."
+            )
 
         level = logging.DEBUG if arg == "on" else logging.INFO
         root_logger.setLevel(level)
@@ -120,8 +142,9 @@ class RCon:
     # - - server cmd - - #
     def _cmd_connect(self, server_obj):
         if server_obj.socket.conn is not None:
-            err_msg = f"{c.ERR} already connected to {server_obj.name}."
-            return self.user.send_query(err_msg)
+            return self.user.send_query(
+                f"{c.ERR} already connected to {server_obj.name}."
+            )
 
         self.user.send_query(f"{c.INFO} connecting to {server_obj.name}")
         server_thread = Thread(target=server_obj.run)
@@ -143,30 +166,43 @@ class RCon:
         self.user.send_query(f"{c.INFO} disconnecting from {server_obj.name}")
         server_obj.stop()
 
-    def _cmd_raw(self, server_obj, raw_msg):
-        msg = f"{c.INFO} sending {c.WHITE}{raw_msg}{c.RES} to "
-        msg += f"{c.LGREEN}{server_obj.name}{c.RES}."
+    def _cmd_raw(self, server_obj, query_msg):
+        msg = f"{c.GREEN}[{c.LBLUE}RAW{c.GREEN}]"
+        msg += f"[{c.LGREEN}{server_obj.name}{c.GREEN}]{c.RES} {query_msg}"
         self.user.send_query(msg)
 
-        server_obj.sock_ops.send_raw(raw_msg)
+        server_obj.sock_ops.send_raw(query_msg)
+
+    def _cmd_say(self, server_obj, channel_obj, query_msg):
+        msg = f"{c.GREEN}[{c.LBLUE}SAY{c.GREEN}]"
+        msg += f"[{c.LGREEN}{channel_obj.name}{c.LRED}@"
+        msg += f"{c.WHITE}{server_obj.name}{c.GREEN}]{c.RES} {query_msg}"
+        self.user.send_query(msg)
+
+        channel_obj.send_query(query_msg)
 
     # - - channel cmd - - #
     def _cmd_join(self, server_obj, channel_name):
         if channel_name in server_obj.channels.keys():
-            err_msg = f"{c.ERR} already in {channel_name} in {server_obj.name}."
-            return self.user.send_query(err_msg)
+            return self.user.send_query(
+                f"{c.ERR} already in {channel_name} in {server_obj.name}."
+            )
 
         server_obj.sock_ops.send_join(channel_name)
-        self.user.send_query(f"{c.INFO} sent JOIN for {channel_name}.")
+        self.user.send_query(
+            f"{c.INFO} sent JOIN for {channel_name} in {server_obj.name}."
+        )
 
     def _cmd_part(self, server_obj, channel_name):
         if not server_obj.channels:
-            err_msg = f"{c.ERR} not in any channels {server_obj.name}."
-            return self.user.send_query(err_msg)
+            return self.user.send_query(
+                f"{c.ERR} not in any channels {server_obj.name}."
+            )
 
         if channel_name not in server_obj.channels.keys():
-            err_msg = f"{c.ERR} not in {channel_name} {server_obj.name}."
-            return self.user.send_query(err_msg)
+            return self.user.send_query(
+                f"{c.ERR} not in {channel_name} {server_obj.name}."
+            )
 
         server_obj.sock_ops.send_part(channel_name, "mom said no.")
         self.user.send_query(f"{c.INFO} parted from {channel_name}")
