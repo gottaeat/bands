@@ -70,7 +70,6 @@ class RCon:
             # connect + dc
             if cmd in ("connect", "dc"):
                 for server_name in args:
-                    print(args)
                     if server_obj := self._get_server(server_name):
                         getattr(self, f"_cmd_{cmd}")(server_obj)
                 return
@@ -157,11 +156,11 @@ class RCon:
             return self.user.send_query(err_msg)
 
         if not server_obj.socket.conn:
+            del self.config.servers[server_obj.name.lower()]
+
             warn_msg = f"{c.WARN} {server_obj.name} has no socket, just "
             warn_msg += "removing it from the server list."
-            self.user.send_query(warn_msg)
-
-            return self.config.servers.remove(server_obj)
+            return self.user.send_query(warn_msg)
 
         self.user.send_query(f"{c.INFO} disconnecting from {server_obj.name}")
         server_obj.stop()
