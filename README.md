@@ -67,19 +67,20 @@ values being specified, if they do not exist, bands will attempt to create and
 initialize the files.
 
 #### servers
-| key            | necessity                   | description                                                                      |
-|----------------|-----------------------------|----------------------------------------------------------------------------------|
-| `name`         | __required__                | (`str`) reference name for the network                                           |
-| `address`      | __required__                | (`str`) network address                                                          |
-| `port`         | __required__                | (`int`) network port                                                             |
-| `passwd`       | optional                    | (`str`) network password                                                         |
-| `botname`      | __required__                | (`str`) bot nick+ident                                                           |
-| `tls`          | optional                    | (`bool`) enable tls, false by default                                            |
-| `verify_tls`   | optional                    | (`bool`) verify tls, false by default                                            |
-| `scroll_speed` | optional                    | (`int`) how long the wait before sending multiple lines (fakelag)                |
-| `channels`     | __required__                | (`list of str's`) channel list to autojoin on startup                            |
-| `allow_admin`  | optional                    | (`bool`) allow authentication and remote control on the server, false by default |
-| `secret`       | required __if allow_admin__ | (`str`) authentication secret                                                    |
+| key            | necessity                    | description                                                                      |
+|----------------|------------------------------|----------------------------------------------------------------------------------|
+| `name`         | __required__                 | (`str`) reference name for the network                                           |
+| `address`      | __required__                 | (`str`) network address                                                          |
+| `port`         | __required__                 | (`int`) network port                                                             |
+| `passwd`       | optional                     | (`str`) network password                                                         |
+| `botname`      | __required__                 | (`str`) bot nick+ident                                                           |
+| `tls`          | optional                     | (`bool`) enable tls, false by default                                            |
+| `verify_tls`   | optional                     | (`bool`) verify tls, false by default                                            |
+| `scroll_speed` | required __if burst_speed__  | (`int`) how long the wait before sending multiple lines (fakelag)                |
+| `burst_speed`  | required __if scroll_speed__ | (`int`) amount of messages allowed before scroll_speed sleep timer kicks in      |
+| `channels`     | __required__                 | (`list of str's`) channel list to autojoin on startup                            |
+| `allow_admin`  | optional                     | (`bool`) allow authentication and remote control on the server, false by default |
+| `secret`       | required __if allow_admin__  | (`str`) authentication secret                                                    |
 
 ### example
 ```yml
@@ -105,6 +106,7 @@ servers:
     tls: true
     verify_tls: true
     scroll_speed: 1
+    burst_limit: 2
     channels:
       - "#pubchannel"
 ```
