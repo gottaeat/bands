@@ -26,6 +26,7 @@ class Server:
         self.allow_admin = None
         self.secret = None
         self.scroll_speed = None
+        self.burst_limit = None
         self.config = None
 
         # logger
