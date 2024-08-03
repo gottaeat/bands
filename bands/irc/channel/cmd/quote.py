@@ -45,7 +45,7 @@ class Quote:
         # get ChannelUser
         try:
             user = self.channel.users[quoted_user.lower()]
-        except IndexError:
+        except KeyError:
             return self.channel.send_query(f"{c.ERR} no such nick: {quoted_user}.")
 
         # list to str

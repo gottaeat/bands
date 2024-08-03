@@ -55,7 +55,7 @@ class Doot:
         # get ChannelUser
         try:
             user = self.channel.users[dooted_user.lower()]
-        except IndexError:
+        except KeyError:
             self.channel.send_query(f"{c.ERR} no such nick: {dooted_user}.")
 
         # self doot
