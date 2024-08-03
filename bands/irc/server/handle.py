@@ -96,7 +96,18 @@ class Handle:
 
     def channel_msg(self, channel_name, user_line, msg):
         channel = self.channels[channel_name.lower()]
-        user = channel.users[chop_userline(user_line)["nick"].lower()]
+
+        user_line = chop_userline(user_line)
+        user_nick = user_line["nick"]
+
+        try:
+            user = channel.users[user_nick.lower()]
+        except KeyError:
+            channel.logger.warning(
+                "received message from %s (%s) but user not present in channel",
+                user_nick,
+                user_line["login"],
+            )
 
         # get timestamp
         tstamp = int(time.strftime("%s"))
