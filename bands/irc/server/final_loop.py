@@ -106,6 +106,14 @@ class FinalLoop:
 
         Thread(target=self._ping_sender, daemon=True).start()
 
+        # initial joins
+        self.logger.info(
+            "%s", f"{ac.BYEL}--> {ac.BWHI}performing initial joins{ac.RES}"
+        )
+
+        for channel in self.server.channels_init:
+            self.sock_ops.send_join(channel)
+
         while not self.socket.halt:
             try:
                 recv_data = self.socket.conn.recv(512)
@@ -283,6 +291,16 @@ class FinalLoop:
                 if line_s[1] == "474":
                     Thread(
                         target=self.handle.bot_ban, args=[line_s[3]], daemon=True
+                    ).start()
+
+                    continue
+
+                # bot not invited
+                if line_s[1] == "473":
+                    Thread(
+                        target=self.handle.bot_invite_only,
+                        args=[line_s[3]],
+                        daemon=True,
                     ).start()
 
                     continue
