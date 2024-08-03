@@ -24,19 +24,6 @@ class Handle:
         self.users = server.users
 
     # -- object generators -- #
-    def _gen_channel(self, channel_name):
-        try:
-            return self.channels[channel_name.lower()]
-        except KeyError:
-            channel = Channel(self.server)
-            channel.name = channel_name
-            channel.logger = self.server.logger.getChild(channel.name)
-
-            self.channels[channel_name.lower()] = channel
-            channel.logger.debug("generated")
-
-            return channel
-
     def _gen_user(self, user_nick, user_login):
         try:
             return self.users[user_nick.lower()]
@@ -144,6 +131,9 @@ class Handle:
 
     def bot_ban(self, channel_name):
         self.logger.warning("we are banned from %s", channel_name)
+
+    def bot_invite_only(self, channel_name):
+        self.logger.warning("%s requires an invite", channel_name)
 
     def initial_topic_msg(self, channel_name, msg):
         channel = self.channels[channel_name.lower()]
@@ -366,14 +356,19 @@ class Handle:
 
         # bot join
         if user_nick == self.server.botname:
-            channel = self._gen_channel(channel_name)
+            channel = Channel(self.server)
+            channel.name = channel_name
+            channel.logger = self.server.logger.getChild(channel.name)
 
-            if not channel.char_limit:
-                channel.char_limit = 512 - len(
-                    f"{user_line} PRIVMSG {channel.name} :\r\n".encode("utf-8")
-                )
+            self.channels[channel_name.lower()] = channel
 
-                channel.logger.debug("char_limit set to %s", channel.char_limit)
+            channel.char_limit = 512 - len(
+                f"{user_line} PRIVMSG {channel.name} :\r\n".encode("utf-8")
+            )
+
+            channel.logger.debug("char_limit set to %s", channel.char_limit)
+
+            channel.logger.info("joined channel")
 
             self.sock_ops.send_raw(f"WHO {channel.name}")
             return channel.logger.debug("sent WHO")
