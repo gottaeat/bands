@@ -54,11 +54,6 @@ class Server:
         cl_init.run()
 
         if not self.socket.halt:
-            self.logger.info("%s", f"{ac.BYEL}--> {ac.BWHI}joining channels{ac.RES}")
-
-            for channel in self.channels_init:
-                self.sock_ops.send_join(channel)
-
             fin_loop = FinalLoop(self)
             fin_loop.run()
 
