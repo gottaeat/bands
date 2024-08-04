@@ -37,7 +37,7 @@ class Socket:
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
             else:
-                ssl_context.check_hostname = True
+                ssl_context.load_default_certs()
 
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -45,23 +45,14 @@ class Socket:
         self.conn.settimeout(10)
 
         if self.tls:
-            if not self.verify_tls:
-                self.conn = ssl_context.wrap_socket(self.conn)
-            else:
-                self.conn = ssl_context.wrap_socket(
-                    self.conn, server_hostname=self.address
-                )
+            self.conn = ssl_context.wrap_socket(self.conn, server_hostname=self.address)
 
         try:
             self.conn.connect(addr)
         except ssl.SSLCertVerificationError:
-            self.logger.exception(
-                "attempting to connect with TLS failed",
-            )
+            self.logger.exception("attempting to connect with TLS failed")
         except TimeoutError:
-            self.logger.exception(
-                "connection timed out",
-            )
+            self.logger.exception("connection timed out")
 
         self.conn.settimeout(None)
 
