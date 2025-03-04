@@ -4,13 +4,14 @@ import unicodedata
 
 from bands.colors import MIRCColors
 
-
+# fmt: off
 # pylint: disable=anomalous-backslash-in-string
 def strip_color(string):
     ansi_strip = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
     mirc_strip = re.compile("[\x02\x0F\x16\x1D\x1F]|\x03(\d{,2}(,\d{,2})?)?")
 
     return mirc_strip.sub("", ansi_strip.sub("", string))
+# fmt: on
 
 
 def chop_userline(userline):
