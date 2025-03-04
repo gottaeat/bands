@@ -15,8 +15,6 @@ ac = ANSIColors()
 
 
 class URLDispatcher:
-    _PIPED_INSTANCE = "pipedapi-libre.kavin.rocks"
-
     def __init__(self, channel, user, urls):
         self.channel = channel
         self.user = user
@@ -24,6 +22,7 @@ class URLDispatcher:
 
         self.logger = self.channel.logger.getChild(self.__class__.__name__)
         self.sc_client_id = self.channel.server.config.sc_client_id
+        self.piped_url = self.channel.server.config.piped_url
 
         self._run()
 
@@ -188,7 +187,7 @@ class URLDispatcher:
 
         # hit up piped api
         try:
-            data = get_url(f"https://{self._PIPED_INSTANCE}/{yt_type}/{yt_id}")
+            data = get_url(f"https://{self.piped_url}/{yt_type}/{yt_id}")
         except:
             self.logger.exception("GET failed")
 
