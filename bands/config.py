@@ -33,6 +33,7 @@ class ConfigYAML:
         self.doot = None
         self.wa_client = None
         self.openai_client = None
+        self.openai_model = None
         self.sc_client_id = None
 
     def load_yaml(self):
@@ -143,11 +144,11 @@ class ConfigYAML:
 
     def _parse_openai(self):
         # - - parse yaml - - #
-        self.logger.info("processing openai_key")
+        self.logger.info("processing openai")
         try:
-            openai_key = self.yaml_parsed["openai_key"]
+            openai_yaml = self.yaml_parsed["openai"]
         except KeyError:
-            warn_msg = "openai_key is not specified in the configuration.\n"
+            warn_msg = "openai is not specified in the configuration.\n"
             warn_msg += "functionality requiring openai will not work."
 
             for line in warn_msg.split("\n"):
@@ -157,11 +158,19 @@ class ConfigYAML:
         except:
             self.logger.exception("%s parsing has failed", self.config_file)
 
-        if not openai_key:
-            self.logger.error("openai_key cannot be specified then left blank")
+        if not openai_yaml:
+            self.logger.error("openai cannot be specified then left blank")
 
-        # - - sanity check - - #
-        self.logger.info("sanity checking the openai key")
+        # - - openai.key - - #
+        if "key" not in openai_yaml.keys():
+            self.logger.error("openai.key is missing from the YAML")
+
+        if not openai_yaml["key"]:
+            self.logger.error("openai.key cannot be blank")
+
+        openai_key = openai_yaml["key"]
+
+        self.logger.info("sanity checking openai.key")
 
         try:
             if openai_key[0:3] != "sk-":
@@ -169,9 +178,59 @@ class ConfigYAML:
         except KeyError:
             self.logger.exception("%s is formatted wrong", openai_key)
 
-        # - - set key - - #
+        # - - create client - - #
         self.logger.info("creating openai client")
         self.openai_client = openai.OpenAI(api_key=openai_key)
+
+        # - - get list of models - - #
+        self.logger.info("getting list of models")
+        try:
+            models = self.openai_client.models.list().dict()["data"]
+        except:
+            self.logger.exception("could not get list of models")
+
+        non_text_match = [
+            "embedding",
+            "vision",
+            "tts",
+            "whisper",
+            "dall",
+            "audio",
+            "realtime",
+            "moderation",
+        ]
+        models_list = sorted(
+            [
+                model["id"]
+                for model in models
+                if not any(keyword in model["id"] for keyword in non_text_match)
+            ]
+        )
+
+        if not models_list:
+            self.logger.error("models list retrieved from OpenAI is empty")
+
+        # - - openai.model - - #
+        if "model" not in openai_yaml.keys():
+            self.logger.error("openai.model is missing from the YAML")
+
+        if not openai_yaml["model"]:
+            self.logger.error("openai.model cannot be blank")
+
+        openai_model = openai_yaml["model"]
+
+        if openai_model not in models_list:
+            warn_msg = f"{openai_model} is not valid, model should be one of:\n"
+            for model in models_list:
+                warn_msg += f" - {model}\n"
+
+            for line in warn_msg.rstrip("\n").split("\n"):
+                self.logger.warning(line)
+
+            self.logger.error("invalid model")
+
+        # - - set model - - #
+        self.openai_model = openai_model
 
     def _parse_quote(self):
         # - - init Quote() - - #
