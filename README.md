@@ -53,15 +53,19 @@ docker compose up -d
 ## configuration
 ### specification
 #### root
-| key               | necessity     | description                                           |
-|-------------------|---------------|-------------------------------------------------------|
-| `wolfram_api_key` | optional      | (`str`) wolfram alpha api key for module support      |
-| `openai`          | optional      | root key for the openai-related configuration         |
-| `quote_file`      | optional      | (`str`) path to read/write channel quotes to and from |
-| `doot_file`       | optional      | (`str`) path to read/write server points to and from  |
-| `servers`         | __required__  | list of servers to connect to on startup              |
+| key               | necessity     | description                                               |
+|-------------------|---------------|-----------------------------------------------------------|
+| `wolfram_api_key` | optional      | (`str`) wolfram alpha api key for module support          |
+| `openai`          | optional      | root key for the openai-related configuration             |
+| `piped_url`       | optional      | (`str`) fqdn to make piped api requests to [1]            |
+| `quote_file`      | optional      | (`str`) path to read/write channel quotes to and from [2] |
+| `doot_file`       | optional      | (`str`) path to read/write server points to and from [2]  |
+| `servers`         | __required__  | list of servers to connect to on startup                  |
 
-`quote_file` and `doot_file` keys, if not specified, will default to
+__[1]__ if none specified, will fall back to a default that may or may not be
+available to make api calls to.
+
+__[2]__ `quote_file` and `doot_file` keys, if not specified, will default to
 `/data/quotes.json` and `/data/doots.json` respectively. regardless of the
 values being specified, if they do not exist, bands will attempt to create and
 initialize the files.
@@ -95,6 +99,7 @@ the `model` key.
 ### example
 ```yml
 wolfram_api_key: "XXXXX-XXXXXXXXXX"
+piped_url: "pipedapi.myfavinstance.net"
 openai:
     key: "sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
     model: 'gpt-4o-mini'
