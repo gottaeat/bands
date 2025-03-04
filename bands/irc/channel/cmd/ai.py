@@ -28,6 +28,7 @@ class AIQuery:
 
         self.logger = self.channel.logger.getChild(self.__class__.__name__)
         self.openai_client = self.channel.server.config.openai_client
+        self.openai_model = self.channel.server.config.openai_model
 
         self._run()
 
@@ -44,8 +45,9 @@ class AIQuery:
         self.channel.send_query(f"{c.INFO} {self.user.nick}, querying: {user_Q}")
 
         try:
+            print(self.openai_model)
             response = self.openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=self.openai_model,
                 messages=[
                     {"role": "system", "content": self.SYSTEM_PROMPT},
                     {"role": "user", "content": user_Q},

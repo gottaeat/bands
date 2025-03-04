@@ -47,6 +47,7 @@ class Tarot:
 
         self.logger = self.channel.logger.getChild(self.__class__.__name__)
         self.openai_client = self.channel.server.config.openai_client
+        self.openai_model = self.channel.server.config.openai_model
 
         self.deck = TarotDeck()
         self.tarot_data = None
@@ -108,7 +109,7 @@ class Tarot:
 
         try:
             response = self.openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=self.openai_model,
                 messages=[
                     {"role": "system", "content": self.MISS_CLEO},
                     {"role": "user", "content": prompt},
