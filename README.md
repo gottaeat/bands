@@ -56,7 +56,7 @@ docker compose up -d
 | key               | necessity     | description                                           |
 |-------------------|---------------|-------------------------------------------------------|
 | `wolfram_api_key` | optional      | (`str`) wolfram alpha api key for module support      |
-| `openai_key`      | optional      | (`str`) openai key for module support                 |
+| `openai`          | optional      | root key for the openai-related configuration         |
 | `quote_file`      | optional      | (`str`) path to read/write channel quotes to and from |
 | `doot_file`       | optional      | (`str`) path to read/write server points to and from  |
 | `servers`         | __required__  | list of servers to connect to on startup              |
@@ -65,6 +65,16 @@ docker compose up -d
 `/data/quotes.json` and `/data/doots.json` respectively. regardless of the
 values being specified, if they do not exist, bands will attempt to create and
 initialize the files.
+
+#### openai
+| key     | necessity    | description                                        |
+|---------|--------------|----------------------------------------------------|
+| `key`   | __required__ | (`str`) openai api key for module support          |
+| `model` | __required__ | (`str`) openai model name to be used in modules[1] |
+
+__[1]__ model names are sanity checked against a list of text-only openai
+models, to see the complete list, just bring up the bot with a random value for
+the `model` key.
 
 #### servers
 | key            | necessity                    | description                                                                      |
