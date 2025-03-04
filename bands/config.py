@@ -34,6 +34,7 @@ class ConfigYAML:
         self.wa_client = None
         self.openai_client = None
         self.openai_model = None
+        self.piped_url = "pipedapi.drgns.space"
         self.sc_client_id = None
 
     def load_yaml(self):
@@ -231,6 +232,34 @@ class ConfigYAML:
 
         # - - set model - - #
         self.openai_model = openai_model
+
+    def _parse_piped(self):
+        # - - parse yaml - - #
+        self.logger.info("processing piped_url")
+        try:
+            piped_url = self.yaml_parsed["piped_url"]
+        except KeyError:
+            warn_msg = "piped_url is not specified in the configuration.\n"
+            warn_msg += f"will use the fallback value of {self.piped_url}"
+
+            for line in warn_msg.split("\n"):
+                self.logger.warning(line)
+
+            return
+        except:
+            self.logger.exception("%s parsing has failed", self.config_file)
+
+        if not piped_url:
+            self.logger.error("piped_url cannot be specified then left blank")
+
+        if not bool(
+            re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z]{2,})+$").match(
+                piped_url
+            )
+        ):
+            self.logger.error("%s is not a fqdn", piped_url)
+
+        self.piped_url = piped_url
 
     def _parse_quote(self):
         # - - init Quote() - - #
@@ -481,6 +510,7 @@ class ConfigYAML:
             self._gen_sc_client_id,
             self._parse_wolfram,
             self._parse_openai,
+            self._parse_piped,
             self._parse_quote,
             self._parse_doot,
             self.parse_servers,
