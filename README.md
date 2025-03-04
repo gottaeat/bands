@@ -95,7 +95,9 @@ the `model` key.
 ### example
 ```yml
 wolfram_api_key: "XXXXX-XXXXXXXXXX"
-openai_key: "sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+openai:
+    key: "sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    model: 'gpt-4o-mini'
 
 servers:
   - name: privnet
