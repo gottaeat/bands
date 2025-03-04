@@ -235,32 +235,33 @@ class Handle:
         if not mode_data:
             return
 
-        for mode_user, mode_info in mode_data.items():
-            user_obj = channel.users[mode_user.lower()]
-            if mode_info["mode"] == "v":
-                user_obj.voiced = mode_info["action"]
+        for mode_change in mode_data:
+            for mode_user, mode_info in mode_change.items():
+                user_obj = channel.users[mode_user.lower()]
+                if mode_info["mode"] == "v":
+                    user_obj.voiced = mode_info["action"]
 
-            if mode_info["mode"] == "h":
-                user_obj.hop = mode_info["action"]
+                if mode_info["mode"] == "h":
+                    user_obj.hop = mode_info["action"]
 
-            if mode_info["mode"] == "o":
-                user_obj.op = mode_info["action"]
+                if mode_info["mode"] == "o":
+                    user_obj.op = mode_info["action"]
 
-            if mode_info["mode"] == "a":
-                user_obj.admin = mode_info["action"]
+                if mode_info["mode"] == "a":
+                    user_obj.admin = mode_info["action"]
 
-            if mode_info["mode"] == "q":
-                user_obj.owner = mode_info["action"]
+                if mode_info["mode"] == "q":
+                    user_obj.owner = mode_info["action"]
 
-            channel.logger.info(
-                "mode %s%s %s (%s) by %s (%s)",
-                "+" if mode_info["action"] else "-",
-                mode_info["mode"],
-                user_obj.nick,
-                user_obj.login,
-                user_nick,
-                user_login,
-            )
+                channel.logger.info(
+                    "mode %s%s %s (%s) by %s (%s)",
+                    "+" if mode_info["action"] else "-",
+                    mode_info["mode"],
+                    user_obj.nick,
+                    user_obj.login,
+                    user_nick,
+                    user_login,
+                )
 
     def nick(self, user_line, user_new_nick):
         user_line = chop_userline(user_line)
