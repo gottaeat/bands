@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+import threading
 
 import openai
 import wolframalpha
@@ -505,8 +506,10 @@ class ConfigYAML:
             self._gen_prompt(server)
 
     def run(self):
+        self.load_yaml()
+
+        func_threads = []
         for config_func in [
-            self.load_yaml,
             self._gen_sc_client_id,
             self._parse_wolfram,
             self._parse_openai,
@@ -515,7 +518,14 @@ class ConfigYAML:
             self._parse_doot,
             self.parse_servers,
         ]:
+            func_thread = threading.Thread(target=config_func)
+            func_threads.append(func_thread)
+
+        for func_thread in func_threads:
             if self.halt:
                 break
 
-            config_func()
+            func_thread.start()
+
+        for func_thread in func_threads:
+            func_thread.join()
