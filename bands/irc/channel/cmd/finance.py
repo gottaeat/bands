@@ -43,7 +43,9 @@ class Finance:
         tls_context.options |= 0x4
 
         try:
-            data = get_url("https://www.tcmb.gov.tr/kurlar/today.xml", tls_context)
+            data = get_url(
+                "https://www.tcmb.gov.tr/kurlar/today.xml", tls_context=tls_context
+            )
         except:
             self.logger.exception("tcmb GET failed")
 
