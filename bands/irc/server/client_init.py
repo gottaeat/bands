@@ -75,6 +75,9 @@ class ClientInit:
             try:
                 recv_data = self.socket.conn.recv(512)
             except:
+                if self.socket.halt:
+                    break
+
                 self.logger.exception("recv error during client_init()")
 
             data = self.server.sock_ops.decode_data(recv_data)
