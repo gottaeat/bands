@@ -11,7 +11,7 @@ def get_url(url, extra_headers=None, data=None, tls_context=None):
     if extra_headers:
         try:
             headers.update(extra_headers)
-        except: # pylint: disable=raise-missing-from
+        except:  # pylint: disable=raise-missing-from
             raise ValueError("merging headers failed")
 
     # create request obj
