@@ -45,7 +45,6 @@ class AIQuery:
         self.channel.send_query(f"{c.INFO} {self.user.nick}, querying: {user_Q}")
 
         try:
-            print(self.openai_model)
             response = self.openai_client.chat.completions.create(
                 model=self.openai_model,
                 messages=[
