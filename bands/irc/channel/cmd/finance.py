@@ -1,8 +1,8 @@
 import json
-import re
 import ssl
 import xml.etree.ElementTree as ET
 
+from dataclasses import dataclass
 from threading import Thread
 
 from bs4 import BeautifulSoup
@@ -13,12 +13,14 @@ from bands.util import get_url
 c = MIRCColors()
 
 
+@dataclass
 class WGB:
-    def __init__(self):
-        self.cds = None
-        self.week = None
-        self.month = None
-        self.year = None
+    cds_1g: float = None
+    cds_1w: tuple = None
+    cds_1m: tuple = None
+    cds_6m: tuple = None
+    cds_1y: tuple = None
+    cds_2y: tuple = None
 
 
 class Finance:
@@ -116,48 +118,46 @@ class Finance:
     def _get_wgb(self):
         try:
             data = get_url(
-                "http://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/"
+                url="https://www.worldgovernmentbonds.com/wp-json/common/v1/historical",
+                extra_headers={
+                    "Content-type": "application/json; charset=UTF-8",
+                    "Origin": "https://www.worldgovernmentbonds.com",
+                },
+                data=json.dumps(
+                    {
+                        "GLOBALVAR": {
+                            "FUNCTION": "CDS",
+                            "DATE_RIF": "2099-12-31",
+                            "OBJ": {
+                                "UNIT": "",
+                                "DECIMAL": 2,
+                                "UNIT_DELTA": "%",
+                                "DECIMAL_DELTA": 2,
+                            },
+                            "COUNTRY1": {
+                                "SYMBOL": "13",
+                            },
+                            "OBJ1": {"DURATA_STRING": "5 Years", "DURATA": 60},
+                        }
+                    }
+                ).encode("utf-8"),
             )
         except:
-            self.logger.exception("wgb GET failed")
+            self.logger.exception("wgb POST failed")
 
         try:
-            soup = BeautifulSoup(data, "html.parser")
+            data = json.loads(data)["result"]["hLevel"]
 
-            cds_td = None
-            td_elem = soup.find_all("td")
-            for td in td_elem:
-                td = td.get_text()
-                if "Current CDS" in td:
-                    cds_td = td.split()
-                    break
-
-            if not cds_td:
-                raise ValueError("element containing current CDS was not found")
-        except:
-            self.logger.exception("wgb parse stage 1 failed")
-
-        try:
-            perc = (
-                soup.find_all("p", string=re.compile("CDS value changed"))[0]
-                .get_text()
-                .split()
+            self.wgb = WGB(
+                cds_1g=data["1g"]["lastVal"],
+                cds_1w=(data["1w"]["firstVal"], data["1w"]["changeInRange"]),
+                cds_1m=(data["1m"]["firstVal"], data["1m"]["changeInRange"]),
+                cds_6m=(data["6m"]["firstVal"], data["6m"]["changeInRange"]),
+                cds_1y=(data["1y"]["firstVal"], data["1y"]["changeInRange"]),
+                cds_2y=(data["2y"]["firstVal"], data["2y"]["changeInRange"]),
             )
-
-            if not perc:
-                raise ValueError("element containing historical CDS was not found")
         except:
-            self.logger.exception("wgb parse stage 2 failed")
-
-        try:
-            self.wgb = WGB()
-            self.wgb.cds = cds_td[2]
-            self.wgb.week = perc[3]
-            self.wgb.month = perc[7]
-            self.wgb.year = perc[11]
-        except:
-            self.wgb = None
-            self.logger.exception("wgb parse stage 3 failed:\n%s")
+            self.logger.exception("wgb parse failed")
 
     def _collect(self):
         jobs = [
@@ -201,13 +201,21 @@ class Finance:
 
         if self.wgb is not None:
             msg += f"{c.WHITE}Credit Default Swaps{c.RES}\n"
-            msg += f"{c.WHITE}→ {c.LRED}current{c.RES} {self.wgb.cds}\n"
-            msg += f"{c.WHITE}→ {c.LRED}weekly{c.RES}  {self.wgb.week}\n"
-            msg += f"{c.WHITE}→ {c.LRED}monthly{c.RES} {self.wgb.month}\n"
-            msg += f"{c.WHITE}→ {c.LRED}yearly{c.RES}  {self.wgb.year}"
+            for period, value in [
+                ("current", self.wgb.cds_1g),
+                ("1w", self.wgb.cds_1w),
+                ("1m", self.wgb.cds_1m),
+                ("6m", self.wgb.cds_6m),
+                ("1y", self.wgb.cds_1y),
+                ("2y", self.wgb.cds_2y),
+            ]:
+                if isinstance(value, tuple):
+                    msg += f"{c.WHITE}→ {c.LRED}{period}{c.RES}      {value[0]} ({value[1]:.2f})\n"
+                else:
+                    msg += f"{c.WHITE}→ {c.LRED}{period}{c.RES} {value}\n"
 
         if not msg:
-            msg = "f{c.ERR} none of the APIs answered."
+            msg = f"{c.ERR} none of the APIs answered."
 
         # self.channel.send_query(drawbox(msg, "thic"))
         self.channel.send_query(msg)
