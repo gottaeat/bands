@@ -1,22 +1,25 @@
 import urllib.request
 
 
-def get_url(url, tls_context=None):
-    # set useragent
+def get_url(url, extra_headers=None, data=None, tls_context=None):
+    # set headers
     ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     ua += "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
-    request = urllib.request.Request(
-        url,
-        headers={"User-Agent": ua},
-    )
+    headers = {"User-Agent": ua}
+
+    if extra_headers:
+        try:
+            headers.update(extra_headers)
+        except: # pylint: disable=raise-missing-from
+            raise ValueError("merging headers failed")
+
+    # create request obj
+    request = urllib.request.Request(url, headers=headers, data=data)
 
     # get response
     # pylint: disable=consider-using-with
-    if tls_context:
-        response = urllib.request.urlopen(request, context=tls_context)
-    else:
-        response = urllib.request.urlopen(request)
+    response = urllib.request.urlopen(request, context=tls_context)
 
     # - - content-type - - #
     content_type = response.getheader("Content-Type")
