@@ -12,14 +12,10 @@ class Help:
         self._run()
 
     def _run(self):
-        # fmt: off
         if self.user == self.user.server.admin:
-            msg  = f"{c.WHITE}│ ├ {c.LGREEN}?auth{c.RES} [secret]\n"
-            msg += f"{c.WHITE}│ └ {c.LGREEN}?rcon{c.RES} help\n"
-        else:
-            msg  = f"{c.WHITE}│ └ {c.LGREEN}?auth{c.RES} [secret]\n"
-        # fmt: on
+            return self.user.send_query(
+                f"{c.WHITE}├ {c.LGREEN}?auth{c.RES} [secret]\n"
+                f"{c.WHITE}└ {c.LGREEN}?rcon{c.RES} help\n"
+            )
 
-        msg += f"{c.WHITE}│ {c.LRED}ver{c.RES} {pkg_version}\n"
-        msg += f"{c.WHITE}└ {c.LRED}src{c.RES} https://github.com/gottaeat/bands"
-        self.user.send_query(msg)
+        self.user.send_query(f"{c.WHITE}└ {c.LGREEN}?auth{c.RES} [secret]\n")
