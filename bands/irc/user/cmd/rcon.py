@@ -290,11 +290,7 @@ class RCon:
         if item not in registry:
             return self.user.send_query(f"{c.ERR} no such channel {item_name}: {item}.")
 
-        if (
-            is_cmd
-            and registry[item]["openai"]
-            and not server_obj.config.ai
-        ):
+        if is_cmd and registry[item]["openai"] and not server_obj.config.ai:
             return self.user.send_query(
                 f"{c.ERR} channel command {item} requires openai " "configuration."
             )
