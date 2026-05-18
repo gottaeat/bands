@@ -1,5 +1,7 @@
 #!/bin/sh
-. /repo/docker/common
+pinfo(){ echo "INFO: ${@}";}
+pwarn(){ echo "WARN: ${@}";}
+perr(){ echo "ERR : ${@}"; exit 1;}
 
 # - - sanity checks - - #
 if ! mountpoint /data >/dev/null 2>&1; then
@@ -13,7 +15,6 @@ fi
 # - - hand over - - #
 pinfo "setting permissions"
 chown -Rh bands:bands /data
-evalret
 
 pinfo "starting bands"
 exec su bands -c 'bands -c /data/config.yml'
