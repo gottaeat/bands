@@ -26,11 +26,13 @@ class BandsFormatter(logging.Formatter):
     }
 
     def format(self, record):
-        finfmt = f"{self._FMT_BEGIN}{self._FORMATS.get(record.levelno)}"
-        finfmt += f"%(levelname)-.1s{self._FMT_END} %(message)s"
-
         return logging.Formatter(
-            fmt=finfmt, datefmt=self._FMT_DATE, validate=True
+            fmt=(
+                f"{self._FMT_BEGIN}{self._FORMATS.get(record.levelno)}"
+                f"%(levelname)-.1s{self._FMT_END} %(message)s"
+            ),
+            datefmt=self._FMT_DATE,
+            validate=True,
         ).format(record)
 
 
