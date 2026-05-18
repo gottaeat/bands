@@ -41,33 +41,61 @@ class Handle:
 
     # -- channel events -- #
     def _channel_hook_prompt(self, channel_obj, user_obj, full_msg):
-        prompt_msg = f"{ac.BMGN}[{ac.BYEL}HOOK{ac.BRED}¦"
-        prompt_msg += f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
-        prompt_msg += f"{ac.BCYN} :{full_msg}{ac.RES}"
-        channel_obj.logger.info("%s", prompt_msg)
+        channel_obj.logger.info(
+            "%s",
+            (
+                f"{ac.BMGN}[{ac.BYEL}HOOK{ac.BRED}¦"
+                f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
+                f"{ac.BCYN} :{full_msg}{ac.RES}"
+            ),
+        )
 
     def _channel_hook(self, channel_obj, user_obj, full_msg, tstamp):
-        # hook matches
-        urls = re.findall(r"https?://[^\s]+", full_msg)
+        for hook, hook_meta in ChanHOOK.HOOKS.items():
+            matches = re.findall(hook_meta["pattern"], full_msg)
 
-        # url dispatcher
-        if urls:
+            if not matches:
+                continue
+
+            if self.server.config.db.hook_disabled(
+                self.server.name, channel_obj.name, hook
+            ):
+                channel_obj.logger.debug("ignoring disabled hook %s", hook)
+                continue
+
             self._channel_hook_prompt(channel_obj, user_obj, full_msg)
 
             if channel_obj.hook_tstamp and tstamp - channel_obj.hook_tstamp < 2:
-                return channel_obj.logger.debug("ignoring url: ratelimited")
+                return channel_obj.logger.debug("ignoring hook %s: ratelimited", hook)
 
             channel_obj.hook_tstamp = tstamp
-            ChanHOOK.HOOKS["url_dispatcher"](channel_obj, user_obj, urls)
+            hook_meta["class"](channel_obj, user_obj, matches)
 
     def _channel_cmd(self, channel_obj, user_obj, msg, tstamp):
-        if msg[0] in ChanCMD.CMDS:
-            cmd, *user_args = msg
+        prefix = self.server.config.db.get_prefix(self.server.name, channel_obj.name)
+        if not msg[0].startswith(f":{prefix}"):
+            return
 
-            prompt_msg = f"{ac.BMGN}[{ac.BYEL}CMD {ac.BRED}¦"
-            prompt_msg += f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
-            prompt_msg += f"{ac.BCYN} {cmd} {' '.join(user_args)}{ac.RES}"
-            channel_obj.logger.info("%s", prompt_msg)
+        cmd_with_prefix, *user_args = msg
+        cmd = cmd_with_prefix.removeprefix(f":{prefix}").lower()
+
+        if cmd in ChanCMD.CMDS:
+            if ChanCMD.CMDS[cmd]["openai"] and not self.server.config.ai:
+                return channel_obj.logger.debug("ignoring unavailable cmd %s", cmd)
+
+            if self.server.config.db.command_disabled(
+                self.server.name, channel_obj.name, cmd
+            ):
+                return channel_obj.logger.debug("ignoring disabled cmd %s", cmd)
+
+            channel_obj.logger.info(
+                "%s",
+                (
+                    f"{ac.BMGN}[{ac.BYEL}CMD {ac.BRED}¦"
+                    f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
+                    f"{ac.BCYN} {cmd_with_prefix} {' '.join(user_args)}{ac.RES}"
+                ),
+            )
 
             if channel_obj.cmd_tstamp:
                 try:
@@ -79,7 +107,7 @@ class Handle:
                     return channel_obj.logger.debug("ignoring cmd %s: ratelimited", cmd)
 
             channel_obj.cmd_tstamp = tstamp
-            ChanCMD.CMDS[cmd](channel_obj, user_obj, user_args)
+            ChanCMD.CMDS[cmd]["class"](channel_obj, user_obj, user_args)
 
     def channel_msg(self, channel_name, user_line, msg):
         channel = self.channels[channel_name.lower()]
@@ -95,6 +123,7 @@ class Handle:
                 user_nick,
                 user_line["login"],
             )
+            return
 
         # get timestamp
         tstamp = int(time.strftime("%s"))
@@ -203,9 +232,12 @@ class Handle:
 
         user = self._gen_user(user_nick, user_login)
 
-        prompt_msg = f"{ac.BMGN}[{ac.BWHI}{user.nick} ({user.login}){ac.BMGN}]"
-        prompt_msg += f"{ac.BCYN} {cmd} {' '.join(user_args)}{ac.RES}"
-        user.logger.info(prompt_msg)
+        user.logger.info(
+            (
+                f"{ac.BMGN}[{ac.BWHI}{user.nick} ({user.login}){ac.BMGN}]"
+                f"{ac.BCYN} {cmd} {' '.join(user_args)}{ac.RES}"
+            )
+        )
 
         tstamp = int(time.strftime("%s"))
 
