@@ -30,7 +30,7 @@ class SocketOps:
         data_split = data.split(b"\r\n")
 
         if data_split[-1] != b"":
-            self.socket.buffer += data_split[-1]
+            self.socket.buffer = data_split[-1]
         else:
             self.socket.buffer = b""
 
@@ -102,9 +102,10 @@ class SocketOps:
     def send_user(self):
         self.logger.debug("sending USER")
 
-        user_str = f"USER {self.server.botname} {self.server.botname} "
-        user_str += f"{self.socket.address} :{self.server.botname}"
-        self.send_raw(user_str)
+        self.send_raw(
+            f"USER {self.server.botname} {self.server.botname} "
+            f"{self.socket.address} :{self.server.botname}"
+        )
 
     def send_pass(self):
         self.logger.debug("sending PASS")

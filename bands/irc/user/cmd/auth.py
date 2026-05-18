@@ -54,8 +54,9 @@ class Auth:
                 self.user.bad_pw_attempts,
             )
 
-            errmsg = f"{c.ERR} a secret is necessary. ({self.user.bad_pw_attempts}/3)"
-            return self.user.send_query(errmsg)
+            return self.user.send_query(
+                f"{c.ERR} a secret is necessary. ({self.user.bad_pw_attempts}/3)"
+            )
 
         # user provided correct pass
         if self.user_args[0] == self.user.server.secret:
@@ -67,8 +68,9 @@ class Auth:
                 self.user.login,
             )
 
-            msg = f"{c.INFO} you are now authorized for administrative access."
-            return self.user.send_query(msg)
+            return self.user.send_query(
+                f"{c.INFO} you are now authorized for administrative access."
+            )
 
         # user provided wrong pass
         self.user.bad_pw_attempts += 1
@@ -81,5 +83,6 @@ class Auth:
             self.user.bad_pw_attempts,
         )
 
-        errmsg = f"{c.ERR} incorrect secret provided. ({self.user.bad_pw_attempts}/3)"
-        self.user.send_query(errmsg)
+        self.user.send_query(
+            f"{c.ERR} incorrect secret provided. ({self.user.bad_pw_attempts}/3)"
+        )

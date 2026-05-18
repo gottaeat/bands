@@ -6,6 +6,6 @@ RUN \
 
 COPY . /repo
 
-RUN pip install /repo
+RUN pip install --no-cache-dir /repo
 
 CMD ["/repo/docker/entrypoint.sh"]

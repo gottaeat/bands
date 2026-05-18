@@ -3,8 +3,10 @@ import urllib.request
 
 def get_url(url, extra_headers=None, data=None, tls_context=None):
     # set headers
-    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    ua += "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    ua = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    )
 
     headers = {"User-Agent": ua}
 

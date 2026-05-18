@@ -61,7 +61,10 @@ class Socket:
 
     def disconnect(self):
         self.logger.debug("shutting down socket (RDWR)")
-        self.conn.shutdown(socket.SHUT_RDWR)
+        try:
+            self.conn.shutdown(socket.SHUT_RDWR)
+        except:
+            self.logger.warning("socket shutdown failed")
 
         self.logger.warning("%s", f"{ac.BYEL}--> {ac.BWHI}closing connection{ac.RES}")
         self.conn.close()

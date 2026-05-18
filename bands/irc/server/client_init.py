@@ -125,9 +125,10 @@ class ClientInit:
                         if "multi-prefix" in ackd_caps:
                             self.logger.debug("server gave us multi-prefix CAP")
                         else:
-                            errmsg = "bands relies on multi-prefix CAP, but the "
-                            errmsg += "server did not offer it, stopping"
-                            self.logger.warning(errmsg)
+                            self.logger.warning(
+                                "bands relies on multi-prefix CAP, but the "
+                                "server did not offer it, stopping"
+                            )
 
                             self.socket.connected = False
                             return self.server.stop()
@@ -148,9 +149,10 @@ class ClientInit:
                     if "multi-prefix" in self.server.caps:
                         self.logger.debug("server supports multi-prefix CAP")
                     else:
-                        errmsg = "bands relies on multi-prefix CAP, but the "
-                        errmsg += "server does not support it, stopping"
-                        self.logger.warning(errmsg)
+                        self.logger.warning(
+                            "bands relies on multi-prefix CAP, but the "
+                            "server does not support it, stopping"
+                        )
 
                         self.socket.connected = False
                         return self.server.stop()
@@ -200,10 +202,11 @@ class ClientInit:
                 # to for sending the pong
                 if line_s[1] == "001":
                     if not cap_ackd:
-                        errmsg = "bands relies on IRCv3 CAPs at a basic level, "
-                        errmsg += "but the server did not respond to the CAP "
-                        errmsg += "negotiation, stopping"
-                        self.logger.warning(errmsg)
+                        self.logger.warning(
+                            "bands relies on IRCv3 CAPs at a basic level, "
+                            "but the server did not respond to the CAP "
+                            "negotiation, stopping"
+                        )
 
                         self.socket.connected = False
                         self.server.stop()

@@ -10,8 +10,6 @@ class User:
         self.char_limit = None
         self.logger = None
 
-        self.tarot_deck = None
-
         self.tstamp = None
         self.bad_pw_attempts = 0
 

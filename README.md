@@ -6,16 +6,62 @@ bands is an internet relay chat bot.
 - ircv3 caps supported are `chghost` and `multi-prefix`.
 - concurrent multi-server and multi-channel support.
 - awareness of the channel, channel user, server and server user contexts.
-- full state maniuplation and hot config reload through private messages on
-  trusted servers.
+- state manipulation and hot config reload through private messages on trusted
+  servers.
+- sqlite for stateful changes, in-memory for the rest.
+- openai responses api support for channel ai modules.
 
-and many more
+## modules
+### channel commands
+channel commands use the channel's configured prefix. the default prefix is `?`.
+
+| command | class         | description                                                   |
+| ------- | ------------- | ------------------------------------------------------------- |
+| `ai`    | `AIQuery()`   | ask openai a short question                                   |
+| `bj`    | `BlackJack()` | wager blackjack bets via user points                          |
+| `help`  | `Help()`      | print commands enabled for the channel context                |
+| `point` | `Point()`     | give/remove points from users, show server-wide stats         |
+| `quote` | `Quote()`     | add/get channel-wide quotes from users                        |
+| `tarot` | `Tarot()`     | pull a deck and ask openai for a reading                      |
+
+### channel hooks
+hooks match on defined regex and run the handler for it.
+
+| hook             | class             | description                                |
+| ---------------- | ----------------- | ------------------------------------------ |
+| `url_dispatcher` | `URLDispatcher()` | match on URLs and print the page title     |
+
+### private-message commands
+commands to be queried within `PRIVMSG`s directly to the bot, outside of a channel.
+
+| command | class    | description                                       |
+| ------- | -------- | ------------------------------------------------- |
+| `auth`  | `Auth()` | authenticate as a bot admin to run `RCon()` CMDs. |
+| `help`  | `Help()` | print commands for bot `PRIVMSG`s                 |
+| `rcon`  | `RCon()` | admin-only remote control                         |
+
+### rcon
+`rcon` is only enabled on servers where `allow_admin` is set on boot. the user
+must `?auth` first.
+
+| command   | description                                         |
+| --------- | --------------------------------------------------- |
+| `connect` | connect to a server defined in the configuration    |
+| `dc`      | disconnect from one or more servers                 |
+| `debug`   | toggle debug on/off or print the current log level  |
+| `hook`    | enable/disable/list disabled hooks for a channel    |
+| `join`    | join channels                                       |
+| `part`    | part channels                                       |
+| `prefix`  | set the command prefix for a channel                |
+| `raw`     | sends a raw irc line to a server                    |
+| `rehash`  | reloads yaml and parses any new servers             |
+| `say`     | send a message to a channel                         |
+| `cmd`     | enable/disable/list disabled commands for a channel |
+| `status`  | print active servers, channels and users            |
 
 ## installation
-### 1. stable
 ```sh
 # 1. get the compose file
-mkdir bands/; cd bands/
 curl -LO \
     https://raw.githubusercontent.com/gottaeat/bands/master/docker-compose.yml
 
@@ -30,79 +76,39 @@ cd ../
 docker compose up -d
 ```
 
-### 2. dev
-```sh
-# 1. clone the repo
-git clone --depth=1 https://github.com/gottaeat/bands
-cd bands/
-
-# 2. uncomment the `build' key and comment out the `image' key inside
-#    docker-compose.yml to build the image instead of using the one from ghcr
-
-# 3. create the volume mount
-mkdir data/; cd data/
-
-# 4. create a config.yml within this directory following the spec and the
-#    example below
-
-# 5. compose up
-cd ../;
-docker compose up -d
-```
-
 ## configuration
 ### specification
 #### root
-| key               | necessity     | description                                               |
-|-------------------|---------------|-----------------------------------------------------------|
-| `wolfram_api_key` | optional      | (`str`) wolfram alpha api key for module support          |
-| `openai`          | optional      | root key for the openai-related configuration             |
-| `piped_url`       | optional      | (`str`) fqdn to make piped api requests to [1]            |
-| `quote_file`      | optional      | (`str`) path to read/write channel quotes to and from [2] |
-| `doot_file`       | optional      | (`str`) path to read/write server points to and from [2]  |
-| `servers`         | __required__  | list of servers to connect to on startup                  |
+| key           | necessity    | type   | description                               |
+| ------------- | ------------ | ------ | ----------------------------------------- |
+| `openai_key`  | optional     | `str`  | openai api key for module support         |
+| `sqlite_file` | optional     | `str`  | path to the sqlite database [1]           |
+| `servers`     | __required__ | `list` | list of servers to connect to on startup  |
 
-__[1]__ if none specified, will fall back to a default that may or may not be
-available to make api calls to.
-
-__[2]__ `quote_file` and `doot_file` keys, if not specified, will default to
-`/data/quotes.json` and `/data/doots.json` respectively. regardless of the
-values being specified, if they do not exist, bands will attempt to create and
-initialize the files.
-
-#### openai
-| key     | necessity    | description                                        |
-|---------|--------------|----------------------------------------------------|
-| `key`   | __required__ | (`str`) openai api key for module support          |
-| `model` | __required__ | (`str`) openai model name to be used in modules[1] |
-
-__[1]__ model names are sanity checked against a list of text-only openai
-models, to see the complete list, just bring up the bot with a random value for
-the `model` key.
+__[1]__ if not specified, defaults to `/data/bands.sqlite3`. bands will create
+and initialize the database if it does not exist.
 
 #### servers
-| key            | necessity                    | description                                                                      |
-|----------------|------------------------------|----------------------------------------------------------------------------------|
-| `name`         | __required__                 | (`str`) reference name for the network                                           |
-| `address`      | __required__                 | (`str`) network address                                                          |
-| `port`         | __required__                 | (`int`) network port                                                             |
-| `passwd`       | optional                     | (`str`) network password                                                         |
-| `botname`      | __required__                 | (`str`) bot nick+ident                                                           |
-| `tls`          | optional                     | (`bool`) enable tls, false by default                                            |
-| `verify_tls`   | optional                     | (`bool`) verify tls, false by default                                            |
-| `scroll_speed` | required __if burst_speed__  | (`int`) how long the wait before sending multiple lines (fakelag)                |
-| `burst_speed`  | required __if scroll_speed__ | (`int`) amount of messages allowed before scroll_speed sleep timer kicks in      |
-| `channels`     | __required__                 | (`list of str's`) channel list to autojoin on startup                            |
-| `allow_admin`  | optional                     | (`bool`) allow authentication and remote control on the server, false by default |
-| `secret`       | required __if allow_admin__  | (`str`) authentication secret                                                    |
+| key            | necessity                    | type   | description                                                             |
+| -------------- | ---------------------------- | ------ | ----------------------------------------------------------------------- |
+| `name`         | __required__                 | `str`  | reference name for the network                                          |
+| `address`      | __required__                 | `str`  | network address                                                         |
+| `port`         | __required__                 | `int`  | network port                                                            |
+| `passwd`       | optional                     | `str`  | network password                                                        |
+| `botname`      | __required__                 | `str`  | bot nick+ident                                                          |
+| `tls`          | optional                     | `bool` | enable tls, false by default                                            |
+| `verify_tls`   | optional                     | `bool` | verify tls, false by default                                            |
+| `scroll_speed` | required __if burst_limit__  | `int`  | how long the wait before sending multiple lines (fakelag)               |
+| `burst_limit`  | required __if scroll_speed__ | `int`  | amount of messages allowed before scroll_speed sleep timer kicks in     |
+| `channels`     | __required__                 | `list` | channel list to autojoin on startup                                     |
+| `allow_admin`  | optional                     | `bool` | allow authentication and remote control on the server, false by default |
+| `secret`       | required __if allow_admin__  | `str`  | authentication secret                                                   |
 
 ### example
 ```yml
-wolfram_api_key: "XXXXX-XXXXXXXXXX"
-piped_url: "pipedapi.myfavinstance.net"
-openai:
-    key: "sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    model: 'gpt-4o-mini'
+sqlite_file: "/data/bands.sqlite3"
+
+openai_key: "sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 servers:
   - name: privnet
@@ -129,10 +135,6 @@ servers:
 ```
 
 ## usage
-for user-accesible features, call `?help` in either the context of a channel or
-a private message with the bot.
-
-cmdline specific usage is:
 ```sh
 usage: bands [-h] -c C [-d]
 
@@ -144,7 +146,7 @@ options:
   -d          enable debug
 ```
 
-## management
+## runtime management
 1. set at least one of the servers to have `allow_admin` and a `secret`.
 2. privmsg the `botname` with `?auth $secret`.
 3. call `?rcon help` for a list of management related functionality.
