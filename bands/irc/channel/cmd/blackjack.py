@@ -78,7 +78,8 @@ class BlackJack:
         self.user = user
         self.user_args = user_args
 
-        self.doot = self.channel.server.config.doot
+        self.db = self.channel.server.config.db
+        self.prefix = self.db.get_prefix(self.channel.server.name, self.channel.name)
 
         self.game = None
 
@@ -146,10 +147,12 @@ class BlackJack:
 
         # return str
         if initial:
-            hand_str = f"{c.INFO} dealer: "
-            hand_str += f"{self.game.dealer_hand[0].face}"
-            hand_str += f"{self.game.dealer_hand[0].suit} "
-            hand_str += f"?? ({self.game.dealer_hand[0].val} + ?)"
+            hand_str = (
+                f"{c.INFO} dealer: "
+                f"{self.game.dealer_hand[0].face}"
+                f"{self.game.dealer_hand[0].suit} "
+                f"?? ({self.game.dealer_hand[0].val} + ?)"
+            )
         else:
             hand_str = f"{c.INFO} dealer's full hand: "
             for card in self.game.dealer_hand:
@@ -174,26 +177,29 @@ class BlackJack:
         if self.game.player_val == 21:
             self._reveal_dealer()
         else:
-            msg = f"{c.INFO} hit or stay? ({c.LGREEN}?bj hit {c.RES}| "
-            msg += f"{c.LGREEN}?bj stay{c.RES})"
-            self.channel.send_query(msg)
+            self.channel.send_query(
+                f"{c.INFO} hit or stay? ({c.LGREEN}{self.prefix}bj hit {c.RES}| "
+                f"{c.LGREEN}{self.prefix}bj stay{c.RES})"
+            )
 
     def _reveal_dealer(self):
         self.channel.send_query(self._dealer_hand_op())
 
         # revealed deck costs less than 17, pull till we're above it
         if self.game.dealer_val < 17:
-            msg = f"{c.INFO} dealer's hand costs less than 17, dealing."
-            self.channel.send_query(msg)
+            self.channel.send_query(
+                f"{c.INFO} dealer's hand costs less than 17, dealing."
+            )
 
             while self.game.dealer_val < 17:
                 self._deal(self.game.dealer_hand)
                 last_card = self.game.dealer_hand[-1]
                 self.game.dealer_val += last_card.val
 
-                msg = f"{c.INFO} dealer got {last_card.face}{last_card.suit} "
-                msg += f"({last_card.val}), total: {self.game.dealer_val}"
-                self.channel.send_query(msg)
+                self.channel.send_query(
+                    f"{c.INFO} dealer got {last_card.face}{last_card.suit} "
+                    f"({last_card.val}), total: {self.game.dealer_val}"
+                )
 
         # game end
         self._handle_gameend()
@@ -206,8 +212,9 @@ class BlackJack:
         if player_bust:
             # player + dealer bust
             if dealer_bust:
-                msg = f"{c.INFO} both the dealer and {self.user.nick} busted!"
-                self.channel.send_query(msg)
+                self.channel.send_query(
+                    f"{c.INFO} both the dealer and {self.user.nick} busted!"
+                )
                 return self._handle_payout("draw")
 
             # player bust
@@ -225,8 +232,9 @@ class BlackJack:
         if player_bjack:
             # both hit blackjack
             if dealer_bjack:
-                msg = f"{c.INFO} the dealer and {self.user.nick} both hit blackjack!"
-                self.channel.send_query(msg)
+                self.channel.send_query(
+                    f"{c.INFO} the dealer and {self.user.nick} both hit blackjack!"
+                )
                 return self._handle_payout("draw")
 
             # player bjack
@@ -245,30 +253,34 @@ class BlackJack:
 
         # dealer == player
         if self.game.dealer_val == self.game.player_val:
-            msg = f"{c.INFO} the dealer and {self.user.nick}'s hands cost the same!"
-            self.channel.send_query(msg)
+            self.channel.send_query(
+                f"{c.INFO} the dealer and {self.user.nick}'s hands cost the same!"
+            )
             return self._handle_payout("draw")
 
         # player costs more
         self._handle_payout("win")
 
     def _handle_payout(self, action):
+        msg = ""
+
         if action == "draw":
-            doot_amount = self.game.bet
-            msg = f"{c.INFO} it's a draw, returning your doots."
+            point_amount = self.game.bet
+            msg = f"{c.INFO} it's a draw, returning your points."
         elif action == "win":
-            doot_amount = 2 * self.game.bet
+            point_amount = 2 * self.game.bet
             msg = f"{c.INFO} {self.user.nick} wins."
         elif action == "loss":
-            doot_amount = 0
+            point_amount = 0
             msg = f"{c.INFO} {self.user.nick} loses."
 
-        user_doots = self.doot.alter_doot(
-            self.channel.server,
-            self.user,
-            doot_amount,  # pylint: disable=possibly-used-before-assignment
+        user_points = self.db.alter_point(
+            self.channel.server.name,
+            self.user.nick,
+            point_amount,  # pylint: disable=possibly-used-before-assignment
         )
-        msg += f" (balance: {user_doots})"  # pylint: disable=undefined-variable
+
+        msg = f"{msg} (balance: {user_points})"
 
         self.channel.send_query(msg)
         self.user.bjack = None
@@ -286,18 +298,19 @@ class BlackJack:
         self._cmd_help()
 
     def _cmd_help(self):
-        msg = f"{c.WHITE}├ {c.LGREEN}bet  {c.RES} [amount]\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}hit  {c.RES}\n"
-        msg += f"{c.WHITE}├ {c.LGREEN}stay {c.RES}\n"
-        msg += f"{c.WHITE}└ {c.LGREEN}state{c.RES}"
-
-        self.channel.send_query(msg)
+        self.channel.send_query(
+            f"{c.WHITE}├ {c.LGREEN}bet  {c.RES} [amount]\n"
+            f"{c.WHITE}├ {c.LGREEN}hit  {c.RES}\n"
+            f"{c.WHITE}├ {c.LGREEN}stay {c.RES}\n"
+            f"{c.WHITE}└ {c.LGREEN}state{c.RES}"
+        )
 
     def _cmd_bet(self):
         # already has a game running
         if self.user.bjack:
-            err_msg = f"{c.ERR} {self.user.nick} already has a game running."
-            return self.channel.send_query(err_msg)
+            return self.channel.send_query(
+                f"{c.ERR} {self.user.nick} already has a game running."
+            )
 
         # no bet
         try:
@@ -309,8 +322,9 @@ class BlackJack:
 
         # bet out of range
         if bet_amount < 1 or bet_amount > 100:
-            err_msg = f"{c.ERR} bet amount should be between 1 - 100."
-            return self.channel.send_query(err_msg)
+            return self.channel.send_query(
+                f"{c.ERR} bet amount should be between 1 - 100."
+            )
 
         # create game
         self.user.bjack = Game()
@@ -318,9 +332,14 @@ class BlackJack:
         self.game.bet = bet_amount
 
         # deduct bet
-        _ = self.doot.alter_doot(self.channel.server, self.user, -self.game.bet)
-        msg = f"{c.INFO} {self.game.bet} doots have been deducted from your account!"
-        self.channel.send_query(msg)
+        _ = self.db.alter_point(
+            self.channel.server.name,
+            self.user.nick,
+            -self.game.bet,
+        )
+        self.channel.send_query(
+            f"{c.INFO} {self.game.bet} points have been deducted from your account!"
+        )
 
         # gen shoe, cut and deal
         self.game.shoe = Shoe()
@@ -329,8 +348,9 @@ class BlackJack:
     def _cmd_hit(self):
         # no game
         if not self.user.bjack:
-            err_msg = f"{c.ERR} {self.user.nick} does not have a game running."
-            return self.channel.send_query(err_msg)
+            return self.channel.send_query(
+                f"{c.ERR} {self.user.nick} does not have a game running."
+            )
 
         self.game = self.user.bjack
 
@@ -341,15 +361,17 @@ class BlackJack:
         if self.game.player_val == 21 or self.game.player_val > 21:
             self._reveal_dealer()
         else:
-            msg = f"{c.INFO} hit or stay? ({c.LGREEN}?bj hit {c.RES}| "
-            msg += f"{c.LGREEN}?bj stay{c.RES})"
-            self.channel.send_query(msg)
+            self.channel.send_query(
+                f"{c.INFO} hit or stay? ({c.LGREEN}{self.prefix}bj hit {c.RES}| "
+                f"{c.LGREEN}{self.prefix}bj stay{c.RES})"
+            )
 
     def _cmd_stay(self):
         # no game
         if not self.user.bjack:
-            err_msg = f"{c.ERR} {self.user.nick} does not have a game running."
-            return self.channel.send_query(err_msg)
+            return self.channel.send_query(
+                f"{c.ERR} {self.user.nick} does not have a game running."
+            )
 
         self.game = self.user.bjack
         self._reveal_dealer()
@@ -357,10 +379,12 @@ class BlackJack:
     def _cmd_state(self):
         # no game
         if not self.user.bjack:
-            err_msg = f"{c.ERR} {self.user.nick} does not have a game running."
-            return self.channel.send_query(err_msg)
+            return self.channel.send_query(
+                f"{c.ERR} {self.user.nick} does not have a game running."
+            )
 
         self.game = self.user.bjack
-        msg = f"{self._player_hand_op()}, bet: {c.WHITE}{self.game.bet}{c.RES}\n"
-        msg += self._dealer_hand_op(initial=True)
-        self.channel.send_query(msg)
+        self.channel.send_query(
+            f"{self._player_hand_op()}, bet: {c.WHITE}{self.game.bet}{c.RES}\n"
+            f"{self._dealer_hand_op(initial=True)}"
+        )
