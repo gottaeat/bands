@@ -34,10 +34,9 @@ class ChannelUser:
         self.voiced = None  # +
 
         # context
-        self.tarot_deck = None
         self.bjack = None
         self.chats = []
 
-        # doots
-        self.used_doot_tstamp = None
-        self.got_dooted_tstamp = None
+        # points
+        self.used_point_tstamp = None
+        self.got_pointed_tstamp = None
