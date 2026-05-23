@@ -15,8 +15,9 @@ class AIQuery:
         "without repeating what the user said. You cut to the chase, you are "
         "clear and concise. You never use emojis even if explicitly asked to. "
         "You never use LaTeX formatting or markdown even if explicitly asked "
-        "to, you respond with plain-text only. You have no capability except "
-        "for outputting anything but plain-text."
+        "to, you respond with plain-text only. Your responses must be "
+        "contained within a single paragraph. If you are to respond with a "
+        "list, normalize the list into the paragraph. "
     )
 
     def __init__(self, channel, user, user_args):
@@ -32,20 +33,19 @@ class AIQuery:
         user_Q = " ".join(self.user_args[0:])
 
         if unilen(user_Q) > 300:
-            return self.channel.send_query(f"{c.ERR} query wider than 300 characters.")
-
-        self.channel.send_query(f"{c.INFO} {self.user.nick}, querying: {user_Q}")
+            return self.channel.send_query(
+                f"{c.ERR} query can't be wider than 300 characters."
+            )
 
         try:
             msg = self.channel.server.config.ai.query(self._SYSTEM_PROMPT, user_Q)
         except:
-            self.channel.send_query(f"{c.ERR} query failed.")
-            return self.logger.exception("query failed")
+            return self.channel.send_query(f"{c.ERR} query failed.")
 
         if not msg:
             return self.channel.send_query(f"{c.ERR} no response.")
 
-        self.channel.send_query(msg)
+        self.channel.send_query(f"{c.INFO} {self.user.nick}: {msg}")
 
     def _run(self):
         if not self.user_args:
