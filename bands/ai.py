@@ -19,6 +19,5 @@ class BandsAI:
             )
         except:
             self.logger.exception("openai query failed")
-            return None
 
         return response.output_text.strip()
