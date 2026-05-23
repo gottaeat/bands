@@ -6,6 +6,7 @@ from bands.colors import MIRCColors
 c = MIRCColors()
 
 
+# - - game logic - - #
 class Card:
     def __init__(self):
         self.face = None
@@ -72,6 +73,7 @@ class Game:
         self.player_val = 0
 
 
+# - - irc logic - - #
 class BlackJack:
     def __init__(self, channel, user, user_args):
         self.channel = channel
@@ -85,11 +87,12 @@ class BlackJack:
 
         self._run()
 
-    # -- card handling -- #
+    # - - card handling - - #
     def _deal(self, hand):
         pulled_card = self.game.shoe.cards.pop()
         hand.append(pulled_card)
         self._handle_aces(hand)
+        self._sync_hand_values()
 
     def _handle_aces(self, hand):
         aces = []
@@ -126,11 +129,16 @@ class BlackJack:
                 for ace in aces[1:]:
                     ace.val = 1
 
+    def _hand_value(self, hand):
+        return sum(card.val for card in hand)
+
+    def _sync_hand_values(self):
+        self.game.player_val = self._hand_value(self.game.player_hand)
+        self.game.dealer_val = self._hand_value(self.game.dealer_hand)
+
     def _player_hand_op(self):
         # calc val
-        self.game.player_val = 0
-        for card in self.game.player_hand:
-            self.game.player_val += card.val
+        self.game.player_val = self._hand_value(self.game.player_hand)
 
         # return str
         hand_str = f"{c.INFO} {self.user.nick}: "
@@ -141,9 +149,7 @@ class BlackJack:
 
     def _dealer_hand_op(self, initial=False):
         # calc val
-        self.game.dealer_val = 0
-        for card in self.game.dealer_hand:
-            self.game.dealer_val += card.val
+        self.game.dealer_val = self._hand_value(self.game.dealer_hand)
 
         # return str
         if initial:
@@ -162,7 +168,7 @@ class BlackJack:
 
         return hand_str
 
-    # -- game handling -- #
+    # - - game handling - - #
     def _initial_deal(self):
         self._deal(self.game.player_hand)
         self._deal(self.game.dealer_hand)
@@ -194,7 +200,6 @@ class BlackJack:
             while self.game.dealer_val < 17:
                 self._deal(self.game.dealer_hand)
                 last_card = self.game.dealer_hand[-1]
-                self.game.dealer_val += last_card.val
 
                 self.channel.send_query(
                     f"{c.INFO} dealer got {last_card.face}{last_card.suit} "
@@ -262,7 +267,7 @@ class BlackJack:
         self._handle_payout("win")
 
     def _handle_payout(self, action):
-        msg = ""
+        msg, point_amount = None, None
 
         if action == "draw":
             point_amount = self.game.bet
@@ -277,7 +282,7 @@ class BlackJack:
         user_points = self.db.alter_point(
             self.channel.server.name,
             self.user.nick,
-            point_amount,  # pylint: disable=possibly-used-before-assignment
+            point_amount,
         )
 
         msg = f"{msg} (balance: {user_points})"
@@ -285,7 +290,7 @@ class BlackJack:
         self.channel.send_query(msg)
         self.user.bjack = None
 
-    # -- cmd handling -- #
+    # - - cmd handling - - #
     def _run(self):
         if not self.user_args:
             return self._cmd_help()
@@ -332,13 +337,15 @@ class BlackJack:
         self.game.bet = bet_amount
 
         # deduct bet
-        _ = self.db.alter_point(
+        user_points = self.db.alter_point(
             self.channel.server.name,
             self.user.nick,
             -self.game.bet,
         )
+
         self.channel.send_query(
-            f"{c.INFO} {self.game.bet} points have been deducted from your account!"
+            f"{c.INFO} {self.game.bet} points have been deducted from your account! "
+            f"(balance: {user_points})"
         )
 
         # gen shoe, cut and deal
