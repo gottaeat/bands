@@ -1,11 +1,8 @@
-import ipaddress
-import socket
-import urllib.parse
-
 from bs4 import BeautifulSoup
 
 from bands.colors import ANSIColors
 from bands.colors import MIRCColors
+from bands.irc.util import unilen
 from bands.util import get_url
 
 c = MIRCColors()
@@ -22,53 +19,43 @@ class URLDispatcher:
 
         self._run()
 
-    def _prechecks(self):
-        # dedup
-        self.urls = list(dict.fromkeys(self.urls))
-
-        for url in self.urls:
-            url_hostname = urllib.parse.urlparse(url).hostname
-
-            # resolve first
-            try:
-                url_ip = socket.gethostbyname(url_hostname)
-            except socket.gaierror:
-                self.logger.warning("cannot resolve %s", url)
-                self.urls.remove(url)
-
-            # check if url host is a bogon
-            if ipaddress.ip_address(url_ip).is_private:
-                self.logger.warning("%s resolves to %s", url, url_ip)
-                self.urls.remove(url)
-
     def _dispatch(self):
-        for url in self.urls:
+        for url in dict.fromkeys(self.urls):
             self._handle_title(url)
 
     # - - title handler / fallback - - #
     def _handle_title(self, url):
         try:
-            data = get_url(url)
+            data = get_url(url, nobogons=True)
         except:
-            self.logger.exception("title GET failed")
+            return self.logger.exception("title GET failed for %s", url)
 
         try:
             soup = BeautifulSoup(data, "html.parser")
         except:
-            self.logger.exception("title parse failed")
+            return self.logger.exception("title parse failed for %s", url)
 
         if soup.title:
-            title = soup.title.string.strip()
+            try:
+                if not isinstance(soup.title.string, str):
+                    return self.logger.exception(
+                        "%s title expected to be a str but got %s",
+                        url,
+                        soup.title.string,
+                    )
 
-            if len(title) > 55:
-                title = f"{title[0:52]}..."
+                title = soup.title.string.strip()
+
+                if unilen(title) > 55:
+                    title = f"{title[0:52]}..."
+            except:
+                return self.logger.exception("title parse failed for %s", url)
         else:
-            self.logger.error("%s has no title", url)
+            return self.logger.error("%s has no title", url)
 
         self.channel.send_query(
             f"{c.GREEN}[{c.LBLUE}LINK{c.GREEN}]{c.RES} {title}{c.RES}\n"
         )
 
     def _run(self):
-        self._prechecks()
         self._dispatch()
