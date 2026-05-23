@@ -177,9 +177,9 @@ class ClientInit:
 
                     continue
 
-                # fix name colissions
+                # fix name collisions
                 if line_s[1] == "433":
-                    self.logger.info("nick colission occured, updating")
+                    self.logger.info("nick collision occurred, updating")
                     self.server.botname = f"{self.server.botname}0"
 
                     self.sock_ops.send_nick()
