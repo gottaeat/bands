@@ -108,6 +108,13 @@ class ConfigYAML:
         if not sqlite_file:
             self.logger.error("sqlite_file cannot be left blank")
 
+        sqlite_directory = os.path.dirname(sqlite_file)
+        if sqlite_directory:
+            try:
+                os.makedirs(sqlite_directory, exist_ok=True)
+            except:
+                self.logger.exception("creating sqlite database directory failed")
+
         self.db = BandsDB(self.logger, sqlite_file)
 
     def parse_servers(self):
