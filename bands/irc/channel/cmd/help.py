@@ -19,7 +19,7 @@ class Help:
         channel_name = self.channel.name
 
         prefix = db.get_prefix(server_name, channel_name)
-        disabled = set(db.disabled_commands(server_name, channel_name))
+        disabled = set(db.get_disabled_commands(server_name, channel_name))
         has_openai = self.channel.server.config.ai is not None
 
         # get available cmds
