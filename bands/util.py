@@ -1,83 +1,112 @@
-import urllib.request
+from urllib.request import build_opener, HTTPRedirectHandler, HTTPSHandler, Request
+from urllib.error import HTTPError
 
 
-def get_url(url, extra_headers=None, data=None, tls_context=None):
-    # set headers
-    ua = (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-    )
+# don't follow redirects
+class NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
-    headers = {"User-Agent": ua}
+
+def get_url(url, extra_headers=None, payload=None, tls_context=None, timeout=10):
+    # get response
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        )
+    }
 
     if extra_headers:
-        try:
-            headers.update(extra_headers)
-        except:  # pylint: disable=raise-missing-from
-            raise ValueError("merging headers failed")
+        headers.update(extra_headers)
 
-    # create request obj
-    request = urllib.request.Request(url, headers=headers, data=data)
+    request = Request(
+        url,
+        headers=headers,
+        data=payload,
+        method="POST" if payload is not None else "GET",
+    )
 
-    # get response
-    # pylint: disable=consider-using-with
-    response = urllib.request.urlopen(request, context=tls_context)
+    opener_handlers = [NoRedirectHandler]
+    if tls_context is not None:
+        opener_handlers.append(HTTPSHandler(context=tls_context))
 
-    # - - content-type - - #
-    content_type = response.getheader("Content-Type")
+    opener = build_opener(*opener_handlers)
 
-    if not content_type:
-        response.close()
-        raise ValueError("Content-Type header was not found")
-
-    content_type = content_type.split(";")
-
-    # check if we take the mimetype
-    mimetype = content_type[0]
-
-    if mimetype not in (
-        "application/javascript",
-        "application/json",
-        "application/xml",
-        "text/html",
-        "text/javascript",
-    ):
-        response.close()
-        raise ValueError(f'"{mimetype}" is not an accepted mimetype')
-
-    # check if charset was specified
     try:
-        charset = content_type[1].split("charset=")[1]
-    except IndexError:
-        charset = "utf-8"
+        response = opener.open(request, timeout=timeout)
+    except HTTPError as exc:
+        raise ValueError(f"request returned {exc.code} for: {url}") from exc
+    except Exception as exc:
+        raise ValueError(f"request failed for: {url}") from exc
 
-    # - - content-length - - #
-    content_length = response.getheader("Content-Length")
-    max_size = 1024 * 1024 * 5
+    with response:
+        # handle only 200
+        status = response.getcode()
+        if status != 200:
+            raise ValueError(f"request returned {status} for: {url}")
 
-    if content_length:
-        if int(content_length) > max_size:
-            response.close()
-            content_size = content_length / 1024 / 1024
-            raise ValueError(f"file is larger than 5MB ({content_size})")
+        # check mimetype
+        content_type = response.headers.get("Content-Type")
+        if not content_type:
+            raise ValueError(f"request missing content-type header: {url}")
 
-    # read data
-    data = response.read(max_size + 1)
-    response.close()
+        mime_type = content_type.split(";", 1)[0].strip().lower()
+        if not mime_type:
+            raise ValueError(f"request missing mimetype: {url}")
 
-    if len(data) > max_size:
-        raise ValueError("file is larger than 5MB")
+        allowed_mime_types = {
+            "application/javascript",
+            "text/javascript",
+            "application/json",
+            "text/json",
+            "text/plain",
+            "application/xml",
+            "text/xml",
+        }
+        if (
+            mime_type not in allowed_mime_types
+            and not mime_type.endswith("+json")
+            and not mime_type.endswith("+xml")
+        ):
+            raise ValueError(f"request contains mimetype {mime_type}: {url}")
 
-    if len(data) == 0:
-        raise ValueError("empty data returned")
+        # check size
+        content_length = response.headers.get("Content-Length")
+        if content_length is None:
+            raise ValueError(f"request missing content-length header: {url}")
 
-    # decode data
-    try:
-        data = data.decode(encoding=charset)
-    except:
         try:
-            data = data.decode(encoding="utf-8")
-        except UnicodeDecodeError:
-            data = data.decode(encoding="latin-1")
+            content_length_int = int(content_length)
+        except Exception as exc:
+            raise ValueError(f"invalid content-length header: {url}") from exc
 
-    return data
+        if content_length_int <= 0:
+            raise ValueError(f"request returned no data: {url}")
+
+        max_bytes = 5242880  # 5m
+        if content_length_int > max_bytes:
+            raise ValueError(f"content-length >5m: {url}")
+
+        data = response.read(max_bytes + 1)
+        if not data:
+            raise ValueError(f"request returned no data: {url}")
+
+        if len(data) > max_bytes:
+            raise ValueError(f"content-length >5m: {url}")
+
+        encoding = response.headers.get_content_charset() or "utf-8"
+
+        tried = set()
+        for candidate_encoding in (encoding, "latin-1"):
+            if candidate_encoding in tried:
+                continue
+
+            tried.add(candidate_encoding)
+
+            try:
+                return data.decode(candidate_encoding)
+            except (UnicodeDecodeError, LookupError):
+                continue
+
+        raise ValueError(f"unable to decode: {url}")
