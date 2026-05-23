@@ -28,7 +28,10 @@ class Socket:
     def connect(self):
         self.logger.info("%s", f"{ac.BYEL}--> {ac.BWHI}connecting{ac.RES}")
 
-        addr = (socket.gethostbyname(self.address), self.port)
+        try:
+            addr = (socket.gethostbyname(self.address), self.port)
+        except:
+            self.logger.exception("resolving hostname failed")
 
         if self.tls:
             ssl_context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_CLIENT)
@@ -53,6 +56,8 @@ class Socket:
             self.logger.exception("attempting to connect with TLS failed")
         except TimeoutError:
             self.logger.exception("connection timed out")
+        except:
+            self.logger.exception("connection failed")
 
         self.conn.settimeout(None)
 
