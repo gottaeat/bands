@@ -117,18 +117,11 @@ class Tarot:
         cards = random.sample(self._CARD_NAMES, 10)
         cards_str = ", ".join(cards)
 
-        # print deck
-        separator = f"{c.LBLUE}, {c.LGREEN}"
-        self.channel.send_query(
-            f"{c.INFO} deck for {c.WHITE}{self.user.nick}{c.RES}: "
-            f"{c.LGREEN}{separator.join(cards)}{c.RES}"
-        )
-
         # query ai
         prompt = (
             f'The querent\'s question is "{question}". The pulled cards are: '
             f"{cards_str}. They are ordered from 1 to 10. Cards must be read "
-            "in the context of the Celtic tarot spread. Your reponse must not "
+            "in the context of the Celtic tarot spread. Your response must not "
             "include the word Celtic. Keep it short and do not include lists, "
             "emojis or markdown formatting. Reading must be done in accordance "
             "and in relation to the question."
@@ -137,15 +130,16 @@ class Tarot:
         try:
             reading = self.channel.server.config.ai.query(self.SYSTEM_PROMPT, prompt)
         except:
-            self.logger.exception("query failed")
             return self.channel.send_query(f"{c.ERR} query failed.")
 
         if not reading:
             return self.channel.send_query(f"{c.ERR} no response.")
 
         # print reading
+        separator = f"{c.RES}, {c.LGREEN}"
         self.channel.send_query(
-            f"{c.INFO} reading for {c.WHITE}{self.user.nick}{c.RES}:\n" f"{reading}"
+            f"{c.INFO} {c.LGREEN}{separator.join(cards)}{c.RES} + "
+            f"{self.user.nick}:\n{reading}"
         )
 
     def _run(self):
