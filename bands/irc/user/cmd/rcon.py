@@ -58,7 +58,7 @@ class RCon:
         if cmd in ("rehash", "status"):
             return getattr(self, f"_cmd_{cmd}")()
 
-        # comands that take one arg: debug
+        # commands that take one arg: debug
         if cmd == "debug":
             if not args or len(args) > 1 or args[0] not in ("on", "off", "state"):
                 return self.user.send_query(
@@ -66,7 +66,7 @@ class RCon:
                 )
             return self._cmd_debug(args[0])
 
-        # commands that take multiple args: connect + dc | join+parg | raw | say
+        # commands that take multiple args: connect + dc | join+part | raw | say
         if cmd in (
             "connect",
             "dc",
@@ -265,9 +265,9 @@ class RCon:
                 return self.user.send_query(f"{c.ERR} list takes no {item_name}.")
 
             method_to_call = (
-                self.config.db.disabled_commands
+                self.config.db.get_disabled_commands
                 if is_cmd
-                else self.config.db.disabled_hooks
+                else self.config.db.get_disabled_hooks
             )
             disabled = method_to_call(server_obj.name, channel_obj.name)
 
