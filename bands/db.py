@@ -1,7 +1,5 @@
-import os
 import sqlite3
 
-from contextlib import contextmanager
 from threading import Lock
 
 
@@ -14,280 +12,317 @@ class BandsDB:
 
         self._init_db()
 
-    def _connect(self):
-        return sqlite3.connect(self.path)
+    def _execute(self, query, params=None, fetch=None):
+        if params is None:
+            params = ()
+
+        conn = None
+        cursor = None
+
+        with self.mutex:
+            try:
+                conn = sqlite3.connect(self.path, timeout=10, isolation_level=None)
+                cursor = conn.execute(query, params)
+
+                if fetch == "one":
+                    return cursor.fetchone()
+                if fetch == "all":
+                    return cursor.fetchall()
+            finally:
+                try:
+                    if cursor is not None:
+                        cursor.close()
+                finally:
+                    if conn is not None:
+                        conn.close()
 
     def _init_db(self):
-        directory = os.path.dirname(self.path)
-        if directory:
-            os.makedirs(directory, exist_ok=True)
+        statements = (
+            (
+                """
+                CREATE TABLE IF NOT EXISTS channel_settings (
+                    server TEXT NOT NULL,
+                    channel TEXT NOT NULL,
+                    prefix TEXT NOT NULL,
+                    PRIMARY KEY (server, channel)
+                )
+                """,
+                "failed creating channel_settings table",
+            ),
+            (
+                """
+                CREATE TABLE IF NOT EXISTS disabled_commands (
+                    server TEXT NOT NULL,
+                    channel TEXT NOT NULL,
+                    command TEXT NOT NULL,
+                    PRIMARY KEY (server, channel, command)
+                )
+                """,
+                "failed creating disabled_commands table",
+            ),
+            (
+                """
+                CREATE TABLE IF NOT EXISTS disabled_hooks (
+                    server TEXT NOT NULL,
+                    channel TEXT NOT NULL,
+                    hook TEXT NOT NULL,
+                    PRIMARY KEY (server, channel, hook)
+                )
+                """,
+                "failed creating disabled_hooks table",
+            ),
+            (
+                """
+                CREATE TABLE IF NOT EXISTS points (
+                    server TEXT NOT NULL,
+                    nick_key TEXT NOT NULL,
+                    nick TEXT NOT NULL,
+                    points INTEGER NOT NULL,
+                    PRIMARY KEY (server, nick_key)
+                )
+                """,
+                "failed creating points table",
+            ),
+            (
+                """
+                CREATE TABLE IF NOT EXISTS quotes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    server TEXT NOT NULL,
+                    channel TEXT NOT NULL,
+                    nick_key TEXT NOT NULL,
+                    nick TEXT NOT NULL,
+                    msg TEXT NOT NULL,
+                    timestamp INTEGER NOT NULL
+                )
+                """,
+                "failed creating quotes table",
+            ),
+            (
+                """
+                CREATE INDEX IF NOT EXISTS idx_points_server_points
+                ON points (server, points DESC, nick ASC)
+                """,
+                "failed creating idx_points_server_points index",
+            ),
+            (
+                """
+                CREATE INDEX IF NOT EXISTS idx_quotes_channel
+                ON quotes (server, channel)
+                """,
+                "failed creating idx_quotes_channel index",
+            ),
+            (
+                """
+                CREATE INDEX IF NOT EXISTS idx_quotes_nick
+                ON quotes (server, channel, nick_key)
+                """,
+                "failed creating idx_quotes_nick index",
+            ),
+        )
 
-        # tables and indexes for: prefix + command|hook toggle + points + quotes
-        self.execute_script("""
-            CREATE TABLE IF NOT EXISTS channel_settings (
-                server TEXT NOT NULL,
-                channel TEXT NOT NULL,
-                prefix TEXT NOT NULL,
-                PRIMARY KEY (server, channel)
-            );
-
-            CREATE TABLE IF NOT EXISTS disabled_commands (
-                server TEXT NOT NULL,
-                channel TEXT NOT NULL,
-                command TEXT NOT NULL,
-                PRIMARY KEY (server, channel, command)
-            );
-
-            CREATE TABLE IF NOT EXISTS disabled_hooks (
-                server TEXT NOT NULL,
-                channel TEXT NOT NULL,
-                hook TEXT NOT NULL,
-                PRIMARY KEY (server, channel, hook)
-            );
-
-            CREATE TABLE IF NOT EXISTS points (
-                server TEXT NOT NULL,
-                nick_key TEXT NOT NULL,
-                nick TEXT NOT NULL,
-                points INTEGER NOT NULL,
-                PRIMARY KEY (server, nick_key)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_points_server_points
-            ON points (server, points DESC, nick ASC);
-
-            CREATE TABLE IF NOT EXISTS quotes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                server TEXT NOT NULL,
-                channel TEXT NOT NULL,
-                nick_key TEXT NOT NULL,
-                nick TEXT NOT NULL,
-                msg TEXT NOT NULL,
-                timestamp INTEGER NOT NULL
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_quotes_channel
-            ON quotes (server, channel);
-
-            CREATE INDEX IF NOT EXISTS idx_quotes_nick
-            ON quotes (server, channel, nick_key);
-            """)
+        for query, log_msg in statements:
+            try:
+                self._execute(query)
+            except:
+                self.logger.exception(log_msg)
 
         self.logger.info("initialized sqlite database at %s", self.path)
 
-    def execute(self, query, params=None):
-        if params is None:
-            params = []
-        with self.mutex, self._connect() as conn:
-            conn.execute(query, params)
-
-    def execute_script(self, query):
-        with self.mutex, self._connect() as conn:
-            conn.executescript(query)
-
-    def fetchone(self, query, params=None):
-        if params is None:
-            params = []
-        with self.mutex, self._connect() as conn:
-            return conn.execute(query, params).fetchone()
-
-    def fetchall(self, query, params=None):
-        if params is None:
-            params = []
-        with self.mutex, self._connect() as conn:
-            return conn.execute(query, params).fetchall()
-
-    @contextmanager
-    def transaction(self):
-        with self.mutex, self._connect() as conn:
-            yield conn
-
-    # irc.user.cmd.rcon
+    # - - prefixes - - #
     def get_prefix(self, server, channel):
-        row = self.fetchone(
-            """
-            SELECT prefix
-            FROM channel_settings
-            WHERE server = ? AND channel = ?
-            """,
-            (server, channel),
-        )
-
-        return row[0] if row else "?"
+        try:
+            row = self._execute(
+                """
+                SELECT prefix
+                FROM channel_settings
+                WHERE server = ? AND channel = ?
+                """,
+                (server, channel),
+                fetch="one",
+            )
+        except:
+            self.logger.exception("getting channel prefix failed")
+        else:
+            return row[0] if row else "?"
 
     def set_prefix(self, server, channel, prefix):
-        self.execute(
-            """
-            INSERT INTO channel_settings (server, channel, prefix)
-            VALUES (?, ?, ?)
-            ON CONFLICT(server, channel) DO UPDATE SET prefix = excluded.prefix
-            """,
-            (server, channel, prefix),
-        )
+        try:
+            self._execute(
+                """
+                INSERT INTO channel_settings (server, channel, prefix)
+                VALUES (?, ?, ?)
+                ON CONFLICT(server, channel) DO UPDATE SET prefix = excluded.prefix
+                """,
+                (server, channel, prefix),
+            )
+        except:
+            self.logger.exception("setting channel prefix failed")
 
-    def command_disabled(self, server, channel, command):
-        row = self.fetchone(
-            """
-            SELECT 1
-            FROM disabled_commands
-            WHERE server = ? AND channel = ? AND command = ?
-            """,
-            (server, channel, command.lower()),
-        )
-
-        return row is not None
+    # - - commands - - #
+    def enable_command(self, server, channel, command):
+        try:
+            self._execute(
+                """
+                DELETE FROM disabled_commands
+                WHERE server = ? AND channel = ? AND command = ?
+                """,
+                (server, channel, command.lower()),
+            )
+        except:
+            self.logger.exception("enabling channel command failed")
 
     def disable_command(self, server, channel, command):
-        self.execute(
-            """
-            INSERT OR IGNORE INTO disabled_commands (server, channel, command)
-            VALUES (?, ?, ?)
-            """,
-            (server, channel, command.lower()),
-        )
+        try:
+            self._execute(
+                """
+                INSERT OR IGNORE INTO disabled_commands (server, channel, command)
+                VALUES (?, ?, ?)
+                """,
+                (server, channel, command.lower()),
+            )
+        except:
+            self.logger.exception("disabling channel command failed")
 
-    def enable_command(self, server, channel, command):
-        self.execute(
-            """
-            DELETE FROM disabled_commands
-            WHERE server = ? AND channel = ? AND command = ?
-            """,
-            (server, channel, command.lower()),
-        )
+    def get_disabled_commands(self, server, channel):
+        try:
+            rows = self._execute(
+                """
+                SELECT command
+                FROM disabled_commands
+                WHERE server = ? AND channel = ?
+                ORDER BY command
+                """,
+                (server, channel),
+                fetch="all",
+            )
+        except:
+            self.logger.exception("getting disabled command list failed")
+        else:
+            return [row[0] for row in rows]
 
-    def disabled_commands(self, server, channel):
-        rows = self.fetchall(
-            """
-            SELECT command
-            FROM disabled_commands
-            WHERE server = ? AND channel = ?
-            ORDER BY command
-            """,
-            (server, channel),
-        )
-
-        return [row[0] for row in rows]
-
-    # irc.user.cmd.rcon
-    def hook_disabled(self, server, channel, hook):
-        row = self.fetchone(
-            """
-            SELECT 1
-            FROM disabled_hooks
-            WHERE server = ? AND channel = ? AND hook = ?
-            """,
-            (server, channel, hook.lower()),
-        )
-
-        return row is not None
+    # - - hooks - - #
+    def enable_hook(self, server, channel, hook):
+        try:
+            self._execute(
+                """
+                DELETE FROM disabled_hooks
+                WHERE server = ? AND channel = ? AND hook = ?
+                """,
+                (server, channel, hook.lower()),
+            )
+        except:
+            self.logger.exception("enabling channel hook failed")
 
     def disable_hook(self, server, channel, hook):
-        self.execute(
-            """
-            INSERT OR IGNORE INTO disabled_hooks (server, channel, hook)
-            VALUES (?, ?, ?)
-            """,
-            (server, channel, hook.lower()),
-        )
+        try:
+            self._execute(
+                """
+                INSERT OR IGNORE INTO disabled_hooks (server, channel, hook)
+                VALUES (?, ?, ?)
+                """,
+                (server, channel, hook.lower()),
+            )
+        except:
+            self.logger.exception("disabling channel hook failed")
 
-    def enable_hook(self, server, channel, hook):
-        self.execute(
-            """
-            DELETE FROM disabled_hooks
-            WHERE server = ? AND channel = ? AND hook = ?
-            """,
-            (server, channel, hook.lower()),
-        )
+    def get_disabled_hooks(self, server, channel):
+        try:
+            rows = self._execute(
+                """
+                SELECT hook
+                FROM disabled_hooks
+                WHERE server = ? AND channel = ?
+                ORDER BY hook
+                """,
+                (server, channel),
+                fetch="all",
+            )
+        except:
+            self.logger.exception("getting disabled hook list failed")
+        else:
+            return [row[0] for row in rows]
 
-    def disabled_hooks(self, server, channel):
-        rows = self.fetchall(
-            """
-            SELECT hook
-            FROM disabled_hooks
-            WHERE server = ? AND channel = ?
-            ORDER BY hook
-            """,
-            (server, channel),
-        )
-
-        return [row[0] for row in rows]
-
-    # irc.channel.cmd.point + irc.channel.cmd.blackjack
+    # - - points - - #
     def alter_point(self, server, nick, amount):
-        nick_key = nick.lower()
-
-        with self.transaction() as conn:
-            conn.execute(
+        try:
+            row = self._execute(
                 """
                 INSERT INTO points (server, nick_key, nick, points)
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT(server, nick_key) DO UPDATE SET
                     nick = excluded.nick,
                     points = points.points + excluded.points
+                RETURNING points
                 """,
-                (server, nick_key, nick, amount),
+                (server, nick.lower(), nick, amount),
+                fetch="one",
             )
-            row = conn.execute(
+        except:
+            self.logger.exception("altering points failed")
+        else:
+            if row is None:
+                self.logger.error("points row was not available after update")
+
+            return row[0]
+
+    def get_point(self, server, nick):
+        try:
+            return self._execute(
                 """
-                SELECT points
+                SELECT nick, points
                 FROM points
                 WHERE server = ? AND nick_key = ?
                 """,
-                (server, nick_key),
-            ).fetchone()
+                (server, nick.lower()),
+                fetch="one",
+            )
+        except:
+            self.logger.exception("getting points failed")
 
-        return row[0]
+    def top_points(self, server):
+        try:
+            return self._execute(
+                """
+                SELECT nick, points
+                FROM points
+                WHERE server = ?
+                ORDER BY points DESC, nick ASC
+                LIMIT 5
+                """,
+                [server],
+                fetch="all",
+            )
+        except:
+            self.logger.exception("getting top points failed")
 
-    def get_point(self, server, nick):
-        return self.fetchone(
-            """
-            SELECT nick, points
-            FROM points
-            WHERE server = ? AND nick_key = ?
-            """,
-            (server, nick.lower()),
-        )
-
-    # irc.channel.cmd.point
-    def top_points(self, server, limit=5):
-        limit = max(1, min(int(limit), 50))
-
-        return self.fetchall(
-            """
-            SELECT nick, points
-            FROM points
-            WHERE server = ?
-            ORDER BY points DESC, nick ASC
-            LIMIT ?
-            """,
-            (server, limit),
-        )
-
-    # irc.channel.cmd.quote
+    # - - quotes - - #
     def add_quote(self, server, channel, nick, msg, timestamp):
-        self.execute(
-            """
-            INSERT INTO quotes (server, channel, nick_key, nick, msg, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (server, channel, nick.lower(), nick, msg, timestamp),
-        )
+        try:
+            self._execute(
+                """
+                INSERT INTO quotes (server, channel, nick_key, nick, msg, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (server, channel, nick.lower(), nick, msg, timestamp),
+            )
+        except:
+            self.logger.exception("saving quote failed")
 
     def random_quote(self, server, channel, nick=None):
-        params = [server, channel]
-        nick_clause = ""
+        nick_key = nick.lower() if nick else None
 
-        if nick is not None:
-            nick_clause = "AND nick_key = ?"
-            params.append(nick.lower())
-
-        return self.fetchone(
-            f"""
-            SELECT nick, msg, timestamp
-            FROM quotes
-            WHERE server = ? AND channel = ? {nick_clause}
-            ORDER BY RANDOM()
-            LIMIT 1
-            """,
-            params,
-        )
+        try:
+            return self._execute(
+                """
+                SELECT nick, msg, timestamp
+                FROM quotes
+                WHERE server = ? AND channel = ?
+                    AND (? IS NULL OR nick_key = ?)
+                ORDER BY RANDOM()
+                LIMIT 1
+                """,
+                (server, channel, nick_key, nick_key),
+                fetch="one",
+            )
+        except:
+            self.logger.exception("getting random quote failed")
