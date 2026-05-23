@@ -1,14 +1,38 @@
+import ipaddress
+import socket
+import urllib.parse
+
 from urllib.request import build_opener, HTTPRedirectHandler, HTTPSHandler, Request
-from urllib.error import HTTPError
 
 
-# don't follow redirects
-class NoRedirectHandler(HTTPRedirectHandler):
+class BogonRedirectHandler(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
+        redirect_url = urllib.parse.urljoin(req.full_url, newurl)
+        _check_bogons(redirect_url)
+
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def get_url(url, extra_headers=None, payload=None, tls_context=None, timeout=10):
+def _check_bogons(url):
+    url_hostname = urllib.parse.urlparse(url).hostname
+    if not url_hostname:
+        raise ValueError(f"cannot parse hostname from {url}")
+
+    try:
+        url_ip = socket.gethostbyname(url_hostname)
+    except Exception as exc:
+        raise ValueError(f"cannot resolve {url}") from exc
+
+    if not ipaddress.ip_address(url_ip).is_global:
+        raise ValueError(f"{url} resolves to a bogon: {url_ip}")
+
+
+def get_url(
+    url, extra_headers=None, payload=None, tls_context=None, timeout=10, nobogons=False
+):
+    if nobogons:
+        _check_bogons(url)
+
     # get response
     headers = {
         "User-Agent": (
@@ -27,7 +51,10 @@ def get_url(url, extra_headers=None, payload=None, tls_context=None, timeout=10)
         method="POST" if payload is not None else "GET",
     )
 
-    opener_handlers = [NoRedirectHandler]
+    opener_handlers = []
+    if nobogons:
+        opener_handlers.append(BogonRedirectHandler)
+
     if tls_context is not None:
         opener_handlers.append(HTTPSHandler(context=tls_context))
 
@@ -35,8 +62,6 @@ def get_url(url, extra_headers=None, payload=None, tls_context=None, timeout=10)
 
     try:
         response = opener.open(request, timeout=timeout)
-    except HTTPError as exc:
-        raise ValueError(f"request returned {exc.code} for: {url}") from exc
     except Exception as exc:
         raise ValueError(f"request failed for: {url}") from exc
 
@@ -57,11 +82,12 @@ def get_url(url, extra_headers=None, payload=None, tls_context=None, timeout=10)
 
         allowed_mime_types = {
             "application/javascript",
-            "text/javascript",
             "application/json",
+            "application/xml",
+            "text/html",
+            "text/javascript",
             "text/json",
             "text/plain",
-            "application/xml",
             "text/xml",
         }
         if (
@@ -72,21 +98,20 @@ def get_url(url, extra_headers=None, payload=None, tls_context=None, timeout=10)
             raise ValueError(f"request contains mimetype {mime_type}: {url}")
 
         # check size
-        content_length = response.headers.get("Content-Length")
-        if content_length is None:
-            raise ValueError(f"request missing content-length header: {url}")
-
-        try:
-            content_length_int = int(content_length)
-        except Exception as exc:
-            raise ValueError(f"invalid content-length header: {url}") from exc
-
-        if content_length_int <= 0:
-            raise ValueError(f"request returned no data: {url}")
-
         max_bytes = 5242880  # 5m
-        if content_length_int > max_bytes:
-            raise ValueError(f"content-length >5m: {url}")
+        content_length = response.headers.get("Content-Length")
+
+        if content_length:
+            try:
+                content_length = int(content_length)
+            except Exception as exc:
+                raise ValueError(f"invalid content-length header: {url}") from exc
+
+            if content_length <= 0:
+                raise ValueError(f"content-length is {content_length}: {url}")
+
+            if content_length > max_bytes:
+                raise ValueError(f"content-length is >5m: {url}")
 
         data = response.read(max_bytes + 1)
         if not data:
