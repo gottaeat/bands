@@ -49,7 +49,7 @@ class FinalLoop:
             ping_tstamp = int(time.strftime("%s"))
 
             self.sock_ops.send_ping()
-            self.logger.warning(
+            self.logger.debug(
                 "received nothing for %s seconds, sent keepalive PING",
                 self.server.PING_INTERVAL,
             )
