@@ -15,7 +15,8 @@ class SocketOps:
         self.logger = server.logger
         self.socket = server.socket
 
-        self.mutex = Lock()
+        self.send_mutex = Lock()
+        self.privmsg_mutex = Lock()
         self.privmsg_tstamp = round(time.time(), 3)
         self.burst_count = 0
 
@@ -53,21 +54,22 @@ class SocketOps:
 
     # -- sending -- #
     def send_raw(self, msg):
-        self.logger.debug(
-            "%s%s", f"{ac.BRED}--> {ac.RES}", strip_color(msg.rstrip("\r\n"))
-        )
+        with self.send_mutex:
+            self.logger.debug(
+                "%s%s", f"{ac.BRED}--> {ac.RES}", strip_color(msg.rstrip("\r\n"))
+            )
 
-        try:
-            self.socket.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
-        except:
-            if not self.socket.halt:
-                self.logger.exception("send failed")
+            try:
+                self.socket.conn.send(f"{msg}\r\n".encode(encoding="UTF-8"))
+            except:
+                if not self.socket.halt:
+                    self.logger.exception("send failed")
 
     def send_privmsg(self, msg, target):
         if self.server.scroll_speed == 0:
             self.send_raw(f"PRIVMSG {target} :{msg}")
         else:
-            with self.mutex:
+            with self.privmsg_mutex:
                 time_past = round(time.time(), 3) - self.privmsg_tstamp
 
                 if time_past < self.server.scroll_speed:
