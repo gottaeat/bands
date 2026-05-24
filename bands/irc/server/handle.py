@@ -40,74 +40,97 @@ class Handle:
             return user
 
     # -- channel events -- #
-    def _channel_hook_prompt(self, channel_obj, user_obj, full_msg):
-        channel_obj.logger.info(
-            "%s",
-            (
-                f"{ac.BMGN}[{ac.BYEL}HOOK{ac.BRED}¦"
-                f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
-                f"{ac.BCYN} :{full_msg}{ac.RES}"
-            ),
+    def _channel_hook(self, channel_obj, user_obj, full_msg, tstamp):
+        # get list of disabled HOOKs
+        disabled_hooks = self.server.config.db.get_disabled_hooks(
+            self.server.name, channel_obj.name
         )
 
-    def _channel_hook(self, channel_obj, user_obj, full_msg, tstamp):
         for hook, hook_meta in ChanHOOK.HOOKS.items():
+            # if HOOK is disabled, ignroe it
+            if hook in disabled_hooks:
+                channel_obj.logger.debug("ignoring disabled hook %s", hook)
+                continue
+
+            # see if the regex pattern of a hook matches the full message
             matches = re.findall(hook_meta["pattern"], full_msg)
 
             if not matches:
                 continue
 
-            if self.server.config.db.hook_disabled(
-                self.server.name, channel_obj.name, hook
-            ):
-                channel_obj.logger.debug("ignoring disabled hook %s", hook)
-                continue
-
-            self._channel_hook_prompt(channel_obj, user_obj, full_msg)
-
+            # if a HOOK was run in this channel, channel would have a timestamp
+            # calculate if it's been 2 seconds, if not, ratelimit
             if channel_obj.hook_tstamp and tstamp - channel_obj.hook_tstamp < 2:
-                return channel_obj.logger.debug("ignoring hook %s: ratelimited", hook)
+                return channel_obj.logger.info("ignoring hook %s: ratelimited", hook)
 
+            # we're running the HOOK, log it
+            channel_obj.logger.info(
+                "%s",
+                (
+                    f"{ac.BMGN}[{ac.BYEL}HOOK{ac.BRED}¦"
+                    f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
+                    f"{ac.BCYN} :{full_msg}{ac.RES}"
+                ),
+            )
+
+            # update timestamp and call the code
             channel_obj.hook_tstamp = tstamp
             hook_meta["class"](channel_obj, user_obj, matches)
 
     def _channel_cmd(self, channel_obj, user_obj, msg, tstamp):
+        # get prefix for channel from db, die if line PRIVMSG doesn't start
+        # with it
         prefix = self.server.config.db.get_prefix(self.server.name, channel_obj.name)
         if not msg[0].startswith(f":{prefix}"):
             return
 
+        # split cmd and args, strip prefix, get the actual cmd name in lowercase
         cmd_with_prefix, *user_args = msg
         cmd = cmd_with_prefix.removeprefix(f":{prefix}").lower()
 
-        if cmd in ChanCMD.CMDS:
-            if ChanCMD.CMDS[cmd]["openai"] and not self.server.config.ai:
-                return channel_obj.logger.debug("ignoring unavailable cmd %s", cmd)
+        # get the cmd metada from CMDS, die if it doesn't exist
+        cmd_meta = ChanCMD.CMDS.get(cmd)
 
-            if self.server.config.db.command_disabled(
-                self.server.name, channel_obj.name, cmd
-            ):
-                return channel_obj.logger.debug("ignoring disabled cmd %s", cmd)
+        if not cmd_meta:
+            return
 
-            channel_obj.logger.info(
-                "%s",
-                (
-                    f"{ac.BMGN}[{ac.BYEL}CMD {ac.BRED}¦"
-                    f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
-                    f"{ac.BCYN} {cmd_with_prefix} {' '.join(user_args)}{ac.RES}"
-                ),
-            )
+        # check if CMD depends on openai but server doesn't have a BandsAI
+        # configured
+        if cmd_meta["openai"] and not self.server.config.ai:
+            return channel_obj.logger.debug("ignoring unavailable cmd %s", cmd)
 
-            if channel_obj.cmd_tstamp:
-                try:
-                    rt_exempt = self.users[user_obj.nick.lower()] == self.server.admin
-                except KeyError:
-                    rt_exempt = False
+        # get list of disabled CMDs, if CMD is disabled, ignore it
+        disabled_commands = self.server.config.db.get_disabled_commands(
+            self.server.name, channel_obj.name
+        )
+        if cmd in disabled_commands:
+            return channel_obj.logger.debug("ignoring disabled cmd %s", cmd)
 
-                if not rt_exempt and tstamp - channel_obj.cmd_tstamp < 2:
-                    return channel_obj.logger.debug("ignoring cmd %s: ratelimited", cmd)
+        # if a CMD was run in this channel, channel would have a timestamp
+        # calculate if it's been 2 seconds, if not, ratelimit
+        # if the CMD was initiated by the admin user, don't ratelimit.
+        if channel_obj.cmd_tstamp:
+            try:
+                rt_exempt = self.users[user_obj.nick.lower()] == self.server.admin
+            except KeyError:
+                rt_exempt = False
 
-            channel_obj.cmd_tstamp = tstamp
-            ChanCMD.CMDS[cmd]["class"](channel_obj, user_obj, user_args)
+            if not rt_exempt and tstamp - channel_obj.cmd_tstamp < 2:
+                return channel_obj.logger.info("ignoring cmd %s: ratelimited", cmd)
+
+        # we're running the CMD, log it
+        channel_obj.logger.info(
+            "%s",
+            (
+                f"{ac.BMGN}[{ac.BYEL}CMD {ac.BRED}¦"
+                f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
+                f"{ac.BCYN} {cmd_with_prefix} {' '.join(user_args)}{ac.RES}"
+            ),
+        )
+
+        # update timestamp and call the code
+        channel_obj.cmd_tstamp = tstamp
+        cmd_meta["class"](channel_obj, user_obj, user_args)
 
     def channel_msg(self, channel_name, user_line, msg):
         channel = self.channels[channel_name.lower()]
@@ -300,7 +323,7 @@ class Handle:
         user_old_nick = user_line["nick"]
         user_login = user_line["login"]
 
-        user_is_us = user_old_nick == self.server.botname
+        user_is_us = user_old_nick.lower() == self.server.botname.lower()
 
         # 0. bot
         if user_is_us:
@@ -388,7 +411,7 @@ class Handle:
         user_login = user_line_chop["login"]
 
         # bot join
-        if user_nick == self.server.botname:
+        if user_nick.lower() == self.server.botname.lower():
             channel = Channel(self.server)
             channel.name = channel_name
             channel.logger = self.server.logger.getChild(channel.name)
@@ -425,7 +448,7 @@ class Handle:
         channel = self.channels[channel_name.lower()]
 
         # bot part
-        if user_nick == self.server.botname:
+        if user_nick.lower() == self.server.botname.lower():
             channel.logger.info("parted")
             del self.channels[channel_name.lower()]
             return
@@ -442,11 +465,12 @@ class Handle:
         user_line = chop_userline(user_line)
         user_nick = user_line["nick"]
         user_login = user_line["login"]
+        reason = " ".join(reason).lstrip(":")
 
         channel = self.channels[channel_name.lower()]
 
         # bot kicked
-        if kicked_user == self.server.botname:
+        if kicked_user.lower() == self.server.botname.lower():
             channel.logger.warning(
                 "%s (%s) kicked us: (%s)", user_nick, user_login, reason
             )
@@ -455,10 +479,10 @@ class Handle:
             return self.sock_ops.send_join(channel_name)
 
         # user kicked
-        user = channel.users[user_nick.lower()]
-        del channel.users[user_nick.lower()]
+        user = channel.users[kicked_user.lower()]
+        del channel.users[kicked_user.lower()]
 
-        channel.logger.debug(
+        channel.logger.info(
             "%s (%s) kicked %s (%s): %s",
             user_nick,
             user_login,
