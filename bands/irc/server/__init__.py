@@ -10,8 +10,8 @@ ac = ANSIColors()
 class Server:
     USER_NICKLIMIT = 30
 
-    PONG_TIMEOUT = 60
-    PING_INTERVAL = 120
+    PONG_TIMEOUT = 30
+    PING_INTERVAL = 60
 
     def __init__(self, socket):
         # args
