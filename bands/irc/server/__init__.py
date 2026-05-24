@@ -70,4 +70,4 @@ class Server:
 
         if not going_down:
             self.logger.info("nuking self")
-            del self.config.servers[self.name]  # pylint: disable=no-member
+            del self.config.servers[self.name.lower()]
