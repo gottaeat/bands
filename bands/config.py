@@ -25,6 +25,7 @@ class ConfigYAML:
         self.servers = {}
         self.db = None
         self.ai = None
+        self.ctl_port = None
 
     def load_yaml(self):
         self.logger.info("loading configuration")
@@ -38,6 +39,19 @@ class ConfigYAML:
         else:
             self.logger.error("%s is not a file", self.config_file)
 
+    @staticmethod
+    def _check_port(port):
+        if not isinstance(port, int):
+            try:
+                port = int(port)
+            except Exception as e:
+                raise ValueError(f"{port} is not an integer") from e
+
+        if port <= 0 or port > 65535:
+            raise ValueError(f"{port} must be >0 =<65535")
+
+        return port
+
     def _gen_prompt(self, server):
         msg = (
             f"{ac.BWHI}{ac.BRED}socket{ac.RES}\n"
@@ -48,8 +62,6 @@ class ConfigYAML:
             f"{ac.BWHI}{ac.BRED}server{ac.RES}\n"
             f"{ac.BWHI}├ {ac.BGRN}botname      {ac.RES}{server.botname}{ac.RES}\n"
             f"{ac.BWHI}├ {ac.BGRN}channels     {ac.RES}{server.channels_init}{ac.RES}\n"
-            f"{ac.BWHI}├ {ac.BGRN}allow_admin  {ac.RES}{server.allow_admin}{ac.RES}\n"
-            f"{ac.BWHI}├ {ac.BGRN}secret       {ac.RES}{server.secret}{ac.RES}\n"
             f"{ac.BWHI}├ {ac.BGRN}passwd       {ac.RES}{server.passwd}{ac.RES}\n"
             f"{ac.BWHI}├ {ac.BGRN}scroll_speed {ac.RES}{server.scroll_speed}{ac.RES}\n"
             f"{ac.BWHI}└ {ac.BGRN}burst_limit  {ac.RES}{server.burst_limit}{ac.RES}"
@@ -117,6 +129,23 @@ class ConfigYAML:
 
         self.db = BandsDB(self.logger, sqlite_file)
 
+    def _parse_ctl_port(self):
+        self.logger.info("processing ctl_port")
+
+        try:
+            ctl_port = self.yaml_parsed["ctl_port"]
+        except KeyError:
+            ctl_port = 1337
+
+            self.logger.warning("ctl_port key was not specified, using 1337")
+        except:
+            self.logger.exception("%s parsing has failed", self.config_file)
+
+        if not ctl_port:
+            self.logger.error("ctl_port cannot be left blank")
+
+        self.ctl_port = self._check_port(ctl_port)
+
     def parse_servers(self):
         self.logger.info("processing servers")
 
@@ -124,6 +153,9 @@ class ConfigYAML:
             servers = self.yaml_parsed["servers"]
         except KeyError:
             self.logger.exception("servers section in the YAML file is missing")
+
+        if not servers:
+            self.logger.error("servers cannot be left blank")
 
         # check for root keys that must be present
         server_must_have = ["name", "address", "port", "botname", "channels"]
@@ -148,15 +180,10 @@ class ConfigYAML:
 
             # socket.address
             socket.address = str(server_yaml["address"])
+            socket.address_init = socket.address
 
             # socket.port
-            try:
-                socket.port = int(server_yaml["port"])
-            except ValueError:
-                self.logger.exception("invalid server port")
-
-            if socket.port <= 0 or socket.port > 65535:
-                self.logger.error("%s is not a valid port number.", socket.port)
+            socket.port = self._check_port(server_yaml["port"])
 
             # socket.tls
             try:
@@ -204,36 +231,6 @@ class ConfigYAML:
                     server.channels_init.append(str(channel))
                 except ValueError:
                     self.logger.exception("invalid channel name: %s", channel)
-
-            # server.allow_admin
-            try:
-                if type(server_yaml["allow_admin"]).__name__ != "bool":
-                    self.logger.error("allow_admin should be a bool")
-            except KeyError:
-                pass
-
-            try:
-                server.allow_admin = server_yaml["allow_admin"]
-            except KeyError:
-                server.allow_admin = False
-
-            # server.secret
-            try:
-                if server_yaml["secret"] is None:
-                    self.logger.error(
-                        "server secret cannot be specified then left blank"
-                    )
-                else:
-                    server.secret = str(server_yaml["secret"])
-            except KeyError:
-                pass
-
-            # wanted auth bot no secret provided
-            if server.allow_admin and not server.secret:
-                self.logger.error("allow_admin enabled but no secret provided")
-
-            if server.secret and not server.allow_admin:
-                self.logger.error("secret provided without enabling allow_admin")
 
             # server.passwd
             try:
@@ -288,6 +285,7 @@ class ConfigYAML:
         for config_func in (
             self._parse_openai_key,
             self._parse_db,
+            self._parse_ctl_port,
             self.parse_servers,
         ):
             if self.halt:
