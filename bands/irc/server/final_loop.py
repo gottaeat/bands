@@ -35,7 +35,7 @@ class FinalLoop:
         self.logger.debug("keepalive started")
 
         while not self.socket.halt:
-            # check if it's been 60 seconds since last activity, ignore if so
+            # wait until we've had no socket activity for PING_INTERVAL seconds
             if (
                 int(time.strftime("%s")) - self.activity_tstamp
                 < self.server.PING_INTERVAL
@@ -43,7 +43,7 @@ class FinalLoop:
                 time.sleep(1)
                 continue
 
-            # it's been 60 seconds or more since we've last received any activity
+            # it's been PING_INTERVAL seconds or more since the last activity
             # from the socket, send a ping and log the time
             self.pong_received = False
             ping_tstamp = int(time.strftime("%s"))
@@ -61,8 +61,7 @@ class FinalLoop:
                         "server didn't respond to keepalive PING for %s seconds, stopping",
                         self.server.PONG_TIMEOUT,
                     )
-                    self.socket.connected = False
-                    self.server.stop()
+                    self.server.stop(send_quit=False)
                     return
 
                 time.sleep(1)
@@ -240,8 +239,7 @@ class FinalLoop:
                 # bot KILL handling
                 if line_s[0] == "ERROR" and line_s[1] == "Killed":
                     self.logger.warning("we got killed")
-                    self.socket.connected = False
-                    self.server.stop()
+                    self.server.stop(send_quit=False)
 
                     continue
 
