@@ -10,6 +10,7 @@ class Socket:
     def __init__(self):
         # yaml
         self.address = None
+        self.address_init = None
         self.port = None
         self.tls = None
         self.verify_tls = None
@@ -27,6 +28,11 @@ class Socket:
 
     def connect(self):
         self.logger.info("%s", f"{ac.BYEL}--> {ac.BWHI}connecting{ac.RES}")
+
+        # ClientInit() updates the server address with the advertised name in
+        # IRC 001, if we're re-connecting, reset it back to the yaml config
+        # default
+        self.address = self.address_init
 
         try:
             addr = (socket.gethostbyname(self.address), self.port)
@@ -65,11 +71,25 @@ class Socket:
         self.connected = True
 
     def disconnect(self):
-        self.logger.debug("shutting down socket (RDWR)")
-        try:
-            self.conn.shutdown(socket.SHUT_RDWR)
-        except:
-            self.logger.warning("socket shutdown failed")
+        # disconnect() might get called before connect() finishes during retry
+        # or stop, or someone else might kill it before disconnect is called,
+        # if no conn, don't cause an exception
+        if self.conn:
+            if self.connected:
+                self.logger.warning("shutting down socket (RDWR)")
+                try:
+                    self.conn.shutdown(socket.SHUT_RDWR)
+                except:
+                    self.logger.warning("socket shutdown failed")
 
-        self.logger.warning("%s", f"{ac.BYEL}--> {ac.BWHI}closing connection{ac.RES}")
-        self.conn.close()
+            self.logger.warning(
+                "%s", f"{ac.BYEL}--> {ac.BWHI}closing connection{ac.RES}"
+            )
+            self.conn.close()
+
+        # remove connection object, set connected state to false and clear the
+        # buffer in case this was not a full nuke of the server but a server
+        # entering the retry loop
+        self.conn = None
+        self.connected = False
+        self.buffer = b""
