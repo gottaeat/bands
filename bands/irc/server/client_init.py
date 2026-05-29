@@ -27,7 +27,7 @@ class ClientInit:
     def _pong_timer(self):
         self.logger.debug("started PONG timer")
 
-        while not self.ping_timer_stop:
+        while not self.socket.halt and not self.ping_timer_stop:
             if int(time.strftime("%s")) - self.ping_tstamp > self.server.PONG_TIMEOUT:
                 self.logger.warning(
                     "did not get a PONG after %s seconds",
@@ -35,10 +35,13 @@ class ClientInit:
                 )
 
                 if not self.ping_timer_stop:
-                    self.socket.connected = False
-                    self.server.stop()
+                    self.server.stop(send_quit=False)
+                    return
 
             time.sleep(1)
+
+        if self.socket.halt:
+            return
 
         self.ping_timer_halt = True
         self.logger.debug("stopped PONG timer")
@@ -130,8 +133,7 @@ class ClientInit:
                                 "server did not offer it, stopping"
                             )
 
-                            self.socket.connected = False
-                            return self.server.stop()
+                            return self.server.stop(send_quit=False)
 
                         if "chghost" in ackd_caps:
                             self.logger.debug("server gave us chghost CAP")
@@ -154,8 +156,7 @@ class ClientInit:
                             "server does not support it, stopping"
                         )
 
-                        self.socket.connected = False
-                        return self.server.stop()
+                        return self.server.stop(send_quit=False)
 
                     if "chghost" in self.server.caps:
                         self.logger.debug("server supports chghost CAP")
@@ -208,8 +209,7 @@ class ClientInit:
                             "negotiation, stopping"
                         )
 
-                        self.socket.connected = False
-                        self.server.stop()
+                        return self.server.stop(send_quit=False)
 
                     self.socket.address = line_s[0].lstrip(":")
                     addr_updated = True
