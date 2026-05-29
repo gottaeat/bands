@@ -108,14 +108,8 @@ class Handle:
 
         # if a CMD was run in this channel, channel would have a timestamp
         # calculate if it's been 2 seconds, if not, ratelimit
-        # if the CMD was initiated by the admin user, don't ratelimit.
         if channel_obj.cmd_tstamp:
-            try:
-                rt_exempt = self.users[user_obj.nick.lower()] == self.server.admin
-            except KeyError:
-                rt_exempt = False
-
-            if not rt_exempt and tstamp - channel_obj.cmd_tstamp < 2:
+            if tstamp - channel_obj.cmd_tstamp < 2:
                 return channel_obj.logger.info("ignoring cmd %s: ratelimited", cmd)
 
         # we're running the CMD, log it
@@ -268,8 +262,8 @@ class Handle:
             user.tstamp = tstamp
             return UserCMD.CMDS[cmd](user, user_args)
 
-        if user != self.server.admin and tstamp - user.tstamp < 2:
-            return user.logger.debug("ignoring cmd %s: ratelimited", cmd)
+        if tstamp - user.tstamp < 2:
+            return user.logger.info("ignoring cmd %s: ratelimited", cmd)
 
         user.tstamp = tstamp
         UserCMD.CMDS[cmd](user, user_args)
@@ -347,15 +341,10 @@ class Handle:
             try:
                 user = self.users[user_old_nick.lower()]
                 user.nick = user_new_nick
+                user.char_limit = 512 - len(
+                    f"PRIVMSG {user_new_nick} :".encode("utf-8")
+                )
                 user.logger = self.server.logger.getChild(user_new_nick)
-
-                if user == self.server.admin:
-                    self.logger.warning(
-                        "admin nick change: %s (%s) => %s",
-                        user_old_nick,
-                        user_login,
-                        user_new_nick,
-                    )
 
                 self.users[user_new_nick.lower()] = self.users.pop(
                     user_old_nick.lower()
@@ -386,14 +375,6 @@ class Handle:
         try:
             user = self.users[user_nick.lower()]
             user.login = user_new_login
-
-            if user == self.server.admin:
-                self.logger.warning(
-                    "admin host change: %s (%s) => %s",
-                    user_nick,
-                    user_old_login,
-                    user_new_login,
-                )
         except KeyError:
             pass
 
