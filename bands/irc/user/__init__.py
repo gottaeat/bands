@@ -11,7 +11,6 @@ class User:
         self.logger = None
 
         self.tstamp = None
-        self.bad_pw_attempts = 0
 
     def send_query(self, msg):
         self.sock_ops.send_query_hook(self.nick, self.char_limit, msg)
