@@ -10,7 +10,7 @@ class User:
         self.char_limit = None
         self.logger = None
 
-        self.tstamp = None
+        self.cmd_tstamp = None
 
     def send_query(self, msg):
         self.sock_ops.send_query_hook(self.nick, self.char_limit, msg)
