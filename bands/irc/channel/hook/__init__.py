@@ -4,5 +4,6 @@ HOOKS = {
     "url_dispatcher": {
         "class": URLDispatcher,
         "pattern": r"https?://[^\s]+",
+        "openai": False,
     },
 }
