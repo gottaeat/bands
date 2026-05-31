@@ -14,10 +14,9 @@ class Help:
     def _run(self):
         from . import CMDS  # pylint: disable=cyclic-import,import-outside-toplevel
 
+        prefix = "?"
         disabled = set(
-            self.channel.server.config.db.get_disabled_user_commands(
-                self.user.server.name
-            )
+            self.user.server.config.db.get_disabled_user_commands(self.user.server.name)
         )
         has_openai = self.user.server.config.ai is not None
 
@@ -35,7 +34,7 @@ class Help:
             if meta["openai"] and not has_openai:
                 continue
 
-            formatted_usage = usage.format(prefix="?")
+            formatted_usage = usage.format(prefix=prefix)
             help_cmds.append((cmd, formatted_usage))
 
         # calculate max width for first column
