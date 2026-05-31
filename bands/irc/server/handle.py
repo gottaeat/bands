@@ -39,132 +39,167 @@ class Handle:
 
             return user
 
-    # -- channel events -- #
-    def _channel_hook(self, channel_obj, user_obj, full_msg, tstamp):
-        # get list of disabled HOOKs
-        disabled_hooks = self.server.config.db.get_disabled_hooks(
-            self.server.name, channel_obj.name
-        )
-
-        for hook, hook_meta in ChanHOOK.HOOKS.items():
-            # if HOOK is disabled, ignroe it
-            if hook in disabled_hooks:
-                channel_obj.logger.debug("ignoring disabled hook %s", hook)
-                continue
-
-            # see if the regex pattern of a hook matches the full message
-            matches = re.findall(hook_meta["pattern"], full_msg)
-
-            if not matches:
-                continue
-
-            # if a HOOK was run in this channel, channel would have a timestamp
-            # calculate if it's been 2 seconds, if not, ratelimit
-            if channel_obj.hook_tstamp and tstamp - channel_obj.hook_tstamp < 2:
-                return channel_obj.logger.info("ignoring hook %s: ratelimited", hook)
-
-            # we're running the HOOK, log it
-            channel_obj.logger.info(
-                "%s",
-                (
-                    f"{ac.BMGN}[{ac.BYEL}HOOK{ac.BRED}¦"
-                    f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
-                    f"{ac.BCYN} :{full_msg}{ac.RES}"
-                ),
-            )
-
-            # update timestamp and call the code
-            channel_obj.hook_tstamp = tstamp
-            hook_meta["class"](channel_obj, user_obj, matches)
-
-    def _channel_cmd(self, channel_obj, user_obj, msg, tstamp):
-        # get prefix for channel from db, die if line PRIVMSG doesn't start
-        # with it
-        prefix = self.server.config.db.get_prefix(self.server.name, channel_obj.name)
-        if not msg[0].startswith(f":{prefix}"):
-            return
-
-        # split cmd and args, strip prefix, get the actual cmd name in lowercase
-        cmd_with_prefix, *user_args = msg
-        cmd = cmd_with_prefix.removeprefix(f":{prefix}").lower()
-
-        # get the cmd metada from CMDS, die if it doesn't exist
-        cmd_meta = ChanCMD.CMDS.get(cmd)
-
-        if not cmd_meta:
-            return
-
-        # check if CMD depends on openai but server doesn't have a BandsAI
-        # configured
-        if cmd_meta["openai"] and not self.server.config.ai:
-            return channel_obj.logger.debug("ignoring unavailable cmd %s", cmd)
-
-        # get list of disabled CMDs, if CMD is disabled, ignore it
-        disabled_commands = self.server.config.db.get_disabled_commands(
-            self.server.name, channel_obj.name
-        )
-        if cmd in disabled_commands:
-            return channel_obj.logger.debug("ignoring disabled cmd %s", cmd)
-
-        # if a CMD was run in this channel, channel would have a timestamp
-        # calculate if it's been 2 seconds, if not, ratelimit
-        if channel_obj.cmd_tstamp:
-            if tstamp - channel_obj.cmd_tstamp < 2:
-                return channel_obj.logger.info("ignoring cmd %s: ratelimited", cmd)
-
-        # we're running the CMD, log it
-        channel_obj.logger.info(
-            "%s",
-            (
-                f"{ac.BMGN}[{ac.BYEL}CMD {ac.BRED}¦"
-                f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
-                f"{ac.BCYN} {cmd_with_prefix} {' '.join(user_args)}{ac.RES}"
-            ),
-        )
-
-        # update timestamp and call the code
-        channel_obj.cmd_tstamp = tstamp
-        cmd_meta["class"](channel_obj, user_obj, user_args)
-
-    def channel_msg(self, channel_name, user_line, msg):
-        channel = self.channels[channel_name.lower()]
-
+    # -- privmsg -- #
+    def privmsg(self, target_name, user_line, msg):
+        # get source
         user_line = chop_userline(user_line)
         user_nick = user_line["nick"]
+        user_login = user_line["login"]
 
-        try:
-            user = channel.users[user_nick.lower()]
-        except KeyError:
-            channel.logger.warning(
-                "received message from %s (%s) but user not present in channel",
-                user_nick,
-                user_line["login"],
-            )
-            return
+        # see if the privmsg target is a channel or the bot itself
+        target_obj = self.channels.get(target_name.lower())
 
-        # get timestamp
+        if target_obj:
+            # target is a channel, get ChannelUser()
+            user_obj = target_obj.users.get(user_nick.lower())
+
+            # msg from a channel but no channeluser exists, die
+            if not user_obj:
+                target_obj.logger.error(
+                    "received message from %s (%s) but user not present in channel",
+                    user_nick,
+                    user_login,
+                )
+        else:
+            # target is bot, generate/get server User()
+            if target_name.lower() == self.server.botname.lower():
+                user_obj = self._gen_user(user_nick, user_login)
+                target_obj = user_obj
+            else:
+                # PRIVMSG exists but coming from neither a ChannelUser() nor a
+                # User(), die
+                self.logger.error(
+                    "user %s (%s) somehow sent a PRIVMSG with no proper target",
+                    user_nick,
+                    user_login,
+                )
+
+        # set timestamp and full msg str
         tstamp = int(time.strftime("%s"))
-
-        # full msg as str
         full_msg = re.sub("^:", "", " ".join(msg))
 
-        # add msg to chats of user
-        if len(user.chats) >= 10:
-            user.chats = user.chats[1:]
-
-        user.chats.append(
-            {
-                "tstamp": tstamp,
-                "chat": full_msg,
-            }
+        # base log format
+        log_msg = (
+            f"{ac.BMGN}[{ac.BYEL}%s{ac.BRED}¦"
+            f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
+            f"{ac.BCYN} :{full_msg}{ac.RES}"
         )
 
-        # ChanCMD
-        self._channel_cmd(channel, user, msg, tstamp)
+        # check if we ran an event where event is one of HOOK or CMD
+        event_ran = False
 
-        # ChanHOOK
-        self._channel_hook(channel, user, full_msg, tstamp)
+        # - - CMD begin - - #
+        # set vars for CMD events
+        if isinstance(target_obj, Channel):
+            # target is channel
+            prefix = self.server.config.db.get_prefix(self.server.name, target_obj.name)
+            cmds = ChanCMD.CMDS
+            disabled_commands = self.server.config.db.get_disabled_commands(
+                self.server.name, target_obj.name
+            )
 
+            # add msg to chats of user
+            if len(user_obj.chats) >= 10:
+                user_obj.chats = user_obj.chats[1:]
+
+            user_obj.chats.append(
+                {
+                    "tstamp": tstamp,
+                    "chat": full_msg,
+                }
+            )
+        else:
+            # target is a user
+            prefix = "?"
+            cmds = UserCMD.CMDS
+            disabled_commands = self.server.config.db.get_disabled_user_commands(
+                self.server.name
+            )
+
+        # if privmsg contents starts w/ prefix, handle cmd events
+        if msg[0].startswith(f":{prefix}"):
+            # split msg to: cmd + args and get the cmd name in lowercase for
+            # lookups
+            cmd_with_prefix, *user_args = msg
+            cmd = cmd_with_prefix.removeprefix(f":{prefix}").lower()
+
+            # get the cmd metadata from CMDS dict for target_obj
+            cmd_meta = cmds.get(cmd)
+
+            if cmd_meta:
+                # check if CMD is disabled
+                if cmd in disabled_commands:
+                    target_obj.logger.debug("CMD is disabled: %s", cmd)
+                # check CMD's openai dependency
+                elif cmd_meta["openai"] and not self.server.config.ai:
+                    target_obj.logger.debug("openai cap needed for CMD: %s", cmd)
+                # check ratelimiting
+                elif target_obj.cmd_tstamp and tstamp - target_obj.cmd_tstamp < 2:
+                    target_obj.logger.info("ignoring CMD %s: ratelimited", cmd)
+                # all checks are done, we're running the CMD
+                else:
+                    target_obj.logger.info(log_msg, "CMD    ")
+
+                    # update timestamp and call the code
+                    target_obj.cmd_tstamp = tstamp
+                    event_ran = True
+                    cmd_meta["class"](target_obj, user_obj, user_args)
+        # - - CMD end - - #
+
+        # - - HOOK begin - - #
+        if isinstance(target_obj, Channel):
+            # get list of disabled HOOKs
+            disabled_hooks = self.server.config.db.get_disabled_hooks(
+                self.server.name, target_obj.name
+            )
+
+            # get list of HOOKs available for the channel msg we received
+            hooks_to_run = []
+            for hook, hook_meta in ChanHOOK.HOOKS.items():
+                # see if the regex pattern of a HOOK matches the full message
+                matches = re.findall(hook_meta["pattern"], full_msg)
+
+                if not matches:
+                    continue
+
+                # check if HOOK is disabled
+                if hook in disabled_hooks:
+                    target_obj.logger.debug("HOOK is disabled: %s", hook)
+                    continue
+                # check HOOK's openai dependency
+                if hook_meta["openai"] and not self.server.config.ai:
+                    target_obj.logger.debug("openai cap needed for HOOK: %s", hook)
+                    continue
+                # all checks are done, we're running the HOOK
+                hooks_to_run.append((hook_meta, matches))
+
+            # if we are going to run HOOKs, check ratelimiting
+            if (
+                hooks_to_run
+                and target_obj.hook_tstamp
+                and tstamp - target_obj.hook_tstamp < 2
+            ):
+                target_obj.logger.info("ignoring HOOKs, ratelimited")
+                hooks_to_run = []
+
+            # run every matching HOOK
+            for hook_meta, matches in hooks_to_run:
+                target_obj.logger.info(log_msg, "HOOK   ")
+                event_ran = True
+                hook_meta["class"](target_obj, user_obj, matches)
+
+            # update HOOK tstamp after every call is done
+            if hooks_to_run:
+                target_obj.hook_tstamp = tstamp
+
+        # if no HOOK/CMD, channel msg -> debug, direct msg -> info
+        if not event_ran:
+            if isinstance(target_obj, Channel):
+                target_obj.logger.debug(log_msg, "PRIVMSG")
+            else:
+                target_obj.logger.info(log_msg, "PRIVMSG")
+
+    # -- channel events -- #
     def bot_invite(self, user_line, channel_name):
         user_line = chop_userline(user_line)
 
@@ -242,32 +277,6 @@ class Handle:
         channel.logger.debug("parsed WHO: %s (%s)", user_nick, user.login)
 
     # -- user events -- #
-    def user_msg(self, user_line, cmd, user_args):
-        user_line = chop_userline(user_line)
-        user_nick = user_line["nick"]
-        user_login = user_line["login"]
-
-        user = self._gen_user(user_nick, user_login)
-
-        user.logger.info(
-            (
-                f"{ac.BMGN}[{ac.BWHI}{user.nick} ({user.login}){ac.BMGN}]"
-                f"{ac.BCYN} {cmd} {' '.join(user_args)}{ac.RES}"
-            )
-        )
-
-        tstamp = int(time.strftime("%s"))
-
-        if not user.tstamp:
-            user.tstamp = tstamp
-            return UserCMD.CMDS[cmd](user, user_args)
-
-        if tstamp - user.tstamp < 2:
-            return user.logger.info("ignoring cmd %s: ratelimited", cmd)
-
-        user.tstamp = tstamp
-        UserCMD.CMDS[cmd](user, user_args)
-
     def mode(self, user_line, channel_name, modes, user_nicks):
         channel = self.channels[channel_name.lower()]
 
