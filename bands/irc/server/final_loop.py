@@ -2,8 +2,6 @@ import time
 
 from threading import Thread
 
-import bands.irc.user.cmd as UserCMD
-
 from bands.colors import ANSIColors
 
 from .handle import Handle
@@ -271,26 +269,10 @@ class FinalLoop:
 
                     continue
 
-                # -- cmd trigger -- #
                 # PRIVMSG handling
                 if line_s[1] == "PRIVMSG":
-                    # channel PRIVMSG
-                    if line_s[2].lower() in self.channels:
-                        Thread(
-                            target=self.handle.channel_msg,
-                            args=[line_s[2], line_s[0], line_s[3:]],
-                            daemon=True,
-                        ).start()
-
-                        continue
-
-                    # user PRIVMSG
-                    if (
-                        line_s[2].lower() == self.server.botname.lower()
-                        and line_s[3] in UserCMD.CMDS
-                    ):
-                        Thread(
-                            target=self.handle.user_msg,
-                            args=[line_s[0], line_s[3], line_s[4:]],
-                            daemon=True,
-                        ).start()
+                    Thread(
+                        target=self.handle.privmsg,
+                        args=[line_s[2], line_s[0], line_s[3:]],
+                        daemon=True,
+                    ).start()
