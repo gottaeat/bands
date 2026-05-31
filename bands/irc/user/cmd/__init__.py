@@ -1,9 +1,9 @@
-from .auth import Auth
 from .help import Help
-from .rcon import RCon
+from .ping import Ping
 
+# fmt: off
 CMDS = {
-    ":?auth": Auth,
-    ":?help": Help,
-    ":?rcon": RCon,
+    "help": {"class": Help, "usage": None,        "openai": False},
+    "ping": {"class": Ping, "usage": "[no args]", "openai": False},
 }
+# fmt: on
