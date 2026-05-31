@@ -73,6 +73,16 @@ class BandsDB:
             ),
             (
                 """
+                CREATE TABLE IF NOT EXISTS disabled_user_commands (
+                    server TEXT NOT NULL,
+                    command TEXT NOT NULL,
+                    PRIMARY KEY (server, command)
+                )
+                """,
+                "failed creating disabled_user_commands table",
+            ),
+            (
+                """
                 CREATE TABLE IF NOT EXISTS points (
                     server TEXT NOT NULL,
                     nick_key TEXT NOT NULL,
@@ -197,6 +207,48 @@ class BandsDB:
             )
         except:
             self.logger.exception("getting disabled command list failed")
+        else:
+            return [row[0] for row in rows]
+
+    # - - user commands - - #
+    def enable_user_command(self, server, command):
+        try:
+            self._execute(
+                """
+                DELETE FROM disabled_user_commands
+                WHERE server = ? AND command = ?
+                """,
+                (server, command.lower()),
+            )
+        except:
+            self.logger.exception("enabling user command failed")
+
+    def disable_user_command(self, server, command):
+        try:
+            self._execute(
+                """
+                INSERT OR IGNORE INTO disabled_user_commands (server, command)
+                VALUES (?, ?)
+                """,
+                (server, command.lower()),
+            )
+        except:
+            self.logger.exception("disabling user command failed")
+
+    def get_disabled_user_commands(self, server):
+        try:
+            rows = self._execute(
+                """
+                SELECT command
+                FROM disabled_user_commands
+                WHERE server = ?
+                ORDER BY command
+                """,
+                (server,),
+                fetch="all",
+            )
+        except:
+            self.logger.exception("getting disabled user command list failed")
         else:
             return [row[0] for row in rows]
 
