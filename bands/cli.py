@@ -4,9 +4,10 @@ import signal
 
 from threading import Thread
 
-from .config import ConfigYAML
-from .log import set_root_logger
 from . import __version__ as pkg_version
+from .config import ConfigYAML
+from .ctl.server import CTLServer
+from .log import set_root_logger
 
 
 class CLI:
@@ -14,6 +15,7 @@ class CLI:
         self.debug = None
         self.config_file = None
         self.config = None
+        self.ctl = None
         self.logger = None
 
     def _gen_args(self):
@@ -39,7 +41,10 @@ class CLI:
 
                 for server in self.config.servers.values():
                     if server.socket:
-                        server.stop(going_down=True)
+                        server.stop(reconnect=False)
+
+            if self.ctl:
+                self.ctl.stop()
 
     def _set_signal_handling(self):
         # signal handling to terminate threads peacefully
@@ -71,6 +76,21 @@ class CLI:
             for server in self.config.servers.values():
                 server_thread = Thread(target=server.run)
                 server_thread.start()
+
+            try:
+                self.ctl = CTLServer(self.config, self.logger)
+                self.ctl.run()
+            except:
+                self.config.halt = True
+
+                if self.ctl:
+                    self.ctl.stop()
+
+                for server in self.config.servers.values():
+                    if server.socket:
+                        server.stop(reconnect=False)
+
+                self.logger.exception("failed starting CTLServer")
 
 
 def run():
