@@ -21,4 +21,5 @@ dependencies = [
 Source = "http://github.com/gottaeat/bands"
 
 [project.scripts]
-bands = "bands.cli:run"
+bandsd = "bands.cli:run"
+bandsctl = "bands.ctl.client:run"
