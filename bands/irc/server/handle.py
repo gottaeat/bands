@@ -82,7 +82,7 @@ class Handle:
         log_msg = (
             f"{ac.BMGN}[{ac.BYEL}%s{ac.BRED}¦"
             f"{ac.BWHI}{user_obj.nick} ({user_obj.login}){ac.BMGN}]"
-            f"{ac.BCYN} :{full_msg}{ac.RES}"
+            f"{ac.BRED}: {ac.BCYN}{full_msg}{ac.RES}"
         )
 
         # check if we ran an event where event is one of HOOK or CMD
@@ -138,7 +138,7 @@ class Handle:
                     target_obj.logger.info("ignoring CMD %s: ratelimited", cmd)
                 # all checks are done, we're running the CMD
                 else:
-                    target_obj.logger.info(log_msg, "CMD    ")
+                    target_obj.logger.info(log_msg, "CMD")
 
                     # update timestamp and call the code
                     target_obj.cmd_tstamp = tstamp
@@ -184,7 +184,7 @@ class Handle:
 
             # run every matching HOOK
             for hook_meta, matches in hooks_to_run:
-                target_obj.logger.info(log_msg, "HOOK   ")
+                target_obj.logger.info(log_msg, "HOOK")
                 event_ran = True
                 hook_meta["class"](target_obj, user_obj, matches)
 
