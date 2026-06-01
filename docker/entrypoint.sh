@@ -16,5 +16,5 @@ fi
 pinfo "setting permissions"
 chown -Rh bands:bands /data
 
-pinfo "starting bands"
-exec su bands -c 'bands -c /data/config.yml'
+pinfo "starting bandsd"
+exec su bands -c 'bandsd -c /data/config.yml'
