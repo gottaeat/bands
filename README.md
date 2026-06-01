@@ -1,63 +1,78 @@
 # bands
-bands is an internet relay chat bot.
+bands is an internet relay chat bot daemon.
 
 ## features
 - covers all relevant portions of rfc's 1459 and 2812.
 - ircv3 caps supported are `chghost` and `multi-prefix`.
 - concurrent multi-server and multi-channel support.
 - awareness of the channel, channel user, server and server user contexts.
-- state manipulation and hot config reload through private messages on trusted
-  servers.
+- state manipulation and config rehash via plaintext over TCP.
 - sqlite for stateful changes, in-memory for the rest.
-- openai responses api support for channel ai modules.
+- openai responses api support for modules.
 
 ## modules
 ### channel commands
-channel commands use the channel's configured prefix. the default prefix is `?`.
+a channel command is a query that starts with a channel's configured prefix, the
+default being `?`. successfully ran recognized commands are ratelimited per
+channel.
 
-| command | class         | description                                                   |
-| ------- | ------------- | ------------------------------------------------------------- |
-| `ai`    | `AIQuery()`   | ask openai a short question                                   |
-| `bj`    | `BlackJack()` | wager blackjack bets via user points                          |
-| `help`  | `Help()`      | print commands enabled for the channel context                |
-| `point` | `Point()`     | give/remove points from users, show server-wide stats         |
-| `quote` | `Quote()`     | add/get channel-wide quotes from users                        |
-| `tarot` | `Tarot()`     | pull a deck and ask openai for a reading                      |
+| command | class         | description                                             |
+| ------- | ------------- | ------------------------------------------------------- |
+| `ai`    | `AIQuery()`   | query a stateless question via the openai responses api |
+| `bj`    | `BlackJack()` | wager blackjack bets via user points                    |
+| `help`  | `Help()`      | print commands enabled for the channel context          |
+| `point` | `Point()`     | give/remove points from users, show server-wide stats   |
+| `quote` | `Quote()`     | add/get channel-wide quotes from users                  |
+| `tarot` | `Tarot()`     | pull a deck and ask openai for a reading                |
 
 ### channel hooks
-hooks match on defined regex and run the handler for it.
+hooks match on defined regex and run the handler for it. like commands, hooks
+are ratelimited.
 
-| hook             | class             | description                                |
-| ---------------- | ----------------- | ------------------------------------------ |
-| `url_dispatcher` | `URLDispatcher()` | match on URLs and print the page title     |
+| hook             | class             | description                            |
+| ---------------- | ----------------- | -------------------------------------- |
+| `url_dispatcher` | `URLDispatcher()` | match on URLs and print the page title |
 
-### private-message commands
-commands to be queried within `PRIVMSG`s directly to the bot, outside of a channel.
+### private messages
+direct `PRIVMSG` commands to the bot use the hardcoded `?` prefix and are
+ratelimited per server user.
 
-| command | class    | description                                       |
-| ------- | -------- | ------------------------------------------------- |
-| `auth`  | `Auth()` | authenticate as a bot admin to run `RCon()` CMDs. |
-| `help`  | `Help()` | print commands for bot `PRIVMSG`s                 |
-| `rcon`  | `RCon()` | admin-only remote control                         |
+| command | class    | description                     |
+| ------- | -------- | ------------------------------- |
+| `help`  | `Help()` | print private message commands  |
+| `ping`  | `Ping()` | reply pong                      |
 
-### rcon
-`rcon` is only enabled on servers where `allow_admin` is set on boot. the user
-must `?auth` first.
+### control
+main bot process is `bandsd` and by default starts listening on `0.0.0.0:1337`
+for control commands. `bandsctl` is the reference client implementation that
+talks to `bandsd`.
 
-| command   | description                                         |
-| --------- | --------------------------------------------------- |
-| `connect` | connect to a server defined in the configuration    |
-| `dc`      | disconnect from one or more servers                 |
-| `debug`   | toggle debug on/off or print the current log level  |
-| `hook`    | enable/disable/list disabled hooks for a channel    |
-| `join`    | join channels                                       |
-| `part`    | part channels                                       |
-| `prefix`  | set the command prefix for a channel                |
-| `raw`     | sends a raw irc line to a server                    |
-| `rehash`  | reloads yaml and parses any new servers             |
-| `say`     | send a message to a channel                         |
-| `cmd`     | enable/disable/list disabled commands for a channel |
-| `status`  | print active servers, channels and users            |
+__WARNING__: comms are done over plain TCP, so do _NOT_ expose it to the global
+internet.
+
+| command      | description                                                   |
+| ------------ | ------------------------------------------------------------- |
+| `help`       | print c&c help                                                |
+| `rehash` [1] | reload config and parse any new servers                       |
+| `debug`      | toggle debug logging or print the current log level           |
+| `status`     | display detailed info about servers, channels and their users |
+| `cmd`        | enable/disable or list disabled commands for a channel        |
+| `usercmd`    | enable/disable or list disabled user commands                 |
+| `hook`       | enable/disable or list disabled hooks for a channel           |
+| `prefix`     | set the command prefix for a channel                          |
+| `connect`    | connect to a loaded server                                    |
+| `dc` [2]     | disconnect from and remove all handling of a server           |
+| `raw`        | send a raw iorc line to a server                              |
+| `join`       | join a channel                                                |
+| `part`       | part a channel                                                |
+| `say`        | send a message to a channel                                   |
+
+__[1]__ `rehash` reloads yaml and parses server definitions. it skips servers
+which are already loaded. it does not reparse `openai_key`, `sqlite_file` or
+`ctl_port`.
+
+__[2]__ `dc` removes the server from the live in-memory server list. use
+`rehash` to load it from the config again before calling `connect`.
 
 ## installation
 ```sh
@@ -83,30 +98,33 @@ docker compose up -d
 | ------------- | ------------ | ------ | ----------------------------------------- |
 | `openai_key`  | optional     | `str`  | openai api key for module support         |
 | `sqlite_file` | optional     | `str`  | path to the sqlite database [1]           |
+| `ctl_port`    | optional     | `int`  | port for the `bandsctl` tcp listener [2]  |
 | `servers`     | __required__ | `list` | list of servers to connect to on startup  |
 
 __[1]__ if not specified, defaults to `/data/bands.sqlite3`. bands will create
-and initialize the database if it does not exist.
+the parent directory and initialize the database if it does not exist.
+
+__[2]__ if not specified, defaults to `1337`. the listener binds to `0.0.0.0`;
+publish or firewall it accordingly.
 
 #### servers
-| key            | necessity                    | type   | description                                                             |
-| -------------- | ---------------------------- | ------ | ----------------------------------------------------------------------- |
-| `name`         | __required__                 | `str`  | reference name for the network                                          |
-| `address`      | __required__                 | `str`  | network address                                                         |
-| `port`         | __required__                 | `int`  | network port                                                            |
-| `passwd`       | optional                     | `str`  | network password                                                        |
-| `botname`      | __required__                 | `str`  | bot nick+ident                                                          |
-| `tls`          | optional                     | `bool` | enable tls, false by default                                            |
-| `verify_tls`   | optional                     | `bool` | verify tls, false by default                                            |
-| `scroll_speed` | required __if burst_limit__  | `int`  | how long the wait before sending multiple lines (fakelag)               |
-| `burst_limit`  | required __if scroll_speed__ | `int`  | amount of messages allowed before scroll_speed sleep timer kicks in     |
-| `channels`     | __required__                 | `list` | channel list to autojoin on startup                                     |
-| `allow_admin`  | optional                     | `bool` | allow authentication and remote control on the server, false by default |
-| `secret`       | required __if allow_admin__  | `str`  | authentication secret                                                   |
+| key            | necessity                    | type   | description                                                         |
+| -------------- | ---------------------------- | ------ | ------------------------------------------------------------------- |
+| `name`         | __required__                 | `str`  | reference name for the network                                      |
+| `address`      | __required__                 | `str`  | network address                                                     |
+| `port`         | __required__                 | `int`  | network port                                                        |
+| `passwd`       | optional                     | `str`  | network password                                                    |
+| `botname`      | __required__                 | `str`  | bot nick+ident                                                      |
+| `tls`          | optional                     | `bool` | enable tls, false by default                                        |
+| `verify_tls`   | optional                     | `bool` | verify tls, false by default                                        |
+| `scroll_speed` | required __if burst_limit__  | `int`  | how long the wait before sending multiple lines (fakelag)           |
+| `burst_limit`  | required __if scroll_speed__ | `int`  | amount of messages allowed before scroll_speed sleep timer kicks in |
+| `channels`     | __required__                 | `list` | channel list to autojoin on startup                                 |
 
 ### example
 ```yml
 sqlite_file: "/data/bands.sqlite3"
+ctl_port: 1337
 
 openai_key: "sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
@@ -120,8 +138,6 @@ servers:
     channels:
       - "#mychannel"
       - "#mychannel2"
-    allow_admin: true
-    secret: EsDf/ZcdNp1whuZh
   - name: publicnet
     address: irc.example.com
     port: 6697
@@ -135,8 +151,9 @@ servers:
 ```
 
 ## usage
+### server
 ```sh
-usage: bands [-h] -c C [-d]
+usage: bandsd [-h] -c C [-d]
 
 bands the irc bot ver. <version>
 
@@ -146,7 +163,17 @@ options:
   -d          enable debug
 ```
 
-## runtime management
-1. set at least one of the servers to have `allow_admin` and a `secret`.
-2. privmsg the `botname` with `?auth $secret`.
-3. call `?rcon help` for a list of management related functionality.
+### client
+```sh
+usage: bandsctl [-h] [-H CTL_HOST] [-p CTL_PORT] ...
+
+bandsctl
+
+positional arguments:
+  command      ctl command
+
+options:
+  -h, --help   show this help message and exit
+  -H CTL_HOST  host
+  -p CTL_PORT  port
+```
